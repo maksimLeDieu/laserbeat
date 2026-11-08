@@ -94,21 +94,52 @@ test('Lecture : « Jouer la musique » lance le son', async () => {
   await close(app);
 });
 
-test('Enchaînement : passage au morceau suivant sans blanc (< 250 ms)', async () => {
-  const { app, w } = await launch(newDataDir('enchainement'));
+test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais de silence', async () => {
+  const { app, w } = await launch(newDataDir('fondu'));
   await w.click('.pli >> text=Laser Arena'); await w.click('text=Écouter');
   assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
   await w.waitForTimeout(2500); // le morceau suivant est préchargé
-  await w.evaluate(() => { window.__ev = []; document.querySelectorAll('audio').forEach(a => ['ended', 'playing'].forEach(n => a.addEventListener(n, () => window.__ev.push([n, performance.now()])))); });
   const t1 = await title(w);
-  await seekNearEnd(w);
-  assert(await waitFor(async () => (await title(w)) !== t1 && await playing(w), 10000), 'pas de passage au suivant');
-  const ev = await w.evaluate(() => window.__ev);
-  const end = ev.find(e => e[0] === 'ended'), pl = ev.filter(e => e[0] === 'playing').pop();
-  assert(end && pl, 'événements manquants');
-  const gap = pl[1] - end[1];
-  console.log(`    blanc entre deux morceaux : ${gap.toFixed(1)} ms`);
-  assert(gap < 250, 'blanc trop long : ' + gap.toFixed(0) + ' ms');
+  await seekNearEnd(w, 6);
+  // relevés toutes les 100 ms pendant 9 s
+  const samples = await w.evaluate(() => new Promise(res => {
+    const out = [], t0 = performance.now();
+    const id = setInterval(() => {
+      const d = [...document.querySelectorAll('audio')].map(a => ({ on: !a.paused && !!a.getAttribute('src'), v: a.volume }));
+      out.push({ t: performance.now() - t0, decks: d, title: document.querySelector('#npT').textContent });
+      if (performance.now() - t0 > 9000) { clearInterval(id); res(out); }
+    }, 100);
+  }));
+  const silent = samples.filter(x => !x.decks.some(d => d.on));
+  const both = samples.filter(x => x.decks.every(d => d.on));
+  const last = samples[samples.length - 1];
+  console.log(`    chevauchement des deux morceaux : ${(both.length / 10).toFixed(1)} s ; relevés sans son : ${silent.length}`);
+  assert(last.title !== t1, 'pas de passage au morceau suivant');
+  assert(silent.length === 0, 'silence pendant la transition');
+  assert(both.length >= 15, 'pas de vrai fondu (chevauchement trop court)');
+  const ons = last.decks.filter(d => d.on);
+  assert(ons.length === 1, 'les deux lecteurs jouent encore après le fondu');
+  const vol = await w.inputValue('#vol');
+  assert(Math.abs(ons[0].v - Number(vol)) < 0.02, 'volume final incorrect');
+  await close(app);
+});
+
+test('Fondu : pause et morceau suivant pendant le fondu restent propres', async () => {
+  const { app, w } = await launch(newDataDir('fondu-pause'));
+  await w.click('.pli >> text=Laser Arena'); await w.click('text=Écouter');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  await w.waitForTimeout(2500);
+  await seekNearEnd(w, 4);
+  await w.waitForTimeout(2000);            // en plein fondu
+  await w.click('#bPlay');                 // pause
+  await w.waitForTimeout(500);
+  const afterPause = await w.evaluate(() => [...document.querySelectorAll('audio')].filter(a => !a.paused).length);
+  assert(afterPause === 0, 'un lecteur joue encore après la pause');
+  await w.click('#bPlay'); await w.waitForTimeout(800);
+  const t2 = await title(w);
+  await w.click('#bNext'); await w.waitForTimeout(1500);
+  const st = await w.evaluate(() => [...document.querySelectorAll('audio')].filter(a => !a.paused).length);
+  assert(st === 1 && (await title(w)) !== t2, 'état incohérent après « suivant »');
   await close(app);
 });
 

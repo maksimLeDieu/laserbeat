@@ -367,7 +367,33 @@ let A=$('#audio'),B=$('#audio2');
 const P={queue:[],i:-1,plId:null,shuffle:false,repeat:0,manual:true,auto:store.get('auto',true),nx:null};
 let want=false; // vrai tant que la musique doit jouer (faux après une pause voulue)
 let vol=store.get('vol',.8);if(!(vol>=0&&vol<=1))vol=.8;
-function setVol(v){vol=v;A.volume=v;B.volume=v;store.set('vol',v)}
+function setVol(v){vol=v;A.volume=v;if(!fade)B.volume=v;store.set('vol',v)}
+/* Fondu enchaîné : FADE secondes avant la fin, le morceau suivant démarre dans l'autre lecteur
+   et monte pendant que le premier descend (courbe à puissance constante : pas de creux de volume). */
+const FADE=3;
+let fade=null,xfMode=false,xfTried=-1,loadN=0;
+function cancelFade(){
+ if(!fade)return;
+ clearInterval(fade.timer);const o=fade.out;fade=null;
+ o.pause();o.removeAttribute('src');o.dataset.tid='';o.load();
+ A.volume=vol;B.volume=vol;
+}
+function startFade(o){
+ cancelFade();
+ o.dataset.tid=''; // le lecteur sortant ne doit plus jamais être réutilisé tel quel
+ const t0=performance.now();A.volume=0;
+ fade={out:o,timer:setInterval(()=>{
+  const p=Math.min(1,(performance.now()-t0)/(FADE*1000));
+  A.volume=vol*Math.sin(p*Math.PI/2);o.volume=vol*Math.cos(p*Math.PI/2);
+  if(p>=1){clearInterval(fade.timer);fade=null;o.pause();o.removeAttribute('src');o.load();o.volume=vol;A.volume=vol;preloadNext()}
+ },50)};
+}
+function maybeCrossfade(){
+ if(fade||!want||P.repeat===2||!A.duration||!isFinite(A.duration)||A.duration<FADE*3)return;
+ if(A.duration-A.currentTime>FADE||xfTried===loadN)return;
+ xfTried=loadN;       // une seule tentative par morceau lancé
+ xfMode=true;try{next(true)}finally{xfMode=false}
+}
 A.volume=vol;B.volume=vol;
 let recent=store.get('recent',[]);
 let preT=null,errs=0;
@@ -377,9 +403,16 @@ function playQueue(list,start,plId,at){
 }
 function load(i,at){
  const t=P.queue[i];if(!t)return;
- P.i=i;want=true;
+ const xf=xfMode&&!A.paused;
+ if(!xf)cancelFade();
+ P.i=i;want=true;loadN++;
  const url=trackUrl(t);
- if(B.dataset.tid===t.id&&B.getAttribute('src')===url&&!B.error){
+ const ready=B.dataset.tid===t.id&&B.getAttribute('src')===url&&!B.error;
+ if(xf){
+  // Fondu : le suivant part dans le lecteur de réserve, le morceau en cours continue en descendant.
+  if(!ready){B.src=url}
+  const o=A;A=B;B=o;startFade(o);
+ }else if(ready){
   const o=A;A=B;B=o; // le morceau est déjà prêt dans le lecteur de réserve
   o.pause();o.removeAttribute('src');o.dataset.tid='';o.load();
  }else A.src=url;
@@ -388,7 +421,7 @@ function load(i,at){
  const pr=A.play();if(pr&&pr.catch)pr.catch(()=>ui());
  recent=[t.id].concat(recent.filter(x=>x!==t.id)).slice(0,12);store.set('recent',recent);
  ui();saveState();
- clearTimeout(preT);preT=setTimeout(preloadNext,1500);
+ clearTimeout(preT);if(!fade)preT=setTimeout(preloadNext,1500);
 }
 function peekNext(){
  const n=P.queue.length;if(!n||P.repeat===2)return -1;
@@ -396,6 +429,7 @@ function peekNext(){
  return P.i+1<n?P.i+1:0;
 }
 function preloadNext(){
+ if(fade)return; // le lecteur de réserve est encore en train de s'éteindre
  const t=P.queue[peekNext()];
  if(!t){if(B.getAttribute('src')){B.removeAttribute('src');B.dataset.tid='';B.load()}return}
  if(B.dataset.tid===t.id&&B.getAttribute('src')===trackUrl(t)&&!B.error)return;
@@ -403,7 +437,7 @@ function preloadNext(){
 }
 function toggle(){
  if(P.i<0){const p=slotPl();P.manual=false;playQueue(tracksOf(p.id),0,p.id);return}
- if(A.paused){want=true;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}else{want=false;A.pause()}
+ if(A.paused){want=true;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}else{want=false;cancelFade();A.pause()}
  saveState();
 }
 function next(fromEnd){
@@ -454,6 +488,7 @@ function logErr(m){try{if(LB)LB.log(m)}catch(e){}}
   const d=A.duration,c=A.currentTime,r=d?c/d*100:0;
   $('#barF').style.width=r+'%';$('#fsF').style.width=r+'%';
   $('#tmC').textContent=fmt(c);$('#tm').textContent=fmt(d);
+  maybeCrossfade();
  });
 });
 function seek(e){const el=e.currentTarget,r=el.getBoundingClientRect();if(A.duration)A.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*A.duration}
@@ -488,6 +523,7 @@ async function onDevices(){
  if(sig!==null&&sig===outSig)return;  // rien n'a changé côté sorties audio
  outSig=sig;
  if(!want||P.i<0)return;
+ cancelFade();
  const t=A.currentTime;logErr('Sortie audio modifiée : relance du morceau à '+Math.floor(t)+' s');
  A.load();if(t>0)A.currentTime=t;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{});
  if(B.getAttribute('src'))B.load();
@@ -537,6 +573,7 @@ async function delTrack(id){
  let ok=false;try{ok=await LB.confirmDelete(t.title)}catch(e){}
  if(!ok)return;
  // On libère le fichier avant de l'effacer : s'il joue, on passe au suivant.
+ cancelFade();
  const cur=P.queue[P.i];
  if(cur&&cur.id===id){
   const rest=P.queue.filter(x=>x.id!==id);

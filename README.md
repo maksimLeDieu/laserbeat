@@ -50,7 +50,8 @@ Laser Arena contient automatiquement les morceaux de Tech Zone, d'Overdrive et d
 
 ## Fonctionnement
 
-- Pendant qu'un morceau joue, le suivant est déjà chargé dans un second lecteur. Les morceaux s'enchaînent donc sans blanc.
+- Pendant qu'un morceau joue, le suivant est déjà chargé dans un second lecteur. Les 3 dernières secondes, un fondu
+  enchaîné fait monter le suivant pendant que le premier descend : jamais de blanc ni de coupure sèche.
 - Le son continue fenêtre réduite ou cachée, et le PC ne se met pas en veille pendant la lecture.
 - Si la lecture se bloque, elle est relancée automatiquement. Si un fichier est illisible, LaserBeat passe au suivant.
 - Si la page de l'interface plante, elle est rechargée.
