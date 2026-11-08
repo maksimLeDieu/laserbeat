@@ -1,0 +1,33 @@
+# Publie une nouvelle version de LaserBeat.
+# Déclenchement : pousser un tag « vX.Y.Z » identique à la version de package.json.
+# Le robot compile l'installateur sur Windows puis crée la Release GitHub
+# (LaserBeat-Setup.exe, .blockmap et latest.yml) : les PC équipés de LaserBeat
+# la téléchargent ensuite tout seuls.
+name: Publier une version
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Vérifier que le tag correspond à la version
+        shell: bash
+        run: |
+          v="v$(node -p "require('./package.json').version")"
+          if [ "$v" != "$GITHUB_REF_NAME" ]; then echo "Le tag $GITHUB_REF_NAME ne correspond pas à package.json ($v)"; exit 1; fi
+      - run: npm ci
+      - name: Compiler et publier
+        run: npx electron-builder --win nsis --x64 --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
