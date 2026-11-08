@@ -37,7 +37,13 @@ jobs:
           v="v$(node -p "require('./package.json').version")"
           echo "version=$v" >> "$GITHUB_OUTPUT"
           if gh release view "$v" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "La Release $v existe déjà : rien à publier."; echo "skip=true" >> "$GITHUB_OUTPUT"
+            if gh release view "$v" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx latest.yml; then
+              echo "La Release $v est complète : rien à publier."; echo "skip=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "La Release $v est incomplète : elle sera complétée."; echo "mode=upload" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "mode=create" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.deja.outputs.skip != 'true'
         run: npm ci
@@ -51,6 +57,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           v="${{ steps.deja.outputs.version }}"
-          gh release create "$v" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "LaserBeat ${v#v}" --notes "Mise à jour de LaserBeat ${v#v}. Les PC équipés la récupèrent automatiquement." \
-            dist/LaserBeat-Setup.exe dist/LaserBeat-Setup.exe.blockmap dist/latest.yml
+          files="dist/LaserBeat-Setup.exe dist/LaserBeat-Setup.exe.blockmap dist/latest.yml"
+          if [ "${{ steps.deja.outputs.mode }}" = "upload" ]; then
+            # Les 3 fichiers sont remplacés ensemble pour qu'ils viennent de la même compilation.
+            gh release upload "$v" $files --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$v" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "LaserBeat ${v#v}" --notes "Mise à jour de LaserBeat ${v#v}. Les PC équipés la récupèrent automatiquement." \
+              $files
+          fi
