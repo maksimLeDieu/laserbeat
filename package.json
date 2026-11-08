@@ -1,0 +1,93 @@
+{
+  "name": "laserbeat",
+  "productName": "LaserBeat",
+  "version": "1.3.0",
+  "description": "LaserBeat - lecteur de musique hors ligne pour le laser game",
+  "author": "LaserBeat",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.9.3",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "fr.laserbeat.app",
+    "productName": "LaserBeat",
+    "copyright": "LaserBeat",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "musiques",
+        "to": "musiques",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "executableName": "LaserBeat",
+      "legalTrademarks": "LaserBeat"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "LaserBeat",
+      "menuCategory": false,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "uninstallDisplayName": "LaserBeat",
+      "installerLanguages": [
+        "fr_FR"
+      ],
+      "language": "1036",
+      "multiLanguageInstaller": true,
+      "include": "build/installer.nsh",
+      "artifactName": "LaserBeat-Setup.${ext}",
+      "displayLanguageSelector": false
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "maksimLeDieu",
+      "repo": "laserbeat",
+      "releaseType": "release"
+    },
+    "extraFiles": [
+      {
+        "from": "THIRD-PARTY-NOTICES.txt",
+        "to": "THIRD-PARTY-NOTICES.txt"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  }
+}
