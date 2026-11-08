@@ -1,15 +1,16 @@
-# Publie une nouvelle version de LaserBeat.
-# Déclenchement : un changement de package.json sur la branche main (nouveau numéro de version),
-# ou à la main depuis l'onglet Actions (« Run workflow »).
-# Le robot compile l'installateur sur Windows puis crée la Release GitHub « vX.Y.Z »
-# (LaserBeat-Setup.exe, .blockmap et latest.yml) : les PC équipés de LaserBeat
-# la téléchargent ensuite tout seuls. Si la Release de cette version existe déjà, rien n'est republié.
-name: Publier une version
+# Vérifie puis publie LaserBeat.
+# À chaque envoi sur main (ou à la main depuis l'onglet Actions) :
+#   1. compilation de l'installateur sur Windows ;
+#   2. tests automatiques sur le logiciel compilé (lecture, enchaînement, Agenda, réglages,
+#      import/suppression, plantage, mise à jour, sortie audio, redémarrage de nuit…) ;
+#   3. si TOUS les tests passent et que le numéro de version de package.json n'est pas encore publié,
+#      création de la Release GitHub « vX.Y.Z » : les PC équipés de LaserBeat l'installent tout seuls.
+# Un seul test en échec = rien n'est publié.
+name: Vérifier et publier
 
 on:
   push:
     branches: [main]
-    paths: ['package.json']
   workflow_dispatch:
 
 permissions:
@@ -22,6 +23,7 @@ concurrency:
 jobs:
   windows:
     runs-on: windows-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,20 +40,22 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
           if gh release view "$v" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             if gh release view "$v" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx latest.yml; then
-              echo "La Release $v est complète : rien à publier."; echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "La Release $v est complète : tests seulement."; echo "mode=skip" >> "$GITHUB_OUTPUT"
             else
               echo "La Release $v est incomplète : elle sera complétée."; echo "mode=upload" >> "$GITHUB_OUTPUT"
             fi
           else
             echo "mode=create" >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.deja.outputs.skip != 'true'
-        run: npm ci
+      - run: npm ci
       - name: Compiler l'installateur
-        if: steps.deja.outputs.skip != 'true'
         run: npx electron-builder --win nsis --x64 --publish never
+      - name: Tests automatiques sur le logiciel compilé
+        run: npm test
+        env:
+          LASERBEAT_EXE: dist/win-unpacked/LaserBeat.exe
       - name: Publier la Release
-        if: steps.deja.outputs.skip != 'true'
+        if: steps.deja.outputs.mode != 'skip'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -59,10 +63,9 @@ jobs:
           v="${{ steps.deja.outputs.version }}"
           files="dist/LaserBeat-Setup.exe dist/LaserBeat-Setup.exe.blockmap dist/latest.yml"
           if [ "${{ steps.deja.outputs.mode }}" = "upload" ]; then
-            # Les 3 fichiers sont remplacés ensemble pour qu'ils viennent de la même compilation.
             gh release upload "$v" $files --repo "$GITHUB_REPOSITORY" --clobber
           else
             gh release create "$v" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-              --title "LaserBeat ${v#v}" --notes "Mise à jour de LaserBeat ${v#v}. Les PC équipés la récupèrent automatiquement." \
+              --title "LaserBeat ${v#v}" --notes "Mise à jour de LaserBeat ${v#v}. Les PC équipés la récupèrent et l'installent automatiquement." \
               $files
           fi

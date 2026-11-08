@@ -16,7 +16,8 @@ function setupUpdater({ log, getWindow }) {
   let ready = null;
   ipcMain.on('update:get', e => { e.returnValue = ready; });
 
-  if (!app.isPackaged || process.platform !== 'win32') {
+  // Pas de mise à jour en développement, hors Windows, ni pendant les tests automatiques.
+  if (!app.isPackaged || process.platform !== 'win32' || process.env.LASERBEAT_TEST) {
     ipcMain.on('update:install', () => {});
     return { onSessionEnd() {} };
   }

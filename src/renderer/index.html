@@ -479,6 +479,32 @@ setInterval(()=>{
  lastT=A.currentTime;
 },3000);
 
+/* Sortie audio : si une carte son, un ampli ou des enceintes sont branchés ou débranchés,
+   on relance le morceau au même endroit pour qu'il sorte bien sur la sortie active. */
+let outSig=null,devT=null;
+async function outputs(){try{return (await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput').map(d=>d.deviceId+'|'+d.groupId+'|'+d.label).sort().join(';')}catch(e){return null}}
+async function onDevices(){
+ const sig=await outputs();
+ if(sig!==null&&sig===outSig)return;  // rien n'a changé côté sorties audio
+ outSig=sig;
+ if(!want||P.i<0)return;
+ const t=A.currentTime;logErr('Sortie audio modifiée : relance du morceau à '+Math.floor(t)+' s');
+ A.load();if(t>0)A.currentTime=t;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{});
+ if(B.getAttribute('src'))B.load();
+}
+if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener){
+ outputs().then(sig=>{outSig=sig});
+ navigator.mediaDevices.addEventListener('devicechange',()=>{clearTimeout(devT);devT=setTimeout(onDevices,1500)});
+}
+/* Redémarrage préventif : après 20 h sans redémarrer, LaserBeat se relance une fois pendant « Hors horaires »
+   (la musique reprend toute seule). S'il y a une mise à jour prête, c'est elle qui est installée à la place. */
+const START=Date.now();
+setInterval(()=>{
+ const limit=window.__LB_TEST_NIGHT_MS||20*3600*1000;
+ if(Date.now()-START<limit||curSlot()!==SL[4]||!LB||!LB.restartApp)return;
+ if(typeof updV!=='undefined'&&updV&&!updDone){installUpd('redémarrage de nuit');return}
+ logErr('Redémarrage préventif de nuit');saveState();LB.restartApp();
+},60000);
 /* Reprise : si LaserBeat jouait à sa fermeture (ou après une coupure), la musique repart. */
 function resume(){
  const R=store.get('resume',null);if(!R||typeof R!=='object')return;

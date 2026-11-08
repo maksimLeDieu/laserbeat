@@ -26,6 +26,8 @@ app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 
 if (process.platform === 'win32') app.setAppUserModelId(APP_ID);
+// Tests automatiques uniquement : dossier de données isolé (jamais utilisé en temps normal).
+if (process.env.LASERBEAT_USER_DATA) app.setPath('userData', process.env.LASERBEAT_USER_DATA);
 
 /* ---------- journal (pour comprendre un éventuel problème) ---------- */
 let logFile = null;
@@ -115,6 +117,16 @@ function start() {
 
   /* ----- IPC : état du lecteur (anti-veille) et journal ----- */
   ipcMain.on('player:state', (e, playing) => setPlaying(!!playing));
+  // Redémarrage préventif (demandé par l'interface la nuit, pendant « Hors horaires »).
+  let restarting = false;
+  ipcMain.on('app:restart', () => {
+    if (restarting) return;
+    restarting = true;
+    log('redémarrage préventif');
+    if (config) config.flush();
+    app.relaunch();
+    app.quit();
+  });
   ipcMain.on('log', (e, msg) => log('[interface]', String(msg).slice(0, 2000)));
 
   app.on('child-process-gone', (e, d) => log('child-process-gone', d));

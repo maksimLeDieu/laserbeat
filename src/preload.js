@@ -28,5 +28,6 @@ contextBridge.exposeInMainWorld('laserbeat', {
   onUpdate: cb => ipcRenderer.on('update:ready', (e, v) => cb(String(v))),
   installUpdate: () => ipcRenderer.send('update:install'),
   setPlaying: playing => ipcRenderer.send('player:state', !!playing),
+  restartApp: () => ipcRenderer.send('app:restart'),
   log: msg => ipcRenderer.send('log', String(msg))
 });
