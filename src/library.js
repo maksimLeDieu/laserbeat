@@ -58,10 +58,27 @@ function makeTrack(origin, dir, file, e) {
   };
 }
 
+// Fichiers supprimés que Windows n'a pas laissé effacer tout de suite (fichier encore ouvert) :
+// ils restent cachés et on retente l'effacement au lancement suivant.
+const PENDING = '.a-supprimer.json';
+function readPending(dir) {
+  try { const v = JSON.parse(fs.readFileSync(path.join(dir, PENDING), 'utf8')); return Array.isArray(v) ? v.map(String) : []; } catch (e) { return []; }
+}
+function writePending(dir, list) {
+  const f = path.join(dir, PENDING);
+  try { if (list.length) fs.writeFileSync(f, JSON.stringify(list)); else fs.rmSync(f, { force: true }); } catch (e) { /* ignore */ }
+}
+function retryPending(dir) {
+  const left = readPending(dir).filter(name => {
+    try { fs.rmSync(path.join(dir, name), { force: true }); return false; } catch (e) { return true; }
+  });
+  writePending(dir, left);
+}
+
 function loadDir(dir, origin) {
   const root = path.resolve(dir);
   const out = [];
-  const seen = new Set();
+  const seen = new Set(origin === 'u' ? readPending(dir).map(keyOf) : []);
   for (const e of readList(dir).list) {
     const f = String(e.fichier || e.file || '').trim();
     if (!f || !isAudio(f)) continue;
@@ -114,6 +131,7 @@ function ensureUserDir(dir) {
 
 function loadAll(dirs) {
   try { ensureUserDir(dirs.user); } catch (e) { /* lecture seule quand même */ }
+  try { retryPending(dirs.user); } catch (e) { /* ignore */ }
   return loadDir(dirs.builtin, 'b').concat(loadDir(dirs.user, 'u'));
 }
 
@@ -184,4 +202,22 @@ function saveDuration(dir, id, dur) {
   writeList(dir, list);
 }
 
-module.exports = { AUDIO_EXT, loadAll, importFiles, saveDuration };
+// Supprime un morceau ajouté par l'utilisateur (jamais un morceau fourni avec le logiciel).
+function deleteTrack(dir, id) {
+  if (typeof id !== 'string' || !id.startsWith('u:')) return false;
+  const key = id.slice(2);
+  const list = editableList(dir);
+  const kept = list.filter(x => keyOf(x.fichier || x.file || '') !== key);
+  let name = null;
+  try { name = fs.readdirSync(dir).find(n => keyOf(n) === key) || null; } catch (e) { /* dossier absent */ }
+  if (kept.length !== list.length) writeList(dir, kept);
+  if (name) {
+    try { fs.rmSync(path.join(dir, name)); } catch (e) {
+      // Fichier encore verrouillé : masqué maintenant, effacé au prochain lancement.
+      const p = readPending(dir); if (!p.includes(name)) p.push(name); writePending(dir, p);
+    }
+  }
+  return true;
+}
+
+module.exports = { AUDIO_EXT, loadAll, importFiles, saveDuration, deleteTrack };

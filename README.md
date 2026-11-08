@@ -35,6 +35,7 @@ La désinstallation conserve `%APPDATA%\LaserBeat` (vos réglages et vos morceau
 ## Ajouter des morceaux
 
 - **Sans rien recompiler** : dans Bibliothèque, cliquez sur **Ajouter mes morceaux**. Les fichiers sont copiés dans `%APPDATA%\LaserBeat\musiques` et rangés dans « Mes imports ».
+  Pour retirer un morceau importé, survolez sa ligne et cliquez sur la corbeille (les morceaux fournis avec le logiciel ne peuvent pas être supprimés).
   Vous pouvez aussi copier des MP3 directement dans ce dossier. Pour choisir la playlist et le BPM, modifiez `morceaux.json` dans ce même dossier (LaserBeat fermé), puis relancez LaserBeat.
 - **Dans le logiciel lui-même** : copiez le MP3 dans `musiques/`, ajoutez une ligne dans `musiques/morceaux.json`, puis lancez `npm run build`.
 

@@ -93,6 +93,22 @@ function start() {
     if (r.canceled || !r.filePaths.length) return [];
     try { return library.importFiles(musicDirs.user, r.filePaths); } catch (err) { log('lib:import', err); return []; }
   });
+  ipcMain.handle('lib:confirm-delete', async (e, title) => {
+    const r = await dialog.showMessageBox(win, {
+      type: 'question',
+      buttons: ['Supprimer', 'Annuler'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+      title: 'Supprimer un morceau',
+      message: `Supprimer « ${String(title).slice(0, 120)} » ?`,
+      detail: 'Le morceau sera retiré de LaserBeat et son fichier effacé du dossier de vos morceaux. Cette action est définitive.'
+    });
+    return r.response === 0;
+  });
+  ipcMain.handle('lib:delete', (e, id) => {
+    try { return library.deleteTrack(musicDirs.user, id); } catch (err) { log('lib:delete', err); return false; }
+  });
   ipcMain.on('lib:duration', (e, id, dur) => {
     try { library.saveDuration(musicDirs.user, id, dur); } catch (err) { log('lib:duration', err); }
   });
@@ -135,7 +151,7 @@ function start() {
       show: false,
       title: 'LaserBeat',
       icon: path.join(__dirname, '..', 'assets', process.platform === 'win32' ? 'laserbeat.ico' : 'laserbeat.png'),
-      backgroundColor: '#ffffff',
+      backgroundColor: '#0a0910',
       autoHideMenuBar: true,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),

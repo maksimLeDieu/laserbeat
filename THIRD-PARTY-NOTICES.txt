@@ -6,6 +6,8 @@ LaserBeat est construit avec les composants libres suivants :
 - Electron (licence MIT) - voir LICENSE.electron.txt
 - Chromium et ses dépendances (licences diverses) - voir LICENSES.chromium.html
 - electron-updater (licence MIT) - Copyright (c) 2015 Loopline Systems
+- Polices Sora (Copyright 2019 The Sora Project Authors) et DM Sans (Copyright 2014 The DM Sans Project Authors),
+  sous licence SIL Open Font License 1.1 - texte complet dans resources/app.asar/src/renderer/fonts/
 - Icônes Feather (licence MIT), utilisées dans l'interface :
 
 The MIT License (MIT)
