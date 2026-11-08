@@ -722,7 +722,22 @@ $('#fPrev').innerHTML=ic('prev');$('#fNext').innerHTML=ic('next');
 $('#vol').value=A.volume;
 if(LB&&LB.version)$('#ver').textContent='v'+LB.version;
 /* Mise à jour automatique : quand une nouvelle version est téléchargée, un bouton apparaît. */
-function updReady(v){if(!v)return;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="btn pri" id="updBtn" style="width:100%;justify-content:center;padding:10px 14px;font-size:13px">${ic('bolt')} Installer la mise à jour ${esc(v)}</button><div class="sub" style="font-size:12px;margin:6px 4px 4px">LaserBeat redémarre (environ 20 s) puis la musique reprend. Sinon, elle s'installe à la prochaine fermeture.</div>`;$('#updBtn').onclick=()=>{saveState();$('#updBtn').disabled=true;$('#updBtn').textContent='Installation…';LB.installUpdate()}}
+function updReady(v){if(!v)return;updV=v;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="btn pri" id="updBtn" style="width:100%;justify-content:center;padding:10px 14px;font-size:13px">${ic('bolt')} Installer la mise à jour ${esc(v)}</button><div class="sub" style="font-size:12px;margin:6px 4px 4px">S'installe toute seule dès que la musique est en pause depuis 2 min, hors horaires ou à la fermeture. LaserBeat redémarre (environ 20 s) puis la musique reprend.</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
+/* Installation automatique, seulement à un moment calme : musique arrêtée depuis 2 min, ou créneau « Hors horaires ». */
+let updV=null,updDone=false,idleSince=null;
+function installUpd(why){
+ if(!updV||updDone||!LB||!LB.installUpdate)return;
+ updDone=true;logErr('Installation de la mise à jour '+updV+' ('+why+')');saveState();
+ const b=$('#updBtn');if(b){b.disabled=true;b.textContent='Installation…'}
+ LB.installUpdate();
+}
+setInterval(()=>{
+ if(!updV||updDone)return;
+ const playing=!A.paused&&P.i>=0;
+ if(playing)idleSince=null;else if(idleSince===null)idleSince=Date.now();
+ if(curSlot()===SL[4])installUpd('hors horaires');
+ else if(!playing&&Date.now()-idleSince>=120000)installUpd('musique arrêtée');
+},20000);
 if(LB&&LB.onUpdate){updReady(LB.updateReady);LB.onUpdate(updReady)}
 if(window.innerWidth<=860){$('#side').classList.add('off');$('#app').classList.add('nosb')}
 const h0=(location.hash||'').slice(1);

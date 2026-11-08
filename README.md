@@ -64,9 +64,10 @@ GitHub (`maksimLeDieu/laserbeat`, onglet Releases).
 
 - 1 minute après le lancement, puis toutes les 4 heures, LaserBeat regarde s'il existe une nouvelle version.
   Sans Internet, il ne se passe rien : la musique continue normalement.
-- La nouvelle version se télécharge en arrière-plan. Un bouton « Installer la mise à jour » apparaît alors
-  en bas à gauche : LaserBeat redémarre (environ 20 s) et la musique reprend.
-  Sinon, la mise à jour s'installe à la prochaine fermeture de LaserBeat (jamais pendant un arrêt de Windows).
+- La nouvelle version se télécharge en arrière-plan, puis s'installe toute seule à un moment calme :
+  musique en pause ou arrêtée depuis 2 minutes, créneau « Hors horaires » de l'Agenda, ou fermeture de
+  LaserBeat (jamais pendant un arrêt de Windows). LaserBeat redémarre (environ 20 s) et la musique reprend.
+  Le bouton « Installer la mise à jour » (en bas à gauche) permet de l'installer tout de suite.
 - Réglages, favoris, Agenda, morceaux ajoutés et lancement au démarrage sont conservés.
 
 Publier une nouvelle version : augmenter `version` dans `package.json` et pousser sur `main`.

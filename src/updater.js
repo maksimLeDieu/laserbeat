@@ -66,8 +66,10 @@ function setupUpdater({ log, getWindow }) {
   setTimeout(check, FIRST_CHECK_MS);
   setInterval(check, CHECK_EVERY_MS);
 
+  let installing = false;
   ipcMain.on('update:install', () => {
-    if (!ready) return;
+    if (!ready || installing) return;
+    installing = true;
     log('[maj] installation demandée', ready);
     // Installation silencieuse puis relance de LaserBeat ; la musique reprend toute seule.
     setTimeout(() => autoUpdater.quitAndInstall(true, true), 300);
