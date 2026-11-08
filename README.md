@@ -57,6 +57,21 @@ Laser Arena contient automatiquement les morceaux de Tech Zone, d'Overdrive et d
 - Si LaserBeat jouait au moment où il a été fermé (ou en cas de coupure de courant), il reprend la musique au prochain lancement.
 - LaserBeat ne s'ouvre qu'une fois : si vous le relancez, la fenêtre déjà ouverte revient au premier plan.
 
+## Réglages conseillés sur le PC du laser game (à faire une fois)
+
+1. **Lancement au démarrage** : relancer l'installateur et cocher « Lancer LaserBeat au démarrage de Windows »
+   (après une coupure de courant ou un redémarrage de Windows, la musique repart toute seule).
+2. **Veille** : Paramètres › Système › Alimentation › « Mettre en veille » sur **Jamais** (secteur).
+3. **Windows Update** : Paramètres › Windows Update › Options avancées › **Heures d'activité** = vos horaires
+   d'ouverture (Windows ne redémarrera pas pendant les parties).
+4. **Sortie audio** : clic droit sur l'icône du son › Paramètres audio › choisir l'ampli / les enceintes comme
+   périphérique de sortie par défaut.
+5. **Notifications** : Paramètres › Système › Notifications › activer « Ne pas déranger » (pas de sons Windows
+   par-dessus la musique).
+
+La croix de la fenêtre propose « Réduire » (la musique continue) ou « Quitter » : un clic par erreur ne coupe
+plus la musique.
+
 ## Mise à jour automatique
 
 Depuis la version 1.3.0, LaserBeat se met à jour tout seul à partir des versions publiées sur

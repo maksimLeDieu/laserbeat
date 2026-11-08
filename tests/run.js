@@ -211,6 +211,24 @@ test('Une seule instance : un 2e lancement se ferme et réaffiche la fenêtre', 
   await close(app);
 });
 
+test('Croix de la fenêtre : « Réduire » garde la musique, « Quitter » ferme', async () => {
+  const { app, w } = await launch(newDataDir('croix'));
+  await w.click('text=Jouer la musique');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  await app.evaluate(({ dialog }) => { global.__asked = 0; dialog.showMessageBox = async () => { global.__asked++; return { response: 0 }; }; });
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
+  await sleep(1500);
+  const st = await app.evaluate(({ BrowserWindow }) => ({ n: BrowserWindow.getAllWindows().length, min: BrowserWindow.getAllWindows()[0].isMinimized(), asked: global.__asked }));
+  assert(st.asked === 1, 'question non posée');
+  assert(st.n === 1, 'fenêtre fermée au lieu de réduite');
+  assert(await playing(w), 'la musique s\'est arrêtée');
+  await app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1 }); });
+  const exited = new Promise(r => app.process().once('exit', () => r(true)));
+  await app.evaluate(({ BrowserWindow }) => { const b = BrowserWindow.getAllWindows()[0]; b.restore(); b.close(); });
+  assert(await Promise.race([exited, sleep(10000).then(() => false)]), '« Quitter » ne ferme pas LaserBeat');
+  current = null;
+});
+
 test('Mise à jour prête : le bouton apparaît et lance l\'installation', async () => {
   const { app, w } = await launch(newDataDir('maj'));
   await app.evaluate(({ ipcMain }) => { global.__inst = 0; ipcMain.on('update:install', () => global.__inst++); });

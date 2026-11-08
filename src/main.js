@@ -64,6 +64,7 @@ function start() {
   let musicDirs = null;
   let blockerId = null;
   let updater = null;
+  let quitting = false;
 
   function setPlaying(playing) {
     if (playing && blockerId === null) {
@@ -145,7 +146,8 @@ function start() {
   });
 
   app.on('window-all-closed', () => app.quit());
-  app.on('before-quit', () => { setPlaying(false); if (config) config.flush(); });
+  // Fermeture voulue (Quitter, mise à jour, redémarrage de nuit, arrêt de Windows) : la fenêtre se ferme sans question.
+  app.on('before-quit', () => { quitting = true; setPlaying(false); if (config) config.flush(); });
 
   // Aucune fenêtre ou vue supplémentaire : tout reste dans la fenêtre LaserBeat.
   app.on('web-contents-created', (e, wc) => {
@@ -204,7 +206,32 @@ function start() {
     wc.on('console-message', (e) => { if (e.level === 'error') log('[console]', e.message); });
 
     // Arrêt de Windows : pas d'installation de mise à jour à ce moment-là.
-    win.on('session-end', () => { if (updater) updater.onSessionEnd(); });
+    win.on('query-session-end', () => { quitting = true; });
+    win.on('session-end', () => { quitting = true; if (updater) updater.onSessionEnd(); });
+
+    // Croix de la fenêtre (ou Alt+F4) : on propose de réduire, pour ne pas couper la musique par erreur.
+    let asking = false;
+    win.on('close', e => {
+      if (quitting) return;
+      e.preventDefault();
+      if (asking) return;
+      asking = true;
+      dialog.showMessageBox(win, {
+        type: 'question',
+        buttons: ['Réduire', 'Quitter LaserBeat', 'Annuler'],
+        defaultId: 0,
+        cancelId: 2,
+        noLink: true,
+        title: 'LaserBeat',
+        message: 'Fermer LaserBeat ?',
+        detail: 'Réduire : la musique continue, LaserBeat reste dans la barre des tâches.\nQuitter : la musique s\'arrête.'
+      }).then(r => {
+        asking = false;
+        if (!win || win.isDestroyed()) return;
+        if (r.response === 0) win.minimize();
+        else if (r.response === 1) { log('fermeture demandée'); app.quit(); }
+      }).catch(err => { asking = false; log('dialogue fermeture', err); });
+    });
     win.on('closed', () => { win = null; setPlaying(false); });
     win.loadFile(INDEX);
   }
