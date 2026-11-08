@@ -41,8 +41,16 @@ jobs:
           fi
       - if: steps.deja.outputs.skip != 'true'
         run: npm ci
-      - name: Compiler et publier
+      - name: Compiler l'installateur
         if: steps.deja.outputs.skip != 'true'
-        run: npx electron-builder --win nsis --x64 --publish always
+        run: npx electron-builder --win nsis --x64 --publish never
+      - name: Publier la Release
+        if: steps.deja.outputs.skip != 'true'
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v="${{ steps.deja.outputs.version }}"
+          gh release create "$v" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "LaserBeat ${v#v}" --notes "Mise à jour de LaserBeat ${v#v}. Les PC équipés la récupèrent automatiquement." \
+            dist/LaserBeat-Setup.exe dist/LaserBeat-Setup.exe.blockmap dist/latest.yml
