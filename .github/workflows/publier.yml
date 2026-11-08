@@ -1,16 +1,23 @@
 # Publie une nouvelle version de LaserBeat.
-# Déclenchement : pousser un tag « vX.Y.Z » identique à la version de package.json.
-# Le robot compile l'installateur sur Windows puis crée la Release GitHub
+# Déclenchement : un changement de package.json sur la branche main (nouveau numéro de version),
+# ou à la main depuis l'onglet Actions (« Run workflow »).
+# Le robot compile l'installateur sur Windows puis crée la Release GitHub « vX.Y.Z »
 # (LaserBeat-Setup.exe, .blockmap et latest.yml) : les PC équipés de LaserBeat
-# la téléchargent ensuite tout seuls.
+# la téléchargent ensuite tout seuls. Si la Release de cette version existe déjà, rien n'est republié.
 name: Publier une version
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: ['package.json']
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: publier
+  cancel-in-progress: false
 
 jobs:
   windows:
@@ -21,13 +28,21 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Vérifier que le tag correspond à la version
+      - name: Version déjà publiée ?
+        id: deja
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           v="v$(node -p "require('./package.json').version")"
-          if [ "$v" != "$GITHUB_REF_NAME" ]; then echo "Le tag $GITHUB_REF_NAME ne correspond pas à package.json ($v)"; exit 1; fi
-      - run: npm ci
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "$v" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "La Release $v existe déjà : rien à publier."; echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.deja.outputs.skip != 'true'
+        run: npm ci
       - name: Compiler et publier
+        if: steps.deja.outputs.skip != 'true'
         run: npx electron-builder --win nsis --x64 --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -68,10 +68,10 @@ GitHub (`maksimLeDieu/laserbeat`, onglet Releases).
   Sinon, la mise à jour s'installe à la prochaine fermeture de LaserBeat (jamais pendant un arrêt de Windows).
 - Réglages, favoris, Agenda, morceaux ajoutés et lancement au démarrage sont conservés.
 
-Publier une nouvelle version : augmenter `version` dans `package.json`, committer, puis pousser un tag
-identique (`git tag v1.3.1 && git push origin main v1.3.1`). Le workflow GitHub Actions
-`.github/workflows/publier.yml` compile l'installateur sur Windows et crée la Release
-(`LaserBeat-Setup.exe`, `.blockmap`, `latest.yml`).
+Publier une nouvelle version : augmenter `version` dans `package.json` et pousser sur `main`.
+Le workflow GitHub Actions `.github/workflows/publier.yml` compile alors l'installateur sur Windows
+et crée la Release `v<version>` (`LaserBeat-Setup.exe`, `.blockmap`, `latest.yml`).
+On peut aussi le lancer à la main : onglet Actions › Publier une version › Run workflow.
 
 ## Structure
 
