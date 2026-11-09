@@ -787,9 +787,9 @@ $('#fPrev').innerHTML=ic('prev');$('#fNext').innerHTML=ic('next');
 $('#vol').value=A.volume;
 if(LB&&LB.version)$('#ver').textContent='v'+LB.version;
 /* Mise à jour automatique : quand une nouvelle version est téléchargée, un bouton apparaît. */
-function updReady(v){if(!v)return;updV=v;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="btn pri" id="updBtn" style="width:100%;justify-content:center;padding:10px 14px;font-size:13px">${ic('bolt')} Installer la mise à jour ${esc(v)}</button><div class="sub" style="font-size:12px;margin:6px 4px 4px">S'installe toute seule dès que la musique est en pause depuis 2 min, ou à la fermeture. LaserBeat redémarre (environ 20 s) puis la musique reprend.</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
-/* Installation automatique, seulement à un moment calme : musique arrêtée depuis 2 min (ou à la fermeture). */
-let updV=null,updDone=false,idleSince=null;
+function updReady(v){if(!v)return;updV=v;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="btn pri" id="updBtn" style="width:100%;justify-content:center;padding:10px 14px;font-size:13px">${ic('bolt')} Installer la mise à jour ${esc(v)}</button><div class="sub" style="font-size:12px;margin:6px 4px 4px">Elle s'installera au prochain lancement de LaserBeat, ou tout de suite si vous cliquez ici (redémarrage d'environ 20 s, puis la musique reprend).</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
+/* La mise à jour téléchargée ne s'installe que sur décision : bouton, ou fermeture volontaire de LaserBeat. */
+let updV=null,updDone=false;
 /* Écran de mise à jour : la barre avance vite puis ralentit (courbe « ease-out »), sans jamais reculer
    ni s'arrêter ; le pourcentage affiché correspond toujours à la longueur de la barre et atteint 100 % à la fin. */
 function updateScreen(kicker,titleTxt,sub,ms){
@@ -808,26 +808,20 @@ function updateScreen(kicker,titleTxt,sub,ms){
 function hideUpdateScreen(){const b=$('#boot');b.classList.add('out');setTimeout(()=>{b.hidden=true;b.classList.remove('out')},400)}
 async function installUpd(why){
  if(!updV||updDone||!LB||!LB.installUpdate)return;
- updDone=true;logErr('Installation de la mise à jour '+updV+' ('+why+')');saveState();
+ updDone=true;logErr('Installation de la mise à jour '+updV+' ('+why+')');
+ if(why!=='lancement')saveState(); // au lancement, on garde l'état de la session précédente pour la reprise
  const b=$('#updBtn');if(b){b.disabled=true;b.textContent='Installation…'}
  await updateScreen('Mise à jour','LaserBeat '+updV,'Préparation de la nouvelle version…',4000);
  $('#bootS').textContent='Installation en cours : LaserBeat redémarre dans un instant.';
  LB.installUpdate();
 }
-setInterval(()=>{
- if(!updV||updDone)return;
- const playing=!A.paused&&P.i>=0;
- if(playing)idleSince=null;else if(idleSince===null)idleSince=Date.now();
- if(!playing&&Date.now()-idleSince>=120000)installUpd('musique arrêtée');
-},20000);
 if(LB&&LB.onUpdate){updReady(LB.updateReady);LB.onUpdate(updReady)}
 if(window.innerWidth<=860){$('#side').classList.add('off');$('#app').classList.add('nosb')}
 const h0=(location.hash||'').slice(1);
 V={name:['home','all','lib'].includes(h0)?h0:'home',arg:null};
 render();
 const hadResume=!!store.get('resume',null); // lu avant toute sauvegarde de ce lancement
-resume();
-if(!store.get('v2',false)){P.repeat=1;store.set('v2',true);ui();saveState()}
+const migrateV2=!store.get('v2',false);if(migrateV2)store.set('v2',true);
 (function(){
  const v=LB&&LB.version,prev=store.get('lastVersion',null);
  if(!v)return;
@@ -835,6 +829,20 @@ if(!store.get('v2',false)){P.repeat=1;store.set('v2',true);ui();saveState()}
  // ancienne version sans ce repère : on la reconnaît à son état de lecture déjà enregistré
  const updated=prev?prev!==v:hadResume;
  if(updated)updateScreen('Mise à jour installée','LaserBeat '+v,'Finalisation de la mise à jour…',3000).then(hideUpdateScreen);
+})();
+/* Lancement : s'il y a une mise à jour prête, elle s'installe AVANT de démarrer la musique.
+   Sécurité : après 2 tentatives ratées pour une même version, on arrête de réessayer au lancement. */
+function launchTryOk(v){
+ const t=store.get('updTry',{})||{};
+ if(t.v===v&&t.n>=2){logErr('Mise à jour '+v+' : 2 tentatives sans succès, installation au lancement suspendue');return false}
+ store.set('updTry',{v,n:(t.v===v?t.n:0)+1});return true;
+}
+(async function startup(){
+ let v=null;
+ if(LB&&LB.launchUpdateCheck){try{v=await LB.launchUpdateCheck()}catch(e){v=null}}
+ if(v&&v!==(LB&&LB.version)&&launchTryOk(v)){updV=v;installUpd('lancement');return}
+ resume();
+ if(migrateV2){P.repeat=1;ui();saveState()}
 })();
 probe(TRACKS);
 window.addEventListener('beforeunload',saveState);

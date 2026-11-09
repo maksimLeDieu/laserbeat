@@ -83,12 +83,13 @@ plus la musique.
 Depuis la version 1.3.0, LaserBeat se met à jour tout seul à partir des versions publiées sur
 GitHub (`maksimLeDieu/laserbeat`, onglet Releases).
 
-- 1 minute après le lancement, puis toutes les 4 heures, LaserBeat regarde s'il existe une nouvelle version.
-  Sans Internet, il ne se passe rien : la musique continue normalement.
-- La nouvelle version se télécharge en arrière-plan, puis s'installe toute seule à un moment calme :
-  musique en pause ou arrêtée depuis 2 minutes, ou fermeture de
-  LaserBeat (jamais pendant un arrêt de Windows). LaserBeat redémarre (environ 20 s) et la musique reprend.
-  Le bouton « Installer la mise à jour » (en bas à gauche) permet de l'installer tout de suite.
+- **Au lancement**, avant de démarrer la musique, LaserBeat regarde s'il a une mise à jour prête (6 s au plus).
+  Si oui : écran « Mise à jour » avec barre de progression, installation, redémarrage, écran « Mise à jour
+  installée », puis la musique démarre. Sinon (ou sans Internet), la musique démarre normalement.
+- **Pendant l'utilisation**, les nouvelles versions sont seulement téléchargées en arrière-plan (toutes les 4 h),
+  sans couper la musique : elles s'installeront au lancement suivant. Le bouton « Installer la mise à jour »
+  (en bas à gauche) permet aussi de l'installer tout de suite. Jamais pendant une pause ni un arrêt de Windows.
+- Sécurité : après 2 tentatives ratées pour une même version, LaserBeat ne réessaie plus au lancement.
 - Réglages, favoris, morceaux ajoutés et lancement au démarrage sont conservés.
 
 Publier une nouvelle version : augmenter `version` dans `package.json` et pousser sur `main`.

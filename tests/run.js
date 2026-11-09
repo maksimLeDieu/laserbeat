@@ -30,11 +30,11 @@ function newDataDir(name) {
   fs.mkdirSync(d, { recursive: true });
   return d;
 }
-function env(dataDir) {
-  return { ...process.env, LASERBEAT_USER_DATA: dataDir, LASERBEAT_TEST: '1' };
+function env(dataDir, extra) {
+  return { ...process.env, LASERBEAT_USER_DATA: dataDir, LASERBEAT_TEST: '1', ...(extra || {}) };
 }
-async function launch(dataDir) {
-  const app = await _electron.launch({ executablePath: ELECTRON, args: BASE_ARGS, env: env(dataDir), timeout: 60000 });
+async function launch(dataDir, extra) {
+  const app = await _electron.launch({ executablePath: ELECTRON, args: BASE_ARGS, env: env(dataDir, extra), timeout: 60000 });
   const w = await app.firstWindow();
   await w.waitForLoadState('domcontentloaded');
   await w.waitForTimeout(1500);
@@ -305,6 +305,29 @@ test('Mise à jour prête : le bouton apparaît et lance l\'installation', async
   assert(p2 - p1 > p3 - p2, 'la barre ne ralentit pas');
   assert(await waitFor(() => app.evaluate(() => global.__inst === 1), 4000), 'installation non demandée');
   assert((await pct()) === 100, 'la barre n\'atteint pas 100 %');
+  await close(app);
+});
+
+test('Mise à jour au lancement : installée avant la musique, 2 essais au maximum', async () => {
+  const dir = newDataDir('maj-lancement');
+  let { app, w } = await launch(dir);                       // session précédente : musique en cours
+  await w.click('text=Jouer la musique');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  await w.waitForTimeout(800);
+  await close(app);
+  for (let k = 1; k <= 2; k++) {
+    ({ app, w } = await launch(dir, { LASERBEAT_TEST_LAUNCH_UPDATE: '9.9.9' }));
+    await app.evaluate(({ ipcMain }) => { global.__inst = 0; ipcMain.on('update:install', () => global.__inst++); });
+    assert(await w.isVisible('#boot'), 'écran de mise à jour absent au lancement (essai ' + k + ')');
+    assert(!(await playing(w)), 'la musique démarre avant la mise à jour');
+    assert(await waitFor(() => app.evaluate(() => global.__inst === 1), 8000), 'installation non lancée (essai ' + k + ')');
+    await close(app);
+  }
+  const cfg = JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8'));
+  assert(cfg.lb_resume && cfg.lb_resume.playing, 'état de lecture perdu pendant la mise à jour');
+  ({ app, w } = await launch(dir, { LASERBEAT_TEST_LAUNCH_UPDATE: '9.9.9' }));  // 3e lancement : on n'insiste plus
+  assert(await waitFor(() => playing(w), 10000), 'après 2 échecs, la musique doit démarrer normalement');
+  assert(!(await w.isVisible('#boot')), 'écran de mise à jour encore affiché');
   await close(app);
 });
 
