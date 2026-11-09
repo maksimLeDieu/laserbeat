@@ -728,10 +728,9 @@ function about(show){
  if(!show){m.hidden=true;return}
  $('#aboutBox').innerHTML=`<button class="ibtn x" data-close title="Fermer">${ic('x')}</button>
  <div class="mh"><div class="logo">${ic('bolt')}</div><div><h3 id="aboutT">À propos de LaserBeat</h3><small>Version ${esc(LB&&LB.version?LB.version:'')}</small></div></div>
- <h4>Création</h4><p>LaserBeat a été entièrement conçu et réalisé par ${AUTEUR} : l'interface, le logiciel et toutes les musiques intégrées.</p>
- <h4>Musiques</h4><p>Les musiques intégrées sont des créations originales de ${AUTEUR}. Elles n'utilisent aucune œuvre d'un autre artiste et ne font partie d'aucun catalogue de gestion de droits (SACEM). Aucun droit n'est dû à un tiers pour leur diffusion.</p>
- <h4>Propriété et utilisation</h4><p>LaserBeat et ses musiques appartiennent à ${AUTEUR}, qui en autorise l'utilisation à ${UTILISATEUR}.</p>
- <h4>Composants libres</h4><p>LaserBeat s'appuie sur des briques open source (Electron, polices Sora et DM Sans, icônes Feather) dont les licences libres autorisent cet usage. Leurs mentions sont fournies avec le logiciel (fichier THIRD-PARTY-NOTICES.txt).</p>
+ <h4>Propriété</h4><p>LaserBeat appartient entièrement et exclusivement à ${AUTEUR}, qui en est le seul auteur : le logiciel, l'interface et toutes les musiques intégrées ont été créés par lui.</p>
+ <h4>Légalité</h4><p>L'ensemble est utilisé en toute légalité. Les musiques sont des créations originales de ${AUTEUR} : elles n'utilisent aucune œuvre d'un autre artiste et aucun droit n'est dû à un tiers pour leur diffusion. Les quelques briques techniques libres utilisées (Electron, polices, icônes) le sont selon leurs licences, qui autorisent cet usage.</p>
+ <h4>Autorisation d'utilisation</h4><p>${AUTEUR} autorise ${UTILISATEUR} à utiliser LaserBeat et à diffuser ses musiques dans les établissements Laser Game Evolution de <b>Trégueux</b>, <b>Quimper</b> et <b>Brest</b>.</p>
  <p class="foot">© ${new Date().getFullYear()} ${AUTEUR} — tous droits réservés.</p>`;
  const lg=$('#aboutBox .logo svg');if(lg)lg.style.stroke='#fff';
  m.hidden=false;$('#aboutBox [data-close]').focus();

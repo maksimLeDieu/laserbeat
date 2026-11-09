@@ -192,7 +192,7 @@ test('Bouton ⓘ : fiche « À propos » (auteur, propriété, utilisation)', as
   await w.click('#bInfo');
   assert(await w.isVisible('#about'), 'fiche non affichée');
   const txt = await w.textContent('#aboutBox');
-  for (const m of ['Maxime Loret', 'Didier Floret', 'créations originales', 'appartiennent']) assert(txt.includes(m), 'texte manquant : ' + m);
+  for (const m of ['Maxime Loret', 'Didier Floret', 'exclusivement', 'légalité', 'Trégueux', 'Quimper', 'Brest']) assert(txt.includes(m), 'texte manquant : ' + m);
   await w.keyboard.press('Escape');
   assert(!(await w.isVisible('#about')), 'Échap ne ferme pas la fiche');
   await close(app);
