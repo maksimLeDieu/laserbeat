@@ -262,8 +262,6 @@ if __name__ == '__main__':
     import os
     out = sys.argv[1]; os.makedirs(out, exist_ok=True)
     jobs = {'laser-arena': arena, 'laserbeats': beats, 'ambiance-accueil': accueil, 'morceaux-preferes': favoris,
-            'LaserBeat 1 - Phonk Laser Game': t_phonk_laser_game, 'LaserBeat 2 - Phonk': t_phonk,
-            'LaserBeat 3 - Mandelao': t_mandelao, 'LaserBeat 4 - Drift Hardbass': t_drift_hardbass,
-            'LaserBeat 5 - Drift Hardbass II': t_drift_hardbass_2, 'LaserBeat 6 - Hard Rock': t_hard_rock}
+            }  # les images des morceaux sont faites par outils/pochettes-morceaux (rendu.js puis developper.py)
     only = sys.argv[2:] or list(jobs)
     for name in only: jobs[name](os.path.join(out, name + '.webp'))
