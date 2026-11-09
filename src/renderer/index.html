@@ -440,7 +440,7 @@ const ic=(n,extra='')=>{const [f,p]=IC[n];return `<svg viewBox="0 0 24 24" class
 /* Morceaux : musiques/morceaux.json (fournis avec le logiciel) + %APPDATA%\LaserBeat\musiques (ajoutés). */
 const TR=LB&&Array.isArray(LB.tracks)?LB.tracks:[];
 const PL=[
- {id:'fav',name:'Morceaux préférés',tags:['Vos favoris'],h:[345,15],special:true},
+ {id:'fav',name:'Morceaux préférés',tags:['Vos favoris'],h:[345,15],special:true,img:'img/morceaux-preferes.png'},
  {id:'arena',name:'Laser Arena',tags:['Phonk','Drift hardbass','Mandelao','Hard rock'],h:[265,330]},
  {id:'beats',name:'LaserBeats',tags:['Phonk','Drift hardbass','Mandelao','Hard rock'],h:[135,295]},
  {id:'accueil',name:'Ambiance accueil',tags:['Accueil','Ambiance'],h:[38,175]}
@@ -486,6 +486,8 @@ const trackUrl=t=>t.url;
 const artStyle=p=>`background:radial-gradient(circle at 22% 18%,hsl(${p.h[0]} 95% 62%),transparent 58%),radial-gradient(circle at 82% 78%,hsl(${p.h[1]} 90% 55%),transparent 58%),linear-gradient(160deg,hsl(${p.h[0]} 55% 22%),hsl(${p.h[1]} 65% 14%))`;
 /* Visuel d'un morceau : sa photo s'il en a une, sinon les couleurs de sa playlist.
    tArt = CSS brut (pour element.style) ; tArtH = même chose, prêt à mettre dans un attribut HTML. */
+/* Visuel d'une playlist : sa pochette si elle en a une, sinon ses couleurs. */
+const pArt=p=>p.img?`background:#1c1c22 url("${p.img}") center/cover no-repeat`:artStyle(p);
 const tArt=t=>t.img?`background:#1c1c22 url("${t.img}") center/cover no-repeat`:artStyle(getPl(t.pl));
 const tArtH=t=>esc(tArt(t));
 const fmt=s=>{if(!isFinite(s))return'0:00';s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
@@ -790,13 +792,13 @@ const titles={home:'Accueil',all:'Tous les morceaux',lib:'Bibliothèque',search:
 const playBtn=(id,act)=>`<button class="fplay" data-act="${act}" data-id="${id}" title="Écouter">${ic('play')}</button>`;
 function card(p){
  const n=tracksOf(p.id).length;
- return `<div class="cd" data-act="open-pl" data-id="${p.id}"><div class="ca" style="${artStyle(p)}">${plIcon(p)}${n?playBtn(p.id,'play-pl'):''}</div><b>${esc(p.name)}</b><small>${esc(plDesc(p))}</small></div>`;
+ return `<div class="cd" data-act="open-pl" data-id="${p.id}"><div class="ca" style="${esc(pArt(p))}">${p.img?'':plIcon(p)}${n?playBtn(p.id,'play-pl'):''}</div><b>${esc(p.name)}</b><small>${esc(plDesc(p))}</small></div>`;
 }
 function tcard(t){
  const p=getPl(t.pl);
  return `<div class="cd" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}"><div class="ca" style="${tArtH(t)}">${t.img?'':ic('note')}<button class="fplay" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" title="Écouter">${ic('play')}</button></div><b>${esc(t.title)}</b><small>${esc(p.name)}${t.bpm?' · '+t.bpm+' BPM':''}</small></div>`;
 }
-const qPl=p=>`<div class="qt" data-act="open-pl" data-id="${p.id}" data-h="${p.h[0]}"><i style="${artStyle(p)}">${plIcon(p)}</i><span>${esc(p.name)}</span>${tracksOf(p.id).length?`<button class="fplay" data-act="play-pl" data-id="${p.id}" title="Écouter">${ic('play')}</button>`:''}</div>`;
+const qPl=p=>`<div class="qt" data-act="open-pl" data-id="${p.id}" data-h="${p.h[0]}"><i style="${esc(pArt(p))}">${p.img?'':plIcon(p)}</i><span>${esc(p.name)}</span>${tracksOf(p.id).length?`<button class="fplay" data-act="play-pl" data-id="${p.id}" title="Écouter">${ic('play')}</button>`:''}</div>`;
 const qTr=t=>{const p=getPl(t.pl);return `<div class="qt" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" data-h="${p.h[0]}"><i style="${tArtH(t)}">${t.img?'':ic('note')}</i><span>${esc(t.title)}</span><button class="fplay" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" title="Écouter">${ic('play')}</button></div>`};
 const thead=()=>`<div class="trow thead"><span class="n">#</span><span>Titre</span><span class="c-pl">Playlist</span><span class="c-bpm">Tempo</span><span></span><span class="dur" title="Durée">${ic('clock')}</span></div>`;
 function trow(t,i,plId){
@@ -825,7 +827,7 @@ function vHome(el){
  </div>`;
 }
 /* En-tête de page coloré, comme une pochette d'album. */
-const head=(p,kick,title,desc,icon)=>`<div class="ph"><div class="art" style="${artStyle(p)}">${icon}</div><div class="pt"><small>${kick}</small><h1>${esc(title)}</h1><p>${desc}</p></div></div>`;
+const head=(p,kick,title,desc,icon)=>`<div class="ph"><div class="art" style="${esc(pArt(p))}">${p.img?'':icon}</div><div class="pt"><small>${kick}</small><h1>${esc(title)}</h1><p>${desc}</p></div></div>`;
 function vPl(el){
  const p=getPl(V.arg),l=tracksOf(p.id),acc=p.id==='accueil',d=durTxt(l.reduce((s,t)=>s+(t.dur||0),0));
  const empty=p.id==='fav'?'Aucun favori pour le moment. Cliquez sur l\'étoile d\'un morceau pour l\'ajouter ici.'
@@ -871,7 +873,7 @@ function render(){
 }
 function go(name,arg){V={name,arg:arg||null};render();$('#main').scrollTop=0;onScroll();try{history.replaceState(null,'','#'+name)}catch(e){}}
 function sideList(){
- $('#sideList').innerHTML=PL.filter(shownPl).map(p=>`<button class="pli ${V.name==='pl'&&V.arg===p.id?'on':''}" data-act="open-pl" data-id="${p.id}" title="${esc(p.name)}"><span class="pa" style="${artStyle(p)}">${p.special?ic('star'):''}</span><span class="pm"><b>${esc(p.name)}</b><small>Playlist · ${nTxt(tracksOf(p.id).length)}</small></span><span class="spk">${ic('vol')}</span></button>`).join('');
+ $('#sideList').innerHTML=PL.filter(shownPl).map(p=>`<button class="pli ${V.name==='pl'&&V.arg===p.id?'on':''}" data-act="open-pl" data-id="${p.id}" title="${esc(p.name)}"><span class="pa" style="${esc(pArt(p))}">${p.special&&!p.img?ic('star'):''}</span><span class="pm"><b>${esc(p.name)}</b><small>Playlist · ${nTxt(tracksOf(p.id).length)}</small></span><span class="spk">${ic('vol')}</span></button>`).join('');
 }
 
 /* ---------- actions ---------- */
