@@ -42,11 +42,11 @@ La désinstallation conserve `%APPDATA%\LaserBeat` (vos réglages et vos morceau
 Format d'une entrée :
 
 ```json
-{ "titre": "Cible Verrouillée", "fichier": "01-cible-verrouillee.mp3", "playlist": "Tech Zone", "bpm": 144, "duree": 141.5 }
+{ "titre": "Phonk Laser Game", "fichier": "LaserBeat 1 - Phonk Laser Game.mp3", "playlist": "LaserBeats", "bpm": 145, "duree": 80.5 }
 ```
 
-Pour `playlist`, mettez `Tech Zone`, `Overdrive`, `LaserBeats`, `Laser Arena`, `Mes imports` ou un nouveau nom (la playlist est alors créée).
-Laser Arena contient automatiquement les morceaux de Tech Zone, d'Overdrive et de LaserBeats. Si `duree` vaut 0 ou manque, elle est calculée toute seule.
+Pour `playlist`, mettez `LaserBeats`, `Ambiance accueil`, `Mes imports` ou un nouveau nom (la playlist est alors créée).
+Laser Arena contient automatiquement les morceaux de LaserBeats. Si `duree` vaut 0 ou manque, elle est calculée toute seule.
 
 ## Fonctionnement
 

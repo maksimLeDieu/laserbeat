@@ -8,8 +8,8 @@
  *    « Ajouter mes morceaux » ou à la main.
  *
  * Format d'une entrée de morceaux.json :
- *   { "titre": "Cible Verrouillée", "fichier": "01-cible-verrouillee.mp3",
- *     "playlist": "Tech Zone", "bpm": 144, "duree": 141.5 }
+ *   { "titre": "Phonk Laser Game", "fichier": "LaserBeat 1 - Phonk Laser Game.mp3",
+ *     "playlist": "LaserBeats", "bpm": 145, "duree": 80.5 }
  * Un fichier audio présent dans le dossier mais absent du JSON est quand même ajouté
  * (titre = nom du fichier). Une entrée dont le fichier n'existe pas est ignorée.
  */
@@ -110,12 +110,12 @@ Le fichier morceaux.json décrit chaque morceau (modifiable avec le Bloc-notes) 
   {
     "titre": "Mon morceau",
     "fichier": "mon-morceau.mp3",
-    "playlist": "Tech Zone",
+    "playlist": "LaserBeats",
     "bpm": 150,
     "duree": 0
   }
 
-- "playlist" : Laser Arena, Tech Zone, Overdrive, LaserBeats, Mes imports, ou un nouveau nom
+- "playlist" : LaserBeats, Ambiance accueil, Mes imports, ou un nouveau nom
   (une nouvelle playlist est alors créée).
 - "duree" en secondes (0 = calculée automatiquement).
 Fermez LaserBeat avant de modifier ce fichier, puis relancez-le.

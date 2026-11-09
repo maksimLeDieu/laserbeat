@@ -441,13 +441,11 @@ const ic=(n,extra='')=>{const [f,p]=IC[n];return `<svg viewBox="0 0 24 24" class
 const TR=LB&&Array.isArray(LB.tracks)?LB.tracks:[];
 const PL=[
  {id:'fav',name:'Morceaux préférés',tags:['Vos favoris'],h:[345,15],special:true},
- {id:'arena',name:'Laser Arena',tags:['Techno','Hard tech','Drum & bass','Phonk'],h:[265,330]},
- {id:'tech',name:'Tech Zone',tags:['Hard techno','Techno'],h:[190,230]},
- {id:'over',name:'Overdrive',tags:['Hard tech','Drum & bass'],h:[20,50]},
+ {id:'arena',name:'Laser Arena',tags:['Phonk','Drift hardbass','Mandelao','Hard rock'],h:[265,330]},
  {id:'beats',name:'LaserBeats',tags:['Phonk','Drift hardbass','Mandelao','Hard rock'],h:[135,295]},
  {id:'accueil',name:'Ambiance accueil',tags:['Accueil','Ambiance'],h:[38,175]}
 ];
-const LASER=['arena','tech','over','beats']; // Laser Arena = tous les morceaux de ces playlists
+const LASER=['arena','beats']; // Laser Arena = tous les morceaux de ces playlists
 const plKey=s=>String(s||'').trim().toLowerCase();
 function impPl(){let p=PL.find(x=>x.id==='imp');if(!p){p={id:'imp',name:'Mes imports',tags:['Fichiers ajoutés'],bpmTxt:'',h:[95,175],tracks:[]};PL.push(p)}return p}
 function plFor(name){
@@ -460,7 +458,7 @@ function plFor(name){
 const mkTrack=t=>({id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'LaserBeat Studio',bpm:t.bpm||0,dur:t.dur||0,url:t.url,user:!!t.user});
 const TRACKS=TR.map(mkTrack);
 /* Recalcule le contenu des playlists. Laser Arena reprend les styles des playlists qu'elle contient vraiment. */
-const ARENA_TAGS={tech:['Hard techno','Techno'],over:['Hard tech','Drum & bass'],beats:['Phonk','Drift hardbass','Mandelao','Hard rock']};
+const ARENA_TAGS={beats:['Phonk','Drift hardbass','Mandelao','Hard rock']};
 function refreshPl(){
  PL.forEach(p=>{if(!p.special)plTracks(p)});
  const a=PL.find(x=>x.id==='arena'),tags=[];
@@ -477,7 +475,9 @@ function plTracks(p){
 refreshPl();
 const getPl=id=>PL.find(p=>p.id===id)||PL[1];
 const allTracks=()=>TRACKS;
-let favs=new Set(store.get('favs',[]));
+/* Favoris et écoutes récentes : on oublie les morceaux qui n'existent plus. */
+const known=new Set(TRACKS.map(t=>t.id));
+let favs=new Set((store.get('favs',[])||[]).filter(id=>known.has(id)));
 const tracksOf=id=>id==='fav'?TRACKS.filter(t=>favs.has(t.id)):(getPl(id).tracks||[]);
 const trackById=id=>TRACKS.find(t=>t.id===id);
 const trackUrl=t=>t.url;
@@ -521,7 +521,7 @@ function maybeCrossfade(){
  xfMode=true;try{next(true)}finally{xfMode=false}
 }
 A.volume=vol;B.volume=vol;
-let recent=store.get('recent',[]);
+let recent=(store.get('recent',[])||[]).filter(id=>known.has(id));
 let preT=null,errs=0;
 function playQueue(list,start,plId,at){
  if(!list.length)return;

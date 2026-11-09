@@ -190,10 +190,11 @@ test('Fin de playlist : la musique continue (répétition de la playlist par dé
 
 test('Playlists vides masquées, reprise sûre si un morceau a été retiré', async () => {
   const dir = newDataDir('retires');
-  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ lb_v2: true, lb_resume: { pl: 'tech', id: 'b:01-cible-verrouillee.mp3', t: 30, playing: true, shuffle: false, repeat: 1 } }));
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ lb_v2: true, lb_favs: ['b:ancien-morceau.mp3'], lb_resume: { pl: 'beats', id: 'b:ancien-morceau.mp3', t: 30, playing: true, shuffle: false, repeat: 1 } }));
   const { app, w } = await launch(dir);
   const side = await w.$$eval('#sideList .pli b', e => e.map(x => x.textContent.trim()));
-  assert(!side.includes('Tech Zone') && !side.includes('Overdrive'), 'playlist vide affichée : ' + side.join(', '));
+  assert(side.join('|') === 'Morceaux préférés|Laser Arena|LaserBeats|Ambiance accueil', 'playlists affichées : ' + side.join(', '));
+  assert((await w.textContent('#sideList .pli[data-id="fav"] small')) === 'Playlist · 0 morceau', 'favori d\'un morceau retiré encore compté');
   assert(await waitFor(() => playing(w), 10000), 'la musique ne repart pas après le retrait du morceau');
   await close(app);
 });
