@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' file:; media-src file: blob:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self' file:; media-src file: blob:">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LaserBeat</title>
 <style>
@@ -455,7 +455,7 @@ function plFor(name){
  if(!p){let h=0;for(const c of k)h=(h*31+c.charCodeAt(0))%360;p={id:'c-'+k,name:String(name).trim(),tags:['Mes morceaux'],h:[h,(h+70)%360],tracks:[]};PL.push(p)}
  return p;
 }
-const mkTrack=t=>({id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'LaserBeat Studio',bpm:t.bpm||0,dur:t.dur||0,url:t.url,user:!!t.user});
+const mkTrack=t=>({id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'LaserBeat Studio',bpm:t.bpm||0,dur:t.dur||0,url:t.url,img:typeof t.img==='string'&&/^file:/.test(t.img)?t.img:'',user:!!t.user});
 const TRACKS=TR.map(mkTrack);
 /* Recalcule le contenu des playlists. Laser Arena reprend les styles des playlists qu'elle contient vraiment. */
 const ARENA_TAGS={beats:['Phonk','Drift hardbass','Mandelao','Hard rock']};
@@ -484,6 +484,10 @@ const trackUrl=t=>t.url;
 
 /* ---------- visuels ---------- */
 const artStyle=p=>`background:radial-gradient(circle at 22% 18%,hsl(${p.h[0]} 95% 62%),transparent 58%),radial-gradient(circle at 82% 78%,hsl(${p.h[1]} 90% 55%),transparent 58%),linear-gradient(160deg,hsl(${p.h[0]} 55% 22%),hsl(${p.h[1]} 65% 14%))`;
+/* Visuel d'un morceau : sa photo s'il en a une, sinon les couleurs de sa playlist.
+   tArt = CSS brut (pour element.style) ; tArtH = même chose, prêt à mettre dans un attribut HTML. */
+const tArt=t=>t.img?`background:#1c1c22 url("${t.img}") center/cover no-repeat`:artStyle(getPl(t.pl));
+const tArtH=t=>esc(tArt(t));
 const fmt=s=>{if(!isFinite(s))return'0:00';s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 
 /* ---------- lecteur ---------- */
@@ -741,7 +745,7 @@ function ui(){
  const t=P.queue[P.i],p=t?getPl(t.pl):null,playing=!A.paused&&t;
  $('#npT').textContent=t?t.title:'Rien en lecture';
  $('#npS').textContent=t?p.name:'Choisissez une playlist';
- $('#npArt').style.cssText=t?artStyle(p):'';
+ $('#npArt').style.cssText=t?tArt(t):'';
  $('#bPlay').innerHTML=ic(playing?'pause':'play');$('#fPlay').innerHTML=ic(playing?'pause':'play');
  $('#bShuf').classList.toggle('on',P.shuffle);
  const r=$('#bRep');r.classList.toggle('on',P.repeat>0);r.classList.toggle('rep1',P.repeat===2);
@@ -752,7 +756,7 @@ function ui(){
  document.body.classList.toggle('playing',!!playing);
  $('#fs').classList.toggle('playing',!!playing);
  $('#fs').style.cssText=artStyle(p||PL[1]); // fond du plein écran
- if(t){$('#fsArt').style.cssText=artStyle(p);$('#fsT').textContent=t.title;$('#fsS').textContent=p.name}
+ if(t){$('#fsArt').style.cssText=tArt(t);$('#fsT').textContent=t.title;$('#fsS').textContent=p.name}
  document.querySelectorAll('[data-tid]').forEach(r=>r.classList.toggle('cur',!!t&&r.dataset.tid===t.id));
  document.querySelectorAll('#sideList .pli').forEach(b=>b.classList.toggle('playing',!!playing&&b.dataset.id===P.plId));
  // Gros bouton lecture d'une playlist : « pause » quand c'est elle qui joue.
@@ -774,9 +778,9 @@ function nowPanel(){
  if(P.repeat===2)up=[P.i];
  else if(P.shuffle){const k=peekNext();if(k>=0)up=[k]}
  else for(let j=1;j<n&&up.length<8;j++){const k=P.i+j;if(k>=n&&P.repeat!==1)break;up.push(k%n)}
- el.innerHTML=`<div class="rp-art" style="${artStyle(p)}">${plIcon(p)}</div>
+ el.innerHTML=`<div class="rp-art" style="${tArtH(t)}">${t.img?'':plIcon(p)}</div>
  <div class="rp-t"><div><h2 title="${esc(t.title)}">${esc(t.title)}</h2><span>${esc(p.name)}${t.bpm?' · '+t.bpm+' BPM':''}</span></div><button class="ibtn star ${favs.has(t.id)?'on':''}" data-act="fav" data-id="${t.id}" title="Favori">${ic('star')}</button></div>
- <div class="rp-card"><h4>Ensuite dans la file${P.shuffle&&P.repeat!==2?' <small>· aléatoire</small>':''}${P.repeat===2?' <small>· en boucle</small>':''}</h4>${up.length?up.map(k=>{const x=P.queue[k],q=getPl(x.pl);return `<button class="qi" data-q="${k}"><i style="${artStyle(q)}"></i><span><b>${esc(x.title)}</b><small>${esc(q.name)}</small></span></button>`}).join(''):'<p>La lecture s\'arrête après ce morceau.</p>'}</div>
+ <div class="rp-card"><h4>Ensuite dans la file${P.shuffle&&P.repeat!==2?' <small>· aléatoire</small>':''}${P.repeat===2?' <small>· en boucle</small>':''}</h4>${up.length?up.map(k=>{const x=P.queue[k],q=getPl(x.pl);return `<button class="qi" data-q="${k}"><i style="${tArtH(x)}"></i><span><b>${esc(x.title)}</b><small>${esc(q.name)}</small></span></button>`}).join(''):'<p>La lecture s\'arrête après ce morceau.</p>'}</div>
  <div class="rp-card"><h4>À propos du morceau</h4><dl><dt>Playlist</dt><dd>${esc(p.name)}</dd><dt>Tempo</dt><dd>${t.bpm?t.bpm+' BPM':'—'}</dd><dt>Durée</dt><dd>${t.dur?fmt(t.dur):'—'}</dd><dt>Source</dt><dd>${t.user?'Morceau ajouté':'Musique originale LaserBeat'}</dd></dl></div>`;
 }
 
@@ -790,14 +794,14 @@ function card(p){
 }
 function tcard(t){
  const p=getPl(t.pl);
- return `<div class="cd" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}"><div class="ca" style="${artStyle(p)}">${ic('note')}<button class="fplay" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" title="Écouter">${ic('play')}</button></div><b>${esc(t.title)}</b><small>${esc(p.name)}${t.bpm?' · '+t.bpm+' BPM':''}</small></div>`;
+ return `<div class="cd" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}"><div class="ca" style="${tArtH(t)}">${t.img?'':ic('note')}<button class="fplay" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" title="Écouter">${ic('play')}</button></div><b>${esc(t.title)}</b><small>${esc(p.name)}${t.bpm?' · '+t.bpm+' BPM':''}</small></div>`;
 }
 const qPl=p=>`<div class="qt" data-act="open-pl" data-id="${p.id}" data-h="${p.h[0]}"><i style="${artStyle(p)}">${plIcon(p)}</i><span>${esc(p.name)}</span>${tracksOf(p.id).length?`<button class="fplay" data-act="play-pl" data-id="${p.id}" title="Écouter">${ic('play')}</button>`:''}</div>`;
-const qTr=t=>{const p=getPl(t.pl);return `<div class="qt" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" data-h="${p.h[0]}"><i style="${artStyle(p)}">${ic('note')}</i><span>${esc(t.title)}</span><button class="fplay" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" title="Écouter">${ic('play')}</button></div>`};
+const qTr=t=>{const p=getPl(t.pl);return `<div class="qt" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" data-h="${p.h[0]}"><i style="${tArtH(t)}">${t.img?'':ic('note')}</i><span>${esc(t.title)}</span><button class="fplay" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" title="Écouter">${ic('play')}</button></div>`};
 const thead=()=>`<div class="trow thead"><span class="n">#</span><span>Titre</span><span class="c-pl">Playlist</span><span class="c-bpm">Tempo</span><span></span><span class="dur" title="Durée">${ic('clock')}</span></div>`;
 function trow(t,i,plId){
  const p=getPl(t.pl),cur=P.queue[P.i]&&P.queue[P.i].id===t.id;
- return `<div class="trow ${cur?'cur':''}" data-act="play-track" data-id="${t.id}" data-pl="${plId}" data-tid="${t.id}"><span class="n"><span class="num">${i+1}</span><span class="pi">${ic('play')}</span><span class="eqs"><i></i><i></i><i></i></span></span><span class="th"><i style="${artStyle(p)}"></i><span class="tt"><span class="tn">${esc(t.title)}</span><span class="sa">${esc(t.artist)}</span></span></span><span class="m c-pl">${esc(p.name)}</span><span class="m c-bpm">${t.bpm?t.bpm+' BPM':''}</span><span class="ta"><button class="ibtn star ${favs.has(t.id)?'on':''}" data-act="fav" data-id="${t.id}" title="Favori">${ic('star')}</button>${t.user&&LB&&LB.deleteTrack?`<button class="ibtn del" data-act="del" data-id="${t.id}" title="Supprimer ce morceau importé">${ic('trash')}</button>`:''}</span><span class="m dur">${t.dur?fmt(t.dur):'—'}</span></div>`;
+ return `<div class="trow ${cur?'cur':''}" data-act="play-track" data-id="${t.id}" data-pl="${plId}" data-tid="${t.id}"><span class="n"><span class="num">${i+1}</span><span class="pi">${ic('play')}</span><span class="eqs"><i></i><i></i><i></i></span></span><span class="th"><i style="${tArtH(t)}"></i><span class="tt"><span class="tn">${esc(t.title)}</span><span class="sa">${esc(t.artist)}</span></span></span><span class="m c-pl">${esc(p.name)}</span><span class="m c-bpm">${t.bpm?t.bpm+' BPM':''}</span><span class="ta"><button class="ibtn star ${favs.has(t.id)?'on':''}" data-act="fav" data-id="${t.id}" title="Favori">${ic('star')}</button>${t.user&&LB&&LB.deleteTrack?`<button class="ibtn del" data-act="del" data-id="${t.id}" title="Supprimer ce morceau importé">${ic('trash')}</button>`:''}</span><span class="m dur">${t.dur?fmt(t.dur):'—'}</span></div>`;
 }
 const rows=(l,plId)=>thead()+l.map((t,i)=>trow(t,i,plId||t.pl)).join('');
 function recentTracks(){

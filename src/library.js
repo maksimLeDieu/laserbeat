@@ -9,7 +9,8 @@
  *
  * Format d'une entrée de morceaux.json :
  *   { "titre": "Phonk Laser Game", "fichier": "LaserBeat 1 - Phonk Laser Game.mp3",
- *     "playlist": "LaserBeats", "bpm": 145, "duree": 80.5 }
+ *     "playlist": "LaserBeats", "bpm": 145, "duree": 80.5, "photo": "mandelao.webp" }
+ * "photo" (facultatif) : image du morceau (jpg, png, webp) placée dans le même dossier.
  * Un fichier audio présent dans le dossier mais absent du JSON est quand même ajouté
  * (titre = nom du fichier). Une entrée dont le fichier n'existe pas est ignorée.
  */
@@ -21,7 +22,16 @@ const AUDIO_EXT = ['.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac'];
 const LIST = 'morceaux.json';
 const DEFAULT_PLAYLIST = 'Mes imports';
 
+const IMG_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 const isAudio = f => AUDIO_EXT.includes(path.extname(f).toLowerCase());
+// Photo d'un morceau : seulement une image du dossier lui-même (jamais ailleurs sur le disque).
+function photoUrl(dir, name) {
+  const f = String(name || '').trim();
+  if (!f || !IMG_EXT.includes(path.extname(f).toLowerCase())) return '';
+  const root = path.resolve(dir), full = path.resolve(root, f);
+  if (!full.startsWith(root + path.sep) || !fs.existsSync(full)) return '';
+  return pathToFileURL(full).href;
+}
 const num = v => { const n = Number(v); return isFinite(n) && n > 0 ? n : 0; };
 const keyOf = f => String(f).replace(/\\/g, '/').toLowerCase();
 
@@ -54,6 +64,7 @@ function makeTrack(origin, dir, file, e) {
     bpm: Math.round(num(e.bpm)),
     dur: num(e.duree !== undefined ? e.duree : e.dur),
     url: pathToFileURL(path.join(dir, file)).href,
+    img: photoUrl(dir, e.photo || e.image),
     user: origin === 'u'
   };
 }
