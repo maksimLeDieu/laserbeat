@@ -20,7 +20,7 @@ const ROOT = path.resolve(__dirname, '..');
 const EXE = process.env.LASERBEAT_EXE ? path.resolve(ROOT, process.env.LASERBEAT_EXE) : null;
 const ELECTRON = EXE || require('electron');
 const BASE_ARGS = (EXE ? [] : [ROOT]).concat(process.platform === 'linux' && process.getuid && process.getuid() === 0 ? ['--no-sandbox'] : []);
-const SAMPLE_MP3 = path.join(ROOT, 'musiques', '30-arret-net.mp3');
+const SAMPLE_MP3 = path.join(ROOT, 'musiques', 'LaserBeat 2 - Phonk.mp3');
 
 let current = null;
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'laserbeat-tests-'));
@@ -67,7 +67,7 @@ const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
 /* ------------------------------------------------------------------ */
-test('Démarrage : fenêtre LaserBeat, sans menu, fichiers locaux, 11 morceaux', async () => {
+test('Démarrage : fenêtre LaserBeat, sans menu, fichiers locaux, 6 morceaux', async () => {
   const { app, w, errors } = await launch(newDataDir('demarrage'));
   const info = await app.evaluate(({ BrowserWindow, Menu }) => {
     const b = BrowserWindow.getAllWindows()[0];
@@ -80,7 +80,7 @@ test('Démarrage : fenêtre LaserBeat, sans menu, fichiers locaux, 11 morceaux',
   assert(info.url.startsWith('file:'), 'interface non locale : ' + info.url);
   assert(info.throttle === false, 'ralentissement en arrière-plan actif');
   const n = await w.evaluate(() => window.laserbeat.tracks.length);
-  assert(n === 11, 'morceaux fournis : ' + n);
+  assert(n === 6, 'morceaux fournis : ' + n);
   assert(/^v\d+\.\d+\.\d+/.test(await w.textContent('#ver')), 'version non affichée');
   assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
@@ -157,13 +157,23 @@ test('Fenêtre réduite/cachée : la musique continue et enchaîne', async () =>
 
 test('Fin de playlist : la musique continue (répétition de la playlist par défaut)', async () => {
   const { app, w } = await launch(newDataDir('fin-playlist'));
-  await w.click('.pli >> text=Tech Zone'); await w.click('text=Écouter');
-  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  await w.click('.pli >> text=LaserBeats');
   assert(await w.evaluate(() => document.querySelector('#bRep').classList.contains('on')), 'répétition non active par défaut');
-  await w.waitForTimeout(2500); await seekNearEnd(w, 1);            // 1er morceau -> 2e
-  assert(await waitFor(async () => (await title(w)) === 'Arrêt Net', 10000), 'pas de 2e morceau');
-  await w.waitForTimeout(2500); await seekNearEnd(w, 1);            // dernier morceau -> retour au début
-  assert(await waitFor(async () => (await title(w)) === 'Cible Verrouillée' && await playing(w), 10000), 'la musique s\'arrête en fin de playlist');
+  const rows = await w.$$('#view .trow:not(.thead)');
+  await rows[rows.length - 1].click();                               // dernier morceau de la playlist
+  assert(await waitFor(async () => (await title(w)) === 'Hard Rock' && await playing(w), 10000), 'dernier morceau non lancé');
+  await w.waitForTimeout(2500); await seekNearEnd(w, 1);
+  assert(await waitFor(async () => (await title(w)) === 'Phonk Laser Game' && await playing(w), 10000), 'la musique s\'arrête en fin de playlist');
+  await close(app);
+});
+
+test('Playlists vides masquées, reprise sûre si un morceau a été retiré', async () => {
+  const dir = newDataDir('retires');
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ lb_v2: true, lb_resume: { pl: 'tech', id: 'b:01-cible-verrouillee.mp3', t: 30, playing: true, shuffle: false, repeat: 1 } }));
+  const { app, w } = await launch(dir);
+  const side = await w.$$eval('#sideList .pli', e => e.map(x => x.innerText.trim()));
+  assert(!side.includes('Tech Zone') && !side.includes('Overdrive'), 'playlist vide affichée : ' + side.join(', '));
+  assert(await waitFor(() => playing(w), 10000), 'la musique ne repart pas après le retrait du morceau');
   await close(app);
 });
 
@@ -201,7 +211,7 @@ test('Bouton ⓘ : fiche « À propos » (auteur, propriété, utilisation)', as
 test('Réglages conservés et reprise de la musique après redémarrage', async () => {
   const dir = newDataDir('reglages');
   let { app, w } = await launch(dir);
-  await w.click('.pli >> text=Tech Zone'); await w.click('text=Écouter');
+  await w.click('.pli >> text=LaserBeats'); await w.click('text=Écouter');
   assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
   await w.evaluate(() => { const v = document.querySelector('#vol'); v.value = '0.42'; v.dispatchEvent(new Event('input')); });
   await w.click('#bFav'); await w.click('#bRep');

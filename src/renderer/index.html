@@ -358,12 +358,22 @@ function plFor(name){
 }
 const mkTrack=t=>({id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'LaserBeat Studio',bpm:t.bpm||0,dur:t.dur||0,url:t.url,user:!!t.user});
 const TRACKS=TR.map(mkTrack);
+/* Recalcule le contenu des playlists. Laser Arena reprend les styles des playlists qu'elle contient vraiment. */
+const ARENA_TAGS={tech:['Hard techno','Techno'],over:['Hard tech','Drum & bass'],beats:['Phonk','Drift hardbass','Mandelao','Hard rock']};
+function refreshPl(){
+ PL.forEach(p=>{if(!p.special)plTracks(p)});
+ const a=PL.find(x=>x.id==='arena'),tags=[];
+ Object.keys(ARENA_TAGS).forEach(id=>{const q=PL.find(x=>x.id===id);if(q&&q.tracks.length)ARENA_TAGS[id].forEach(t=>{if(!tags.includes(t))tags.push(t)})});
+ if(tags.length)a.tags=tags;
+}
+/* Une playlist vide (en attente de morceaux) n'est pas affichée, sauf les favoris et l'ambiance accueil. */
+const shownPl=p=>p.special||p.id==='accueil'||!!(p.tracks&&p.tracks.length);
 function plTracks(p){
  p.tracks=p.id==='arena'?TRACKS.filter(t=>LASER.includes(t.pl)):TRACKS.filter(t=>t.pl===p.id);
  const b=p.tracks.map(t=>t.bpm).filter(x=>x>0);
  p.bpmTxt=!b.length?'':Math.min(...b)===Math.max(...b)?b[0]+' BPM':Math.min(...b)+'–'+Math.max(...b)+' BPM';
 }
-PL.forEach(p=>{if(!p.special)plTracks(p)});
+refreshPl();
 const getPl=id=>PL.find(p=>p.id===id)||PL[1];
 const allTracks=()=>TRACKS;
 let favs=new Set(store.get('favs',[]));
@@ -551,7 +561,12 @@ function resume(){
  const R=store.get('resume',null);if(!R||typeof R!=='object')return;
  P.shuffle=!!R.shuffle;P.repeat=[0,1,2].includes(R.repeat)?R.repeat:1;
  if(!R.playing||!R.id){ui();return}
- const t=trackById(R.id);if(!t){ui();return}
+ const t=trackById(R.id);
+ if(!t){ // morceau retiré depuis : on repart sur sa playlist (ou Laser Arena) plutôt que de rester muet
+  const own=tracksOf(R.pl),l=own.length?own:tracksOf('arena');
+  if(l.length)playQueue(l,0,own.length?R.pl:'arena');else ui();
+  return;
+ }
  let l=tracksOf(R.pl),k=l.findIndex(x=>x.id===R.id);if(k<0){l=[t];k=0}
  playQueue(l,k,R.pl,R.t>0&&(!t.dur||R.t<t.dur-3)?R.t:0);
 }
@@ -587,7 +602,7 @@ async function delTrack(id){
  if(favs.delete(id))store.set('favs',[...favs]);
  recent=recent.filter(x=>x!==id);store.set('recent',recent);
  const now=P.queue[P.i];P.queue=P.queue.filter(x=>x.id!==id);P.i=now?P.queue.indexOf(now):-1;P.nx=null;
- PL.forEach(p=>{if(!p.special)plTracks(p)});
+ refreshPl();
  render();saveState();clearTimeout(preT);preT=setTimeout(preloadNext,500);
 }
 async function importTracks(playlist){
@@ -596,7 +611,7 @@ async function importTracks(playlist){
  if(!list||!list.length)return;
  const added=[];
  list.forEach(x=>{if(!trackById(x.id)){const t=mkTrack(x);TRACKS.push(t);added.push(t)}});
- PL.forEach(p=>{if(!p.special)plTracks(p)});
+ refreshPl();
  const t0=trackById(list[0].id);
  go('pl',t0?t0.pl:'imp');
  probe(added);
@@ -668,7 +683,7 @@ function vHome(el){
   <p class="sub">${pl.tags.map(esc).join(', ')}${pl.bpmTxt?' · '+pl.bpmTxt:''}</p>
   <div class="acts"><button class="btn pri" data-act="play-pl" data-id="arena">${ic('play')} Jouer la musique</button><button class="btn ghost" data-act="open-pl" data-id="${pl.id}">Voir la playlist</button></div></div></section>
  <h2 class="h2">Playlists ${ic('chev')}</h2>
- <div class="row">${PL.filter(p=>!p.special&&p.id!==pl.id).map(card).join('')}</div>
+ <div class="row">${PL.filter(p=>!p.special&&p.id!==pl.id&&shownPl(p)).map(card).join('')}</div>
  <h2 class="h2">Écoutes récentes ${ic('chev')}</h2>
  <div class="row">${recentTracks().map(tcard).join('')}</div>
  <h2 class="h2"><a data-act="go" data-v="all">Tous les morceaux · ${TRACKS.length}</a> ${ic('chev')}</h2>
@@ -696,7 +711,7 @@ function vAll(el){
 function vLib(el){
  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin:20px 4px 6px"><h2 style="font-size:26px;letter-spacing:-.02em">Bibliothèque</h2><button class="btn pri" data-act="import">${ic('plus')} Ajouter mes morceaux</button></div>
  <p class="sub" style="margin:0 4px 16px">Morceaux originaux composés pour le laser game. Les morceaux ajoutés sont copiés dans LaserBeat et restent disponibles hors ligne.</p>
- <div class="grid">${PL.map(card).join('')}</div><div style="height:110px"></div>`;
+ <div class="grid">${PL.filter(shownPl).map(card).join('')}</div><div style="height:110px"></div>`;
 }
 function vSearch(el){
  const q=V.arg.toLowerCase();
@@ -718,7 +733,7 @@ function render(){
 }
 function go(name,arg){V={name,arg:arg||null};render();$('#main').scrollTop=0;try{history.replaceState(null,'','#'+name)}catch(e){}}
 function sideList(){
- $('#sideList').innerHTML=PL.filter(p=>p.id!=='accueil').map(p=>`<button class="pli ${V.name==='pl'&&V.arg===p.id?'on':''}" data-act="open-pl" data-id="${p.id}"><i style="${artStyle(p)}">${p.special?ic('star'):''}</i><span>${esc(p.name)}</span></button>`).join('');
+ $('#sideList').innerHTML=PL.filter(p=>p.id!=='accueil'&&shownPl(p)).map(p=>`<button class="pli ${V.name==='pl'&&V.arg===p.id?'on':''}" data-act="open-pl" data-id="${p.id}"><i style="${artStyle(p)}">${p.special?ic('star'):''}</i><span>${esc(p.name)}</span></button>`).join('');
 }
 
 /* ---------- actions ---------- */

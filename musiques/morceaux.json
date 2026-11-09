@@ -1,9 +1,4 @@
 [
-  { "titre": "Cible Verrouillée", "fichier": "01-cible-verrouillee.mp3", "playlist": "Tech Zone", "bpm": 144, "duree": 141.5 },
-  { "titre": "Arrêt Net", "fichier": "30-arret-net.mp3", "playlist": "Tech Zone", "bpm": 142, "duree": 128.4 },
-  { "titre": "Fréquence Max", "fichier": "11-frequence-max.mp3", "playlist": "Overdrive", "bpm": 158, "duree": 141.3 },
-  { "titre": "Headshot Run", "fichier": "14-headshot-run.mp3", "playlist": "Overdrive", "bpm": 174, "duree": 142.2 },
-  { "titre": "Vitesse Max", "fichier": "34-vitesse-max.mp3", "playlist": "Overdrive", "bpm": 174, "duree": 146.4 },
   { "titre": "Phonk Laser Game", "fichier": "LaserBeat 1 - Phonk Laser Game.mp3", "playlist": "LaserBeats", "bpm": 145, "duree": 80.5 },
   { "titre": "Phonk", "fichier": "LaserBeat 2 - Phonk.mp3", "playlist": "LaserBeats", "bpm": 145, "duree": 61.1 },
   { "titre": "Mandelao", "fichier": "LaserBeat 3 - Mandelao.mp3", "playlist": "LaserBeats", "bpm": 150, "duree": 65.5 },
