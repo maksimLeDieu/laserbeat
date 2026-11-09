@@ -441,9 +441,9 @@ const ic=(n,extra='')=>{const [f,p]=IC[n];return `<svg viewBox="0 0 24 24" class
 const TR=LB&&Array.isArray(LB.tracks)?LB.tracks:[];
 const PL=[
  {id:'fav',name:'Morceaux préférés',tags:['Vos favoris'],h:[345,15],special:true,img:'img/morceaux-preferes.png'},
- {id:'arena',name:'Laser Arena',tags:['Phonk','Drift hardbass','Mandelao','Hard rock'],h:[265,330]},
- {id:'beats',name:'LaserBeats',tags:['Toute la musique'],h:[135,295]},
- {id:'accueil',name:'Ambiance accueil',tags:['Accueil','Ambiance'],h:[38,175]}
+ {id:'arena',name:'Laser Arena',tags:['Phonk','Drift hardbass','Mandelao','Hard rock'],h:[265,330],img:'img/laser-arena.webp'},
+ {id:'beats',name:'LaserBeats',tags:['Toute la musique'],h:[135,295],img:'img/laserbeats.webp'},
+ {id:'accueil',name:'Ambiance accueil',tags:['Accueil','Ambiance'],h:[38,175],img:'img/ambiance-accueil.webp'}
 ];
 /* Laser Arena = les morceaux des parties de laser game ; LaserBeats = toute la musique du logiciel.
    Anciennes playlists (LaserBeats, Tech Zone, Overdrive dans morceaux.json) : rangées dans Laser Arena. */
@@ -820,7 +820,7 @@ function vHome(el){
  const more=recentTracks().slice(0,6-quick.length);
  el.innerHTML=`<div class="home" id="home"><h1>${greet()}</h1>
  <div class="qgrid">${quick.map(qPl).join('')}${more.map(qTr).join('')}</div>
- <section class="feat" style="background:linear-gradient(100deg,hsl(${a.h[0]} 48% 30%),hsl(${a.h[1]} 45% 18%))"><div class="art" style="${artStyle(a)}">${pyramid}</div>
+ <section class="feat" style="background:linear-gradient(100deg,hsl(${a.h[0]} 48% 30%),hsl(${a.h[1]} 45% 18%))"><div class="art" style="${esc(pArt(a))}">${a.img?'':pyramid}</div>
   <div><small>À la une · La musique des parties de laser game</small><h2>${esc(a.name)}</h2>
   <p>${a.tags.map(esc).join(', ')} · ${nTxt(a.tracks.length)}${a.bpmTxt?' · '+a.bpmTxt:''}</p>
   <div class="acts"><button class="pill pri" data-act="play-pl" data-id="arena">${ic('play')} Jouer la musique</button><button class="pill" data-act="open-pl" data-id="arena">Voir la playlist</button></div></div></section>
