@@ -100,6 +100,8 @@ test('Interface : panneau « En cours de lecture », bouton lecture/pause de la 
   assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
   const rp = await w.textContent('#rp');
   assert(rp.includes('Phonk Laser Game') && rp.includes('Ensuite dans la file') && rp.includes('Mandelao'), 'panneau de droite incomplet');
+  assert(/url\("file:.*Phonk%20Laser%20Game\.webp"\)/.test(await w.getAttribute('#npArt', 'style')), 'photo du morceau absente du lecteur');
+  assert(await w.evaluate(() => { const i = document.querySelector('#rp .rp-art'); return !!i && /\.webp/.test(getComputedStyle(i).backgroundImage); }), 'photo absente du panneau de droite');
   await w.click('#view .bigplay');                                   // même playlist : pause
   assert(await waitFor(async () => !(await playing(w)), 3000), 'le gros bouton ne met pas en pause');
   await w.click('#view .bigplay');                                   // reprise, sans repartir du début
