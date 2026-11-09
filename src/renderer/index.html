@@ -748,8 +748,8 @@ function about(show){
  if(!show){m.hidden=true;return}
  $('#aboutBox').innerHTML=`<button class="ibtn x" data-close title="Fermer">${ic('x')}</button>
  <div class="mh"><div class="logo">${ic('bolt')}</div><div><h3 id="aboutT">À propos de LaserBeat</h3><small>Version ${esc(LB&&LB.version?LB.version:'')}</small></div></div>
- <h4>Propriété</h4><p><b>${AUTEUR} détient 100 % des droits sur LaserBeat.</b> Le code, l'interface, le design et toutes les musiques ont été créés par lui et sont sa propriété exclusive.</p>
- <h4>Légalité</h4><p><b>LaserBeat est 100 % légal.</b> Toutes les musiques sont des créations originales de ${AUTEUR} : aucune œuvre d'un autre artiste n'est utilisée et aucun droit n'est dû à qui que ce soit pour leur diffusion.</p>
+ <h4>Propriété</h4><p><b>${AUTEUR} détient 100 % des droits sur LaserBeat.</b> Le logiciel, l'interface, le design et toutes les musiques ont été créés pour lui et sous sa direction, et sont sa propriété exclusive.</p>
+ <h4>Légalité</h4><p><b>LaserBeat est 100 % légal.</b> Toutes les musiques sont des créations originales réalisées pour ${AUTEUR} : aucune œuvre d'un autre artiste n'est utilisée et aucun droit n'est dû à qui que ce soit pour leur diffusion.</p>
  <h4>Autorisation d'utilisation</h4><p>${AUTEUR} autorise ${UTILISATEUR}, par sa permission, à utiliser LaserBeat et à diffuser ses musiques dans les établissements Laser Game Evolution de <b>Trégueux</b>, <b>Quimper</b> et <b>Brest</b>.</p>
  <p class="foot">© ${new Date().getFullYear()} ${AUTEUR} — tous droits réservés.<br>Composants techniques libres utilisés sous leurs licences : voir THIRD-PARTY-NOTICES.txt.</p>`;
  const lg=$('#aboutBox .logo svg');if(lg)lg.style.stroke='#fff';
