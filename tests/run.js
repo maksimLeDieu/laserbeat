@@ -105,6 +105,7 @@ test('Interface : panneau « En cours de lecture », bouton lecture/pause de la 
   await w.click('#view .bigplay');                                   // reprise, sans repartir du début
   assert(await waitFor(() => playing(w), 3000), 'le gros bouton ne relance pas');
   assert((await title(w)) === 'Phonk Laser Game', 'mauvais morceau après reprise');
+  if (!(await w.isVisible('#rpanel'))) await w.click('#bQ');           // petit écran : le panneau est masqué d'office
   await w.click('#rp .qi >> text=Drift Hardbass II');                // clic dans la file
   assert(await waitFor(async () => (await title(w)) === 'Drift Hardbass II', 3000), 'la file ne lance pas le morceau');
   await w.click('#bQ'); assert(!(await w.isVisible('#rpanel')), 'le panneau ne se masque pas');
