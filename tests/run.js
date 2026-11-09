@@ -94,9 +94,30 @@ test('Lecture : « Jouer la musique » lance le son', async () => {
   await close(app);
 });
 
+test('Interface : panneau « En cours de lecture », bouton lecture/pause de la playlist, bibliothèque réduite', async () => {
+  const { app, w, errors } = await launch(newDataDir('interface'));
+  await w.click('.pli >> text=LaserBeats'); await w.click('#view .bigplay');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  const rp = await w.textContent('#rp');
+  assert(rp.includes('Phonk Laser Game') && rp.includes('Ensuite dans la file') && rp.includes('Mandelao'), 'panneau de droite incomplet');
+  await w.click('#view .bigplay');                                   // même playlist : pause
+  assert(await waitFor(async () => !(await playing(w)), 3000), 'le gros bouton ne met pas en pause');
+  await w.click('#view .bigplay');                                   // reprise, sans repartir du début
+  assert(await waitFor(() => playing(w), 3000), 'le gros bouton ne relance pas');
+  assert((await title(w)) === 'Phonk Laser Game', 'mauvais morceau après reprise');
+  await w.click('#rp .qi >> text=Drift Hardbass II');                // clic dans la file
+  assert(await waitFor(async () => (await title(w)) === 'Drift Hardbass II', 3000), 'la file ne lance pas le morceau');
+  await w.click('#bQ'); assert(!(await w.isVisible('#rpanel')), 'le panneau ne se masque pas');
+  await w.click('#bSide'); assert(!(await w.isVisible('#n-all')), 'la bibliothèque ne se réduit pas');
+  await w.click('#bSide'); await w.click('#bQ');
+  assert(await w.isVisible('#rpanel') && await w.isVisible('#n-all'), 'affichage non rétabli');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
 test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais de silence', async () => {
   const { app, w } = await launch(newDataDir('fondu'));
-  await w.click('.pli >> text=Laser Arena'); await w.click('text=Écouter');
+  await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
   assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
   await w.waitForTimeout(2500); // le morceau suivant est préchargé
   const t1 = await title(w);
@@ -126,7 +147,7 @@ test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais
 
 test('Fondu : pause et morceau suivant pendant le fondu restent propres', async () => {
   const { app, w } = await launch(newDataDir('fondu-pause'));
-  await w.click('.pli >> text=Laser Arena'); await w.click('text=Écouter');
+  await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
   assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
   await w.waitForTimeout(2500);
   await seekNearEnd(w, 4);
@@ -145,7 +166,7 @@ test('Fondu : pause et morceau suivant pendant le fondu restent propres', async 
 
 test('Fenêtre réduite/cachée : la musique continue et enchaîne', async () => {
   const { app, w } = await launch(newDataDir('cachee'));
-  await w.click('.pli >> text=Laser Arena'); await w.click('text=Écouter');
+  await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
   assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
   await app.evaluate(({ BrowserWindow }) => { const b = BrowserWindow.getAllWindows()[0]; b.minimize(); b.hide(); });
   const t1 = await title(w);
@@ -171,7 +192,7 @@ test('Playlists vides masquées, reprise sûre si un morceau a été retiré', a
   const dir = newDataDir('retires');
   fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ lb_v2: true, lb_resume: { pl: 'tech', id: 'b:01-cible-verrouillee.mp3', t: 30, playing: true, shuffle: false, repeat: 1 } }));
   const { app, w } = await launch(dir);
-  const side = await w.$$eval('#sideList .pli', e => e.map(x => x.innerText.trim()));
+  const side = await w.$$eval('#sideList .pli b', e => e.map(x => x.textContent.trim()));
   assert(!side.includes('Tech Zone') && !side.includes('Overdrive'), 'playlist vide affichée : ' + side.join(', '));
   assert(await waitFor(() => playing(w), 10000), 'la musique ne repart pas après le retrait du morceau');
   await close(app);
@@ -211,7 +232,7 @@ test('Bouton ⓘ : fiche « À propos » (auteur, propriété, utilisation)', as
 test('Réglages conservés et reprise de la musique après redémarrage', async () => {
   const dir = newDataDir('reglages');
   let { app, w } = await launch(dir);
-  await w.click('.pli >> text=LaserBeats'); await w.click('text=Écouter');
+  await w.click('.pli >> text=LaserBeats'); await w.click('#view .bigplay');
   assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
   await w.evaluate(() => { const v = document.querySelector('#vol'); v.value = '0.42'; v.dispatchEvent(new Event('input')); });
   await w.click('#bFav'); await w.click('#bRep');
