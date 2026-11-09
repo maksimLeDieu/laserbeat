@@ -189,6 +189,18 @@ svg.f{fill:currentColor;stroke:none}
 .eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}.eq i:nth-child(4){animation-delay:.1s}.eq i:nth-child(5){animation-delay:.3s}
 @keyframes eq{0%,100%{height:25%}50%{height:100%}}
 #view h2,#view h3{font-family:var(--disp);font-weight:600;letter-spacing:-.02em}
+.boot{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:radial-gradient(900px 600px at 30% 20%,rgba(124,77,255,.22),transparent 60%),radial-gradient(800px 600px at 80% 90%,rgba(255,77,141,.12),transparent 60%),var(--bg);transition:opacity .4s}
+.boot[hidden]{display:none}
+.boot.out{opacity:0}
+.bootc{width:min(440px,90vw);text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.bootlogo{width:64px;height:64px;border-radius:18px;margin-bottom:14px}
+.bootlogo svg{width:30px;height:30px;stroke:#fff}
+.bootk{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ac);font-weight:600}
+.boot h2{font-family:var(--disp);font-size:28px;font-weight:700;letter-spacing:-.03em}
+.boot p{color:var(--mut);font-size:13px;min-height:1.4em}
+.bootbar{width:100%;height:6px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:18px}
+.bootbar i{display:block;height:100%;width:0;background:var(--grad);border-radius:6px}
+.bootp{font-family:var(--disp);font-weight:600;font-size:13px;color:#d9d5e8;font-variant-numeric:tabular-nums;margin-top:6px}
 .modal{position:fixed;inset:0;z-index:60;background:rgba(5,4,10,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;padding:24px}
 .modal[hidden]{display:none}
 .mbox{position:relative;width:min(580px,100%);max-height:84vh;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:26px 28px 22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}
@@ -263,6 +275,14 @@ svg.f{fill:currentColor;stroke:none}
   </div>
  </div>
  <div id="qp"></div>
+ <div class="boot" id="boot" hidden><div class="bootc">
+  <div class="logo bootlogo" id="bootLogo"></div>
+  <div class="bootk" id="bootK">Mise à jour</div>
+  <h2 id="bootT">LaserBeat</h2>
+  <p id="bootS"></p>
+  <div class="bootbar"><i id="bootF"></i></div>
+  <div class="bootp" id="bootP">0 %</div>
+ </div></div>
  <div class="modal" id="about" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="aboutT" id="aboutBox"></div></div>
  <div id="fs">
   <button class="ibtn x" id="fsX"></button>
@@ -770,10 +790,28 @@ if(LB&&LB.version)$('#ver').textContent='v'+LB.version;
 function updReady(v){if(!v)return;updV=v;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="btn pri" id="updBtn" style="width:100%;justify-content:center;padding:10px 14px;font-size:13px">${ic('bolt')} Installer la mise à jour ${esc(v)}</button><div class="sub" style="font-size:12px;margin:6px 4px 4px">S'installe toute seule dès que la musique est en pause depuis 2 min, ou à la fermeture. LaserBeat redémarre (environ 20 s) puis la musique reprend.</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
 /* Installation automatique, seulement à un moment calme : musique arrêtée depuis 2 min (ou à la fermeture). */
 let updV=null,updDone=false,idleSince=null;
-function installUpd(why){
+/* Écran de mise à jour : la barre avance vite puis ralentit (courbe « ease-out »), sans jamais reculer
+   ni s'arrêter ; le pourcentage affiché correspond toujours à la longueur de la barre et atteint 100 % à la fin. */
+function updateScreen(kicker,titleTxt,sub,ms){
+ const b=$('#boot');b.classList.remove('out');b.hidden=false;
+ $('#bootLogo').innerHTML=ic('bolt');$('#bootK').textContent=kicker;$('#bootT').textContent=titleTxt;$('#bootS').textContent=sub;
+ return new Promise(res=>{
+  const t0=performance.now();
+  const step=()=>{
+   const t=Math.min(1,(performance.now()-t0)/ms),p=1-Math.pow(1-t,3);
+   $('#bootF').style.width=(p*100).toFixed(2)+'%';$('#bootP').textContent=Math.round(p*100)+' %';
+   if(t<1)requestAnimationFrame(step);else res();
+  };
+  requestAnimationFrame(step);
+ });
+}
+function hideUpdateScreen(){const b=$('#boot');b.classList.add('out');setTimeout(()=>{b.hidden=true;b.classList.remove('out')},400)}
+async function installUpd(why){
  if(!updV||updDone||!LB||!LB.installUpdate)return;
  updDone=true;logErr('Installation de la mise à jour '+updV+' ('+why+')');saveState();
  const b=$('#updBtn');if(b){b.disabled=true;b.textContent='Installation…'}
+ await updateScreen('Mise à jour','LaserBeat '+updV,'Préparation de la nouvelle version…',4000);
+ $('#bootS').textContent='Installation en cours : LaserBeat redémarre dans un instant.';
  LB.installUpdate();
 }
 setInterval(()=>{
@@ -787,8 +825,17 @@ if(window.innerWidth<=860){$('#side').classList.add('off');$('#app').classList.a
 const h0=(location.hash||'').slice(1);
 V={name:['home','all','lib'].includes(h0)?h0:'home',arg:null};
 render();
+const hadResume=!!store.get('resume',null); // lu avant toute sauvegarde de ce lancement
 resume();
 if(!store.get('v2',false)){P.repeat=1;store.set('v2',true);ui();saveState()}
+(function(){
+ const v=LB&&LB.version,prev=store.get('lastVersion',null);
+ if(!v)return;
+ store.set('lastVersion',v);
+ // ancienne version sans ce repère : on la reconnaît à son état de lecture déjà enregistré
+ const updated=prev?prev!==v:hadResume;
+ if(updated)updateScreen('Mise à jour installée','LaserBeat '+v,'Finalisation de la mise à jour…',3000).then(hideUpdateScreen);
+})();
 probe(TRACKS);
 window.addEventListener('beforeunload',saveState);
 })();

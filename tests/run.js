@@ -293,8 +293,33 @@ test('Mise à jour prête : le bouton apparaît et lance l\'installation', async
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('update:ready', '9.9.9'));
   assert(await waitFor(() => w.isVisible('#updBtn'), 3000), 'bouton absent');
   await w.click('#updBtn');
-  assert(await waitFor(() => app.evaluate(() => global.__inst === 1), 3000), 'installation non demandée');
+  // écran « Mise à jour » : barre qui avance, rapide au début puis plus lente, jusqu'à 100 %
+  assert(await waitFor(() => w.isVisible('#boot'), 2000), 'écran de mise à jour absent');
+  assert((await w.textContent('#bootT')).includes('9.9.9'), 'version absente de l\'écran');
+  const pct = async () => parseInt(await w.textContent('#bootP'), 10);
+  await sleep(1000); const p1 = await pct();
+  await sleep(1000); const p2 = await pct();
+  await sleep(1000); const p3 = await pct();
+  console.log(`    progression : ${p1} % -> ${p2} % -> ${p3} % (1 s d'écart)`);
+  assert(p1 < p2 && p2 < p3, 'la barre n\'avance pas');
+  assert(p2 - p1 > p3 - p2, 'la barre ne ralentit pas');
+  assert(await waitFor(() => app.evaluate(() => global.__inst === 1), 4000), 'installation non demandée');
+  assert((await pct()) === 100, 'la barre n\'atteint pas 100 %');
   await close(app);
+});
+
+test('Premier lancement après une mise à jour : écran « Mise à jour installée »', async () => {
+  const dir = newDataDir('apres-maj');
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ lb_lastVersion: '0.0.1', lb_v2: true }));
+  const { app, w } = await launch(dir);
+  assert(await w.isVisible('#boot'), 'écran absent après mise à jour');
+  assert((await w.textContent('#bootK')).includes('Mise à jour installée'), 'mauvais texte');
+  assert(await waitFor(async () => !(await w.isVisible('#boot')), 6000), 'l\'écran ne disparaît pas');
+  await close(app);
+  const again = await launch(dir);
+  await sleep(300);
+  assert(!(await again.w.isVisible('#boot')), 'écran affiché à un lancement normal');
+  await close(again.app);
 });
 
 test('Sortie audio modifiée : le morceau repart au même endroit', async () => {
