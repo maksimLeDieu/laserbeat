@@ -55,7 +55,6 @@ svg.f{fill:currentColor;stroke:none}
 .search input{flex:1;min-width:0;border:0;outline:0;background:none;height:100%;font-size:15px}
 .search input::placeholder{color:var(--mut)}
 .search kbd{font:12px var(--font);color:var(--mut);border:1px solid #3a3a44;padding:2px 7px;border-radius:5px;white-space:nowrap}
-.site{margin-left:auto;color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;padding-left:8px}
 .status{display:flex;align-items:center;gap:8px;height:32px;padding:0 14px;border-radius:16px;background:var(--panel2);font-size:13px;font-weight:600;color:var(--mut);white-space:nowrap;flex:none;max-width:280px;overflow:hidden;text-overflow:ellipsis}
 .status i{width:8px;height:8px;border-radius:50%;background:#55555f;flex:none}
 .status.live{color:#fff}
@@ -324,7 +323,7 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
 .mbox h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ac2);margin:18px 0 6px}
 .mbox p{color:var(--tx2);line-height:1.6;font-size:14px}
 .mbox .foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
-@media (max-width:1280px){.site{display:none}.status{margin-left:auto}}
+.status{margin-left:auto}
 @media (max-width:1150px){.search kbd{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}.eq i,.eqs i{animation:none}}
 </style>
@@ -335,7 +334,6 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
   <div class="brand"><div class="logo" id="lg"></div><span>LaserBeat</span></div>
   <button class="hbtn" data-act="go" data-v="home" id="n-home" title="Accueil"></button>
   <label class="search"><span id="sIc"></span><input id="q" placeholder="Que souhaitez-vous écouter ?" autocomplete="off"><kbd>Ctrl K</kbd></label>
-  <div class="site">Laser Game Evolution · Trégueux · Quimper · Brest</div>
   <div class="status" id="stat"><i></i><span id="statT"></span></div>
   <button class="ibtn" id="bInfo" title="À propos de LaserBeat" aria-haspopup="dialog"></button>
  </header>
@@ -440,7 +438,7 @@ const ic=(n,extra='')=>{const [f,p]=IC[n];return `<svg viewBox="0 0 24 24" class
 /* Morceaux : musiques/morceaux.json (fournis avec le logiciel) + %APPDATA%\LaserBeat\musiques (ajoutés). */
 const TR=LB&&Array.isArray(LB.tracks)?LB.tracks:[];
 const PL=[
- {id:'fav',name:'Morceaux préférés',tags:['Vos favoris'],h:[345,15],special:true,img:'img/morceaux-preferes.png'},
+ {id:'fav',name:'Morceaux préférés',tags:['Vos favoris'],h:[345,15],special:true,img:'img/morceaux-preferes.webp'},
  {id:'arena',name:'Laser Arena',tags:['Phonk','Drift hardbass','Mandelao','Hard rock'],h:[265,330],img:'img/laser-arena.webp'},
  {id:'beats',name:'LaserBeats',tags:['Toute la musique'],h:[135,295],img:'img/laserbeats.webp'},
  {id:'accueil',name:'Ambiance accueil',tags:['Accueil','Ambiance'],h:[38,175],img:'img/ambiance-accueil.webp'}
@@ -910,7 +908,7 @@ function about(show){
  <div class="mh"><div class="logo">${ic('bolt')}</div><div><h3 id="aboutT">À propos de LaserBeat</h3><small>Version ${esc(LB&&LB.version?LB.version:'')}</small></div></div>
  <h4>Propriété</h4><p><b>${AUTEUR} détient 100 % des droits sur LaserBeat.</b> Le logiciel, l'interface, le design et toutes les musiques ont été créés pour lui et sous sa direction, et sont sa propriété exclusive.</p>
  <h4>Légalité</h4><p><b>LaserBeat est 100 % légal.</b> Toutes les musiques sont des créations originales réalisées pour ${AUTEUR} : aucune œuvre d'un autre artiste n'est utilisée et aucun droit n'est dû à qui que ce soit pour leur diffusion.</p>
- <h4>Autorisation d'utilisation</h4><p>${AUTEUR} autorise ${UTILISATEUR}, par sa permission, à utiliser LaserBeat et à diffuser ses musiques dans les établissements Laser Game Evolution de <b>Trégueux</b>, <b>Quimper</b> et <b>Brest</b>.</p>
+ <h4>Autorisation d'utilisation</h4><p>${AUTEUR} autorise ${UTILISATEUR}, par sa permission, à utiliser LaserBeat et à diffuser ses musiques dans les salles de laser game de <b>Trégueux</b>, <b>Quimper</b> et <b>Brest</b>.</p>
  <p class="foot">© ${new Date().getFullYear()} ${AUTEUR} — tous droits réservés.<br>Composants techniques libres utilisés sous leurs licences : voir THIRD-PARTY-NOTICES.txt.</p>`;
  m.hidden=false;$('#aboutBox [data-close]').focus();
 }

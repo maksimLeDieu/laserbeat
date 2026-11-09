@@ -1,6 +1,6 @@
 # LaserBeat
 
-Lecteur de musique de bureau pour Windows, 100 % hors ligne, conçu pour le Laser Game Evolution (Saint-Brieuc).
+Lecteur de musique de bureau pour Windows, 100 % hors ligne, conçu pour les salles de laser game de Trégueux, Quimper et Brest.
 Electron 44 + electron-builder (installateur NSIS x64). L'interface est un fichier local : aucun navigateur, aucun serveur, aucun port réseau.
 
 ## Commandes
