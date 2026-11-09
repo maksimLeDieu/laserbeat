@@ -218,6 +218,9 @@ test('Page « Ambiance accueil » : ajout de morceaux séparés du laser game', 
   await w.click('.pli >> text=Laser Arena'); await w.waitForTimeout(300);
   const arena = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
   assert(!arena.includes('Ambiance douce'), 'musique d\'accueil mélangée à Laser Arena');
+  await w.click('.pli >> text=LaserBeats'); await w.waitForTimeout(300);
+  const all = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
+  assert(all.includes('Ambiance douce') && all.includes('Mandelao') && all.length === 7, 'LaserBeats ne réunit pas toute la musique : ' + all.join(', '));
   assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
 });

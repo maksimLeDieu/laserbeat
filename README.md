@@ -42,13 +42,13 @@ La désinstallation conserve `%APPDATA%\LaserBeat` (vos réglages et vos morceau
 Format d'une entrée :
 
 ```json
-{ "titre": "Phonk Laser Game", "fichier": "LaserBeat 1 - Phonk Laser Game.mp3", "playlist": "LaserBeats", "bpm": 145, "duree": 80.5, "photo": "LaserBeat 1 - Phonk Laser Game.webp" }
+{ "titre": "Phonk Laser Game", "fichier": "LaserBeat 1 - Phonk Laser Game.mp3", "playlist": "Laser Arena", "bpm": 145, "duree": 80.5, "photo": "LaserBeat 1 - Phonk Laser Game.webp" }
 ```
 
 `photo` (facultatif) : image du morceau (jpg, png ou webp, carrée de préférence) placée dans le même dossier ; sans photo, le morceau prend les couleurs de sa playlist.
 
-Pour `playlist`, mettez `LaserBeats`, `Ambiance accueil`, `Mes imports` ou un nouveau nom (la playlist est alors créée).
-Laser Arena contient automatiquement les morceaux de LaserBeats. Si `duree` vaut 0 ou manque, elle est calculée toute seule.
+Pour `playlist`, mettez `Laser Arena` (musique des parties de laser game), `Ambiance accueil`, `Mes imports` ou un nouveau nom (la playlist est alors créée).
+LaserBeats réunit automatiquement toute la musique du logiciel. « Jouer la musique » lance Laser Arena. Si `duree` vaut 0 ou manque, elle est calculée toute seule.
 
 ## Fonctionnement
 
