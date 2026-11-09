@@ -155,19 +155,46 @@ test('Fenêtre réduite/cachée : la musique continue et enchaîne', async () =>
   await close(app);
 });
 
-test('Agenda : la playlist du créneau change en fin de morceau', async () => {
-  const { app, w } = await launch(newDataDir('agenda'));
-  await w.click('#n-agenda');
-  const cur = await w.evaluate(() => [...document.querySelectorAll('.ag tr')].findIndex(r => r.classList.contains('now')) - 1);
-  const was = await w.$eval(`select[data-slot="${cur}"]`, s => s.value);
-  await w.click('text=Reprendre la programmation');
+test('Fin de playlist : la musique continue (répétition de la playlist par défaut)', async () => {
+  const { app, w } = await launch(newDataDir('fin-playlist'));
+  await w.click('.pli >> text=Tech Zone'); await w.click('text=Écouter');
   assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
-  const target = was === 'tech' ? 'over' : 'tech';
-  const name = target === 'tech' ? 'Tech Zone' : 'Overdrive';
-  await w.selectOption(`select[data-slot="${cur}"]`, target);
-  await w.waitForTimeout(1500);
-  await seekNearEnd(w);
-  assert(await waitFor(async () => (await w.textContent('#npS')) === name && await playing(w), 10000), "l'agenda n'a pas changé de playlist");
+  assert(await w.evaluate(() => document.querySelector('#bRep').classList.contains('on')), 'répétition non active par défaut');
+  await w.waitForTimeout(2500); await seekNearEnd(w, 1);            // 1er morceau -> 2e
+  assert(await waitFor(async () => (await title(w)) === 'Arrêt Net', 10000), 'pas de 2e morceau');
+  await w.waitForTimeout(2500); await seekNearEnd(w, 1);            // dernier morceau -> retour au début
+  assert(await waitFor(async () => (await title(w)) === 'Cible Verrouillée' && await playing(w), 10000), 'la musique s\'arrête en fin de playlist');
+  await close(app);
+});
+
+test('Page « Ambiance accueil » : ajout de morceaux séparés du laser game', async () => {
+  const dir = newDataDir('accueil');
+  const src = path.join(tmpRoot, 'Ambiance douce.mp3');
+  fs.copyFileSync(SAMPLE_MP3, src);
+  const { app, w, errors } = await launch(dir);
+  await app.evaluate(({ dialog }, src) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [src] }); }, src);
+  await w.click('#n-accueil');
+  assert((await w.textContent('#ttl')) === 'Ambiance accueil', 'page non ouverte');
+  assert(await w.isVisible('#view .empty'), 'message de page vide absent');
+  await w.click('text=Ajouter des morceaux');
+  assert(await waitFor(async () => (await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent))).includes('Ambiance douce'), 5000), 'morceau non ajouté à l\'accueil');
+  const json = JSON.parse(fs.readFileSync(path.join(dir, 'musiques', 'morceaux.json'), 'utf8'));
+  assert(json.some(e => e.fichier === 'Ambiance douce.mp3' && e.playlist === 'Ambiance accueil'), 'mauvaise playlist enregistrée');
+  await w.click('.pli >> text=Laser Arena'); await w.waitForTimeout(300);
+  const arena = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
+  assert(!arena.includes('Ambiance douce'), 'musique d\'accueil mélangée à Laser Arena');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
+test('Bouton ⓘ : fiche « À propos » (auteur, propriété, utilisation)', async () => {
+  const { app, w } = await launch(newDataDir('apropos'));
+  await w.click('#bInfo');
+  assert(await w.isVisible('#about'), 'fiche non affichée');
+  const txt = await w.textContent('#aboutBox');
+  for (const m of ['Maxime Loret', 'Didier Floret', 'créations originales', 'appartiennent']) assert(txt.includes(m), 'texte manquant : ' + m);
+  await w.keyboard.press('Escape');
+  assert(!(await w.isVisible('#about')), 'Échap ne ferme pas la fiche');
   await close(app);
 });
 
@@ -282,14 +309,6 @@ test('Sortie audio modifiée : le morceau repart au même endroit', async () => 
   });
   assert(await waitFor(() => /Sortie audio modifiée/.test(logOf(dir)), 6000), 'changement de sortie non détecté');
   assert(await waitFor(() => w.evaluate(() => { const a = [...document.querySelectorAll('audio')].find(x => !x.paused); return !!a && a.currentTime > 2; }), 6000), 'le morceau ne repart pas au même endroit');
-  await close(app);
-});
-
-test('Redémarrage préventif de nuit (créneau « Hors horaires »)', async () => {
-  const { app, w } = await launch(newDataDir('nuit'));
-  await app.evaluate(({ ipcMain }) => { ipcMain.removeAllListeners('app:restart'); global.__restart = 0; ipcMain.on('app:restart', () => global.__restart++); });
-  await w.evaluate(() => { window.__LB_TEST_NIGHT_MS = 1; Date.prototype.getHours = () => 23; });
-  assert(await waitFor(() => app.evaluate(() => global.__restart > 0), 75000, 2000), 'pas de redémarrage de nuit');
   await close(app);
 });
 

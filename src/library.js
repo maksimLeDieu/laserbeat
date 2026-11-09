@@ -152,7 +152,7 @@ function uniqueName(dir, base) {
   }
 }
 
-function importFiles(dir, paths) {
+function importFiles(dir, paths, playlist) {
   ensureUserDir(dir);
   const list = editableList(dir);
   const listed = new Set(list.map(e => keyOf(e.fichier || e.file || '')));
@@ -173,7 +173,7 @@ function importFiles(dir, paths) {
       }
     }
     if (!listed.has(keyOf(name))) {
-      list.push({ titre: path.basename(name, path.extname(name)), fichier: name, playlist: DEFAULT_PLAYLIST, bpm: 0, duree: 0 });
+      list.push({ titre: path.basename(name, path.extname(name)), fichier: name, playlist: String(playlist || '').trim() || DEFAULT_PLAYLIST, bpm: 0, duree: 0 });
       listed.add(keyOf(name));
     }
     added.push('u:' + keyOf(name));

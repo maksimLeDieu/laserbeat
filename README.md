@@ -26,7 +26,7 @@ L'installation se fait pour l'utilisateur courant dans `%LOCALAPPDATA%\Programs\
 | Quoi | Où |
 |---|---|
 | Morceaux fournis | `musiques/` du projet (copiés dans `resources\musiques` à l'installation) |
-| Réglages (volume, favoris, agenda, reprise) | `%APPDATA%\LaserBeat\config.json` |
+| Réglages (volume, favoris, reprise) | `%APPDATA%\LaserBeat\config.json` |
 | Morceaux ajoutés | `%APPDATA%\LaserBeat\musiques\` + `morceaux.json` |
 | Journal (en cas de problème) | `%APPDATA%\LaserBeat\laserbeat.log` |
 
@@ -49,6 +49,11 @@ Pour `playlist`, mettez `Tech Zone`, `Overdrive`, `LaserBeats`, `Laser Arena`, `
 Laser Arena contient automatiquement les morceaux de Tech Zone, d'Overdrive et de LaserBeats. Si `duree` vaut 0 ou manque, elle est calculée toute seule.
 
 ## Fonctionnement
+
+- Pages : Accueil, Tous les morceaux, **Ambiance accueil** (musiques de l'accueil, séparées du laser game,
+  ajoutées avec « Ajouter des morceaux »), Bibliothèque, playlists et favoris. Le bouton ⓘ en haut à droite
+  affiche l'auteur, la propriété et l'utilisation autorisée du logiciel.
+- En fin de playlist, la musique repart au début (répétition de la playlist activée par défaut).
 
 - Pendant qu'un morceau joue, le suivant est déjà chargé dans un second lecteur. Les 3 dernières secondes, un fondu
   enchaîné fait monter le suivant pendant que le premier descend : jamais de blanc ni de coupure sèche.
@@ -81,10 +86,10 @@ GitHub (`maksimLeDieu/laserbeat`, onglet Releases).
 - 1 minute après le lancement, puis toutes les 4 heures, LaserBeat regarde s'il existe une nouvelle version.
   Sans Internet, il ne se passe rien : la musique continue normalement.
 - La nouvelle version se télécharge en arrière-plan, puis s'installe toute seule à un moment calme :
-  musique en pause ou arrêtée depuis 2 minutes, créneau « Hors horaires » de l'Agenda, ou fermeture de
+  musique en pause ou arrêtée depuis 2 minutes, ou fermeture de
   LaserBeat (jamais pendant un arrêt de Windows). LaserBeat redémarre (environ 20 s) et la musique reprend.
   Le bouton « Installer la mise à jour » (en bas à gauche) permet de l'installer tout de suite.
-- Réglages, favoris, Agenda, morceaux ajoutés et lancement au démarrage sont conservés.
+- Réglages, favoris, morceaux ajoutés et lancement au démarrage sont conservés.
 
 Publier une nouvelle version : augmenter `version` dans `package.json` et pousser sur `main`.
 Le workflow GitHub Actions `.github/workflows/publier.yml` compile alors l'installateur sur Windows

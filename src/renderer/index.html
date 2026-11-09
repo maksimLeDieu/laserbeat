@@ -139,18 +139,6 @@ svg.f{fill:currentColor;stroke:none}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
 .grid .card{width:auto;height:200px}
 .empty{padding:40px;text-align:center;color:var(--mut);border:1px dashed var(--line2);border-radius:18px;background:var(--bg2)}
-/* agenda */
-.ag{width:100%;max-width:780px;border-collapse:separate;border-spacing:0;margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2)}
-.ag td,.ag th{padding:15px 16px;border-bottom:1px solid var(--line);text-align:left}
-.ag tr:last-child td{border-bottom:0}
-.ag th{color:var(--mut);font-weight:500;font-size:11px;letter-spacing:.09em;text-transform:uppercase;background:rgba(255,255,255,.02)}
-.ag tr.now td{background:linear-gradient(90deg,rgba(139,92,246,.18),rgba(255,77,141,.05))}
-.pill{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--grad);color:#fff;font-size:11px;font-weight:600;margin-left:10px;box-shadow:0 4px 14px -4px rgba(180,60,240,.7)}
-select{border:1px solid var(--line2);border-radius:10px;padding:9px 12px;background:var(--panel2);color:var(--tx);min-width:230px}
-.box{border:1px solid var(--line);background:var(--bg2);border-radius:12px;padding:18px;max-width:780px;margin-top:16px;display:flex;gap:14px;align-items:center;justify-content:space-between}
-.sw{position:relative;width:48px;height:28px;border-radius:999px;background:rgba(255,255,255,.16);transition:.2s;flex:none}
-.sw::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 2px 6px rgba(0,0,0,.4)}
-.sw.on{background:var(--grad);box-shadow:var(--glow)}.sw.on::after{left:23px}
 /* player : barre ancrée en bas, 3 zones (morceau · commandes · outils) */
 .player{position:fixed;left:256px;right:0;bottom:0;height:84px;display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,1.5fr) minmax(0,1fr);align-items:center;gap:20px;padding:0 20px;background:rgba(13,11,20,.94);backdrop-filter:blur(20px) saturate(130%);-webkit-backdrop-filter:blur(20px) saturate(130%);border-top:1px solid var(--line2);z-index:20;transition:left .2s}
 .app.nosb .player{left:0}
@@ -201,6 +189,17 @@ select{border:1px solid var(--line2);border-radius:10px;padding:9px 12px;backgro
 .eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}.eq i:nth-child(4){animation-delay:.1s}.eq i:nth-child(5){animation-delay:.3s}
 @keyframes eq{0%,100%{height:25%}50%{height:100%}}
 #view h2,#view h3{font-family:var(--disp);font-weight:600;letter-spacing:-.02em}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(5,4,10,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;padding:24px}
+.modal[hidden]{display:none}
+.mbox{position:relative;width:min(580px,100%);max-height:84vh;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:26px 28px 22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}
+.mbox .x{position:absolute;right:12px;top:12px}
+.mbox .mh{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.mbox .mh .logo{width:40px;height:40px;border-radius:10px}
+.mbox h3{font-family:var(--disp);font-size:20px;font-weight:700;letter-spacing:-.02em}
+.mbox .mh small{color:var(--mut);font-size:12px}
+.mbox h4{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ac);margin:16px 0 4px}
+.mbox p{color:#d9d5e8;line-height:1.55;font-size:13.5px}
+.mbox .foot{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
 .side>.sh:last-child{text-transform:none;letter-spacing:0;font-size:12px;gap:8px}
 .side>.sh:last-child span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}.eq i{animation:none}}
@@ -221,7 +220,7 @@ select{border:1px solid var(--line2);border-radius:10px;padding:9px 12px;backgro
   <div class="venue"><div class="logo" id="lg"></div><div><b>Laser Game Evolution</b><small>Trégueux</small></div></div>
   <button class="nav" data-act="go" data-v="home" id="n-home"></button>
   <button class="nav" data-act="go" data-v="all" id="n-all"></button>
-  <button class="nav" data-act="go" data-v="agenda" id="n-agenda"></button>
+  <button class="nav" data-act="open-pl" data-id="accueil" id="n-accueil"></button>
   <button class="nav" data-act="go" data-v="lib" id="n-lib"></button>
   <div class="sep"></div>
   <div class="sh"><span>Playlists</span></div>
@@ -236,10 +235,10 @@ select{border:1px solid var(--line2);border-radius:10px;padding:9px 12px;backgro
    <button class="ibtn" id="bSide" title="Menu"></button>
    <div class="ttl" id="ttl">Accueil</div>
    <label class="search"><span id="sIc"></span><input id="q" placeholder="Que souhaitez-vous écouter ?" autocomplete="off"><kbd>Ctrl K</kbd></label>
-   <button class="status" id="stat" data-act="go" data-v="agenda" title="Voir l'agenda"><i></i><span id="statT"></span></button>
-   <div class="clock" id="clock">--:--</div>
+   <div class="status" id="stat"><i></i><span id="statT"></span></div>
+   <button class="ibtn" id="bInfo" title="À propos de LaserBeat" aria-haspopup="dialog"></button>
   </header>
-  <nav class="chips" id="chips"><button data-act="go" data-v="home">Accueil</button><button data-act="go" data-v="all">Tous les morceaux</button><button data-act="go" data-v="lib">Playlists</button><button data-act="go" data-v="agenda">Agenda</button></nav>
+  <nav class="chips" id="chips"><button data-act="go" data-v="home">Accueil</button><button data-act="go" data-v="all">Tous les morceaux</button><button data-act="open-pl" data-id="accueil">Ambiance accueil</button><button data-act="go" data-v="lib">Playlists</button></nav>
   <div id="main"><div id="view"></div></div>
  </div>
 
@@ -258,13 +257,13 @@ select{border:1px solid var(--line2);border-radius:10px;padding:9px 12px;backgro
    <div class="prog"><span class="tm" id="tmC">0:00</span><div class="bar" id="bar"><i id="barF"></i></div><span class="tm" id="tm">0:00</span></div>
   </div>
   <div class="tools">
-   <button class="ibtn" id="bAg" title="Agenda"></button>
    <button class="ibtn" id="bQ" title="File d'attente"></button>
    <div class="vol"><button class="ibtn" id="bVol" title="Volume"></button><input type="range" id="vol" min="0" max="1" step="0.01"></div>
    <button class="ibtn" id="bFs" title="Plein écran"></button>
   </div>
  </div>
  <div id="qp"></div>
+ <div class="modal" id="about" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="aboutT" id="aboutBox"></div></div>
  <div id="fs">
   <button class="ibtn x" id="fsX"></button>
   <div class="big" id="fsArt"></div>
@@ -310,6 +309,8 @@ const IC={
  x:['','<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'],
  bolt:['','<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'],
  note:['','<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'],
+ coffee:['','<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'],
+ info:['','<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'],
  trash:['','<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>']
 };
 const ic=(n,extra='')=>{const [f,p]=IC[n];return `<svg viewBox="0 0 24 24" class="${f} ${extra}">${p}</svg>`};
@@ -322,7 +323,8 @@ const PL=[
  {id:'arena',name:'Laser Arena',tags:['Techno','Hard tech','Drum & bass','Phonk'],h:[265,330]},
  {id:'tech',name:'Tech Zone',tags:['Hard techno','Techno'],h:[190,230]},
  {id:'over',name:'Overdrive',tags:['Hard tech','Drum & bass'],h:[20,50]},
- {id:'beats',name:'LaserBeats',tags:['Phonk','Drift hardbass','Mandelao','Hard rock'],h:[135,295]}
+ {id:'beats',name:'LaserBeats',tags:['Phonk','Drift hardbass','Mandelao','Hard rock'],h:[135,295]},
+ {id:'accueil',name:'Ambiance accueil',tags:['Accueil','Ambiance'],h:[38,175]}
 ];
 const LASER=['arena','tech','over','beats']; // Laser Arena = tous les morceaux de ces playlists
 const plKey=s=>String(s||'').trim().toLowerCase();
@@ -349,13 +351,6 @@ const tracksOf=id=>id==='fav'?TRACKS.filter(t=>favs.has(t.id)):(getPl(id).tracks
 const trackById=id=>TRACKS.find(t=>t.id===id);
 const trackUrl=t=>t.url;
 
-/* ---------- agenda ---------- */
-const DEF=[{label:'Ouverture',a:10,b:12,pl:'arena'},{label:'Déjeuner',a:12,b:14,pl:'tech'},{label:'Après-midi',a:14,b:18,pl:'arena'},{label:'Soirée',a:18,b:22,pl:'over'},{label:'Hors horaires',a:22,b:10,pl:'arena'}];
-let SL=store.get('slots',DEF);
-if(!Array.isArray(SL)||SL.length!==5||SL.some(s=>!PL.find(p=>p.id===s.pl)))SL=DEF;
-const curSlot=()=>{const h=new Date().getHours();return SL.find(s=>s.a<s.b?(h>=s.a&&h<s.b):(h>=s.a||h<s.b))||SL[4]};
-const slotPl=()=>getPl(curSlot().pl);
-
 /* ---------- visuels ---------- */
 const artStyle=p=>`background:radial-gradient(circle at 22% 18%,hsl(${p.h[0]} 95% 62%),transparent 58%),radial-gradient(circle at 82% 78%,hsl(${p.h[1]} 90% 55%),transparent 58%),linear-gradient(160deg,hsl(${p.h[0]} 55% 22%),hsl(${p.h[1]} 65% 14%))`;
 const fmt=s=>{if(!isFinite(s))return'0:00';s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
@@ -364,7 +359,7 @@ const fmt=s=>{if(!isFinite(s))return'0:00';s=Math.floor(s);return Math.floor(s/6
 /* Deux lecteurs audio : pendant qu'un morceau joue, le suivant est déjà chargé dans l'autre,
    pour enchaîner sans blanc. A = lecteur actif, B = lecteur de réserve. */
 let A=$('#audio'),B=$('#audio2');
-const P={queue:[],i:-1,plId:null,shuffle:false,repeat:0,manual:true,auto:store.get('auto',true),nx:null};
+const P={queue:[],i:-1,plId:null,shuffle:false,repeat:1,nx:null};
 let want=false; // vrai tant que la musique doit jouer (faux après une pause voulue)
 let vol=store.get('vol',.8);if(!(vol>=0&&vol<=1))vol=.8;
 function setVol(v){vol=v;A.volume=v;if(!fade)B.volume=v;store.set('vol',v)}
@@ -436,20 +431,19 @@ function preloadNext(){
  B.dataset.tid=t.id;B.src=trackUrl(t);
 }
 function toggle(){
- if(P.i<0){const p=slotPl();P.manual=false;playQueue(tracksOf(p.id),0,p.id);return}
+ if(P.i<0){playQueue(tracksOf('arena'),0,'arena');return}
  if(A.paused){want=true;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}else{want=false;cancelFade();A.pause()}
  saveState();
 }
 function next(fromEnd){
  if(!P.queue.length)return;
  if(fromEnd&&P.repeat===2){A.currentTime=0;A.play().catch(()=>{});return}
- if(fromEnd&&P.auto&&!P.manual){const p=slotPl(),l=tracksOf(p.id);if(p.id!==P.plId&&l.length){playQueue(l,0,p.id);return}}
  let n;
  if(P.shuffle&&P.queue.length>1){n=P.nx!==null&&P.nx!==P.i&&P.nx<P.queue.length?P.nx:-1;if(n<0)do{n=Math.floor(Math.random()*P.queue.length)}while(n===P.i)}
  else n=P.i+1;
  P.nx=null;
  if(n>=P.queue.length){
-  if(P.repeat===1||fromEnd&&!P.manual)n=0;else if(fromEnd){want=false;ui();saveState();return}else n=0;
+  if(P.repeat===1)n=0;else if(fromEnd){want=false;ui();saveState();return}else n=0;
  }
  load(n);
 }
@@ -466,7 +460,7 @@ function toggleFav(id){
 }
 function saveState(){
  const t=P.queue[P.i];
- store.set('resume',{pl:P.plId,id:t?t.id:null,t:t?Math.floor(A.currentTime||0):0,playing:!!t&&want,manual:P.manual,shuffle:P.shuffle,repeat:P.repeat});
+ store.set('resume',{pl:P.plId,id:t?t.id:null,t:t?Math.floor(A.currentTime||0):0,playing:!!t&&want,shuffle:P.shuffle,repeat:P.repeat});
 }
 function logErr(m){try{if(LB)LB.log(m)}catch(e){}}
 [A,B].forEach(el=>{
@@ -532,25 +526,11 @@ if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener){
  outputs().then(sig=>{outSig=sig});
  navigator.mediaDevices.addEventListener('devicechange',()=>{clearTimeout(devT);devT=setTimeout(onDevices,1500)});
 }
-/* Redémarrage préventif : après 20 h sans redémarrer, LaserBeat se relance une fois pendant « Hors horaires »
-   (la musique reprend toute seule). S'il y a une mise à jour prête, c'est elle qui est installée à la place. */
-const START=Date.now();
-setInterval(()=>{
- const limit=window.__LB_TEST_NIGHT_MS||20*3600*1000;
- if(Date.now()-START<limit||curSlot()!==SL[4]||!LB||!LB.restartApp)return;
- if(typeof updV!=='undefined'&&updV&&!updDone){installUpd('redémarrage de nuit');return}
- logErr('Redémarrage préventif de nuit');saveState();LB.restartApp();
-},60000);
 /* Reprise : si LaserBeat jouait à sa fermeture (ou après une coupure), la musique repart. */
 function resume(){
  const R=store.get('resume',null);if(!R||typeof R!=='object')return;
- P.shuffle=!!R.shuffle;P.repeat=[0,1,2].includes(R.repeat)?R.repeat:0;
+ P.shuffle=!!R.shuffle;P.repeat=[0,1,2].includes(R.repeat)?R.repeat:1;
  if(!R.playing||!R.id){ui();return}
- if(R.manual===false){
-  P.manual=false;
-  const p=slotPl(),l=tracksOf(p.id);
-  if(p.id!==R.pl){if(l.length)playQueue(l,0,p.id);return}
- }else P.manual=true;
  const t=trackById(R.id);if(!t){ui();return}
  let l=tracksOf(R.pl),k=l.findIndex(x=>x.id===R.id);if(k<0){l=[t];k=0}
  playQueue(l,k,R.pl,R.t>0&&(!t.dur||R.t<t.dur-3)?R.t:0);
@@ -590,9 +570,9 @@ async function delTrack(id){
  PL.forEach(p=>{if(!p.special)plTracks(p)});
  render();saveState();clearTimeout(preT);preT=setTimeout(preloadNext,500);
 }
-async function importTracks(){
+async function importTracks(playlist){
  if(!LB)return;
- let list=[];try{list=await LB.importTracks()}catch(e){logErr('Import : '+e)}
+ let list=[];try{list=await LB.importTracks(playlist||'')}catch(e){logErr('Import : '+e)}
  if(!list||!list.length)return;
  const added=[];
  list.forEach(x=>{if(!trackById(x.id)){const t=mkTrack(x);TRACKS.push(t);added.push(t)}});
@@ -609,12 +589,11 @@ if('mediaSession' in navigator){try{
 }catch(e){}}
 
 let lastPlaying=null;
-/* Barre du haut : heure et état de la diffusion. */
+/* Barre du haut : état de la lecture. */
 function topStatus(){
- const d=new Date();$('#clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
  const on=!A.paused&&P.i>=0;
  $('#stat').classList.toggle('live',on);
- $('#statT').textContent=!on?'En pause':P.manual?'Lecture manuelle':'Programmation · '+curSlot().label;
+ $('#statT').textContent=on?'En lecture · '+getPl(P.plId).name:'En pause';
 }
 setInterval(topStatus,10000);
 function ui(){
@@ -643,7 +622,7 @@ function queue(){
 
 /* ---------- vues ---------- */
 let V={name:'home',arg:null};
-const titles={home:'Accueil',all:'Tous les morceaux',agenda:'Agenda',lib:'Bibliothèque',search:'Recherche'};
+const titles={home:'Accueil',all:'Tous les morceaux',lib:'Bibliothèque',search:'Recherche'};
 const pyramid='<svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 3v16M7.5 11h9"/></svg>';
 function card(p){
  return `<div class="card" style="${artStyle(p)}" data-act="open-pl" data-id="${p.id}"><span class="ov"></span><span class="ct"><small>Playlist</small><b>${esc(p.name)}</b><em>${p.tags.map(esc).join(' · ')}</em></span><span class="play" data-act="play-pl" data-id="${p.id}">${ic('play')}</span></div>`;
@@ -662,12 +641,12 @@ function recentTracks(){
  return l.slice(0,8);
 }
 function vHome(el){
- const pl=slotPl(),sl=curSlot();
+ const pl=getPl('arena');
  el.innerHTML=`
  <section class="hero"><div class="hart" style="${artStyle(pl)}">${pyramid}</div>
-  <div><div class="kick">Prévue pour maintenant · ${esc(sl.label)}</div><h1>${esc(pl.name)}</h1>
+  <div><div class="kick">Toute la musique du laser game</div><h1>${esc(pl.name)}</h1>
   <p class="sub">${pl.tags.map(esc).join(', ')}${pl.bpmTxt?' · '+pl.bpmTxt:''}</p>
-  <div class="acts"><button class="btn pri" data-act="play-slot">${ic('play')} Jouer la musique</button><button class="btn ghost" data-act="open-pl" data-id="${pl.id}">Voir la playlist</button></div></div></section>
+  <div class="acts"><button class="btn pri" data-act="play-pl" data-id="arena">${ic('play')} Jouer la musique</button><button class="btn ghost" data-act="open-pl" data-id="${pl.id}">Voir la playlist</button></div></div></section>
  <h2 class="h2">Playlists ${ic('chev')}</h2>
  <div class="row">${PL.filter(p=>!p.special&&p.id!==pl.id).map(card).join('')}</div>
  <h2 class="h2">Écoutes récentes ${ic('chev')}</h2>
@@ -678,33 +657,26 @@ function vHome(el){
  <div style="height:110px"></div>`;
 }
 function vPl(el){
- const p=getPl(V.arg),l=tracksOf(p.id);
- el.innerHTML=`<div class="phead"><div class="hart" style="${artStyle(p)}">${pyramid}</div><div><div class="kick">Playlist</div><h1>${esc(p.name)}</h1><p class="sub">${p.tags.map(esc).join(' · ')} · ${l.length} morceaux</p>
- <div class="acts"><button class="btn pri" data-act="play-pl" data-id="${p.id}">${ic('play')} Écouter</button><button class="btn line" data-act="shuf-pl" data-id="${p.id}">${ic('shuf')} Aléatoire</button></div></div></div>
+ const p=getPl(V.arg),l=tracksOf(p.id),acc=p.id==='accueil';
+ const empty=p.id==='fav'?'Aucun favori pour le moment. Cliquez sur l\'étoile d\'un morceau pour l\'ajouter ici.'
+  :acc?'Aucune musique d\'accueil pour l\'instant. Cliquez sur « Ajouter des morceaux » pour choisir des MP3 : ils sont copiés dans LaserBeat et restent séparés de la musique du laser game.'
+  :'Aucun morceau dans cette playlist.';
+ el.innerHTML=`<div class="phead"><div class="hart" style="${artStyle(p)}">${acc?ic('coffee'):pyramid}</div><div><div class="kick">${acc?'Musiques de l\'accueil':'Playlist'}</div><h1>${esc(p.name)}</h1><p class="sub">${acc?'Ambiance pour l\'accueil, à part de la musique du laser game':p.tags.map(esc).join(' · ')} · ${l.length} morceau${l.length>1?'x':''}</p>
+ <div class="acts">${l.length?`<button class="btn pri" data-act="play-pl" data-id="${p.id}">${ic('play')} Écouter</button><button class="btn line" data-act="shuf-pl" data-id="${p.id}">${ic('shuf')} Aléatoire</button>`:''}${acc&&LB&&LB.importTracks?`<button class="btn ${l.length?'line':'pri'}" data-act="import" data-pl="Ambiance accueil">${ic('plus')} Ajouter des morceaux</button>`:''}</div></div></div>
  <div style="margin-top:14px">
  <div class="trow thead"><span>#</span><span>Titre</span><span>Tempo</span><span class="dur">Durée</span><span></span></div>
- ${l.length?l.map((t,i)=>trow(t,i,p.id)).join(''):'<div class="empty">Aucun favori pour le moment. Cliquez sur l\'étoile d\'un morceau pour l\'ajouter ici.</div>'}</div><div style="height:110px"></div>`;
+ ${l.length?l.map((t,i)=>trow(t,i,p.id)).join(''):`<div class="empty">${empty}</div>`}</div><div style="height:110px"></div>`;
 }
 function vAll(el){
  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:20px 4px 14px"><div><h2 style="font-size:26px;letter-spacing:-.02em">Tous les morceaux</h2><p class="sub" style="margin:2px 0 0">${TRACKS.length} titres · cliquez sur un morceau pour le lancer</p></div>
  <div class="acts"><button class="btn pri" data-act="play-pl" data-id="arena">${ic('play')} Tout écouter</button><button class="btn line" data-act="shuf-pl" data-id="arena">${ic('shuf')} Aléatoire</button></div></div>
- ${PL.filter(p=>!p.special&&p.id!=='arena').map(p=>`<h3 style="margin:22px 10px 6px;font-size:15px;display:flex;align-items:center;gap:10px"><i style="width:22px;height:22px;border-radius:6px;${artStyle(p)}"></i>${esc(p.name)} <span class="m" style="font-weight:400;color:var(--mut)">· ${p.tracks.length} titres${p.bpmTxt?' · '+p.bpmTxt:''}</span></h3>${p.tracks.map((t,i)=>trow(t,i,p.id)).join('')}`).join('')}
+ ${PL.filter(p=>!p.special&&p.id!=='arena'&&p.tracks.length).map(p=>`<h3 style="margin:22px 10px 6px;font-size:15px;display:flex;align-items:center;gap:10px"><i style="width:22px;height:22px;border-radius:6px;${artStyle(p)}"></i>${esc(p.name)} <span class="m" style="font-weight:400;color:var(--mut)">· ${p.tracks.length} titres${p.bpmTxt?' · '+p.bpmTxt:''}</span></h3>${p.tracks.map((t,i)=>trow(t,i,p.id)).join('')}`).join('')}
  <div style="height:110px"></div>`;
 }
 function vLib(el){
  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin:20px 4px 6px"><h2 style="font-size:26px;letter-spacing:-.02em">Bibliothèque</h2><button class="btn pri" data-act="import">${ic('plus')} Ajouter mes morceaux</button></div>
  <p class="sub" style="margin:0 4px 16px">Morceaux originaux composés pour le laser game. Les morceaux ajoutés sont copiés dans LaserBeat et restent disponibles hors ligne.</p>
  <div class="grid">${PL.map(card).join('')}</div><div style="height:110px"></div>`;
-}
-function vAgenda(el){
- const cs=curSlot();
- el.innerHTML=`<h2 style="font-size:26px;letter-spacing:-.02em;margin:20px 4px 4px">Agenda</h2>
- <p class="sub" style="margin:0 4px">Quelle playlist joue selon l'heure de la journée.</p>
- <table class="ag"><tr><th>Créneau</th><th>Horaires</th><th>Playlist</th></tr>
- ${SL.map((s,i)=>`<tr class="${s===cs?'now':''}"><td><b>${esc(s.label)}</b>${s===cs?'<span class="pill">En cours</span>':''}</td><td>${s.a}h – ${s.b}h</td><td><select data-slot="${i}">${PL.filter(p=>!p.special).map(p=>`<option value="${p.id}" ${p.id===s.pl?'selected':''}>${esc(p.name)}</option>`).join('')}</select></td></tr>`).join('')}</table>
- <div class="box"><div><b>Programmation automatique</b><div class="sub" style="margin:2px 0 0">À la fin d'un morceau, la musique passe d'elle-même à la playlist du créneau en cours.</div></div><button class="sw ${P.auto?'on':''}" data-act="auto" aria-label="Programmation automatique"></button></div>
- <div class="box"><div><b>${P.manual?'Lecture manuelle':'Lecture suivant la programmation'}</b><div class="sub" style="margin:2px 0 0">${P.manual?'Vous avez choisi une playlist vous-même : l\'agenda ne la change pas.':'La playlist change toute seule quand le créneau change.'}</div></div>${P.manual?'<button class="btn pri" data-act="play-slot">Reprendre la programmation</button>':''}</div>
- <div style="height:110px"></div>`;
 }
 function vSearch(el){
  const q=V.arg.toLowerCase();
@@ -717,15 +689,16 @@ function vSearch(el){
 }
 function render(){
  const el=$('#view');
- ({home:vHome,all:vAll,agenda:vAgenda,lib:vLib,pl:vPl,search:vSearch}[V.name])(el);
+ ({home:vHome,all:vAll,lib:vLib,pl:vPl,search:vSearch}[V.name])(el);
  $('#ttl').textContent=V.name==='pl'?getPl(V.arg).name:titles[V.name];
- ['home','all','agenda','lib'].forEach(n=>$('#n-'+n).classList.toggle('on',V.name===n));
- document.querySelectorAll('#chips button').forEach(b=>b.classList.toggle('on',b.dataset.v===V.name));
+ ['home','all','lib'].forEach(n=>$('#n-'+n).classList.toggle('on',V.name===n));
+ $('#n-accueil').classList.toggle('on',V.name==='pl'&&V.arg==='accueil');
+ document.querySelectorAll('#chips button').forEach(b=>b.classList.toggle('on',b.dataset.v?b.dataset.v===V.name:(V.name==='pl'&&V.arg===b.dataset.id)));
  sideList();ui();
 }
 function go(name,arg){V={name,arg:arg||null};render();$('#main').scrollTop=0;try{history.replaceState(null,'','#'+name)}catch(e){}}
 function sideList(){
- $('#sideList').innerHTML=PL.map(p=>`<button class="pli ${V.name==='pl'&&V.arg===p.id?'on':''}" data-act="open-pl" data-id="${p.id}"><i style="${artStyle(p)}">${p.special?ic('star'):''}</i><span>${esc(p.name)}</span></button>`).join('');
+ $('#sideList').innerHTML=PL.filter(p=>p.id!=='accueil').map(p=>`<button class="pli ${V.name==='pl'&&V.arg===p.id?'on':''}" data-act="open-pl" data-id="${p.id}"><i style="${artStyle(p)}">${p.special?ic('star'):''}</i><span>${esc(p.name)}</span></button>`).join('');
 }
 
 /* ---------- actions ---------- */
@@ -733,14 +706,12 @@ function act(n,d){
  switch(n){
   case 'go':go(d.v);break;
   case 'open-pl':go('pl',d.id);break;
-  case 'play-pl':{const l=tracksOf(d.id);if(l.length){P.manual=true;playQueue(l,0,d.id)}else go('pl',d.id);break}
-  case 'shuf-pl':{const l=tracksOf(d.id);if(l.length){P.shuffle=true;P.manual=true;playQueue(l,Math.floor(Math.random()*l.length),d.id)}break}
-  case 'play-slot':{const p=slotPl();P.manual=false;playQueue(tracksOf(p.id),0,p.id);if(V.name==='agenda')render();break}
-  case 'play-track':{const l=tracksOf(d.pl);const k=l.findIndex(t=>t.id===d.id);P.manual=true;if(k>=0)playQueue(l,k,d.pl);else{const t=trackById(d.id);if(t)playQueue([t],0,t.pl)}break}
+  case 'play-pl':{const l=tracksOf(d.id);if(l.length){playQueue(l,0,d.id)}else go('pl',d.id);break}
+  case 'shuf-pl':{const l=tracksOf(d.id);if(l.length){P.shuffle=true;playQueue(l,Math.floor(Math.random()*l.length),d.id)}break}
+  case 'play-track':{const l=tracksOf(d.pl);const k=l.findIndex(t=>t.id===d.id);if(k>=0)playQueue(l,k,d.pl);else{const t=trackById(d.id);if(t)playQueue([t],0,t.pl)}break}
   case 'fav':toggleFav(d.id);break;
   case 'del':delTrack(d.id);break;
-  case 'import':importTracks();break;
-  case 'auto':P.auto=!P.auto;store.set('auto',P.auto);render();break;
+  case 'import':importTracks(d.pl);break;
  }
 }
 document.addEventListener('click',e=>{
@@ -750,17 +721,29 @@ document.addEventListener('click',e=>{
  if(q){load(+q.dataset.q);return}
  if(!e.target.closest('#qp')&&!e.target.closest('#bQ'))$('#qp').classList.remove('show');
 });
-document.addEventListener('change',e=>{
- const s=e.target.closest('select[data-slot]');
- if(s){SL[+s.dataset.slot].pl=s.value;store.set('slots',SL);render()}
-});
+/* « À propos » : auteur, propriété des musiques et de l'interface, utilisation autorisée. */
+const AUTEUR='Maxime Loret',UTILISATEUR='Didier Floret';
+function about(show){
+ const m=$('#about');
+ if(!show){m.hidden=true;return}
+ $('#aboutBox').innerHTML=`<button class="ibtn x" data-close title="Fermer">${ic('x')}</button>
+ <div class="mh"><div class="logo">${ic('bolt')}</div><div><h3 id="aboutT">À propos de LaserBeat</h3><small>Version ${esc(LB&&LB.version?LB.version:'')}</small></div></div>
+ <h4>Création</h4><p>LaserBeat a été entièrement conçu et réalisé par ${AUTEUR} : l'interface, le logiciel et toutes les musiques intégrées.</p>
+ <h4>Musiques</h4><p>Les musiques intégrées sont des créations originales de ${AUTEUR}. Elles n'utilisent aucune œuvre d'un autre artiste et ne font partie d'aucun catalogue de gestion de droits (SACEM). Aucun droit n'est dû à un tiers pour leur diffusion.</p>
+ <h4>Propriété et utilisation</h4><p>LaserBeat et ses musiques appartiennent à ${AUTEUR}, qui en autorise l'utilisation à ${UTILISATEUR}.</p>
+ <h4>Composants libres</h4><p>LaserBeat s'appuie sur des briques open source (Electron, polices Sora et DM Sans, icônes Feather) dont les licences libres autorisent cet usage. Leurs mentions sont fournies avec le logiciel (fichier THIRD-PARTY-NOTICES.txt).</p>
+ <p class="foot">© ${new Date().getFullYear()} ${AUTEUR} — tous droits réservés.</p>`;
+ const lg=$('#aboutBox .logo svg');if(lg)lg.style.stroke='#fff';
+ m.hidden=false;$('#aboutBox [data-close]').focus();
+}
+$('#bInfo').onclick=()=>about(true);
+$('#about').addEventListener('click',e=>{if(e.target.id==='about'||e.target.closest('[data-close]'))about(false)});
 $('#bPlay').onclick=toggle;$('#fPlay').onclick=toggle;
 $('#bNext').onclick=()=>next(false);$('#fNext').onclick=()=>next(false);
 $('#bPrev').onclick=prev;$('#fPrev').onclick=prev;
 $('#bShuf').onclick=()=>{P.shuffle=!P.shuffle;P.nx=null;ui();saveState();preloadNext()};
 $('#bRep').onclick=()=>{P.repeat=(P.repeat+1)%3;ui();saveState();preloadNext()};
 $('#bFav').onclick=()=>{const t=P.queue[P.i];if(t)toggleFav(t.id)};
-$('#bAg').onclick=()=>go('agenda');
 $('#bQ').onclick=e=>{e.stopPropagation();queue();$('#qp').classList.toggle('show')};
 $('#bVol').onclick=()=>{setVol(A.volume===0?.8:0);$('#vol').value=vol;ui()};
 $('#vol').oninput=e=>{setVol(+e.target.value);ui()};
@@ -771,22 +754,22 @@ const q=$('#q');
 q.addEventListener('input',()=>{const v=q.value.trim();if(v)go('search',v);else go('home')});
 document.addEventListener('keydown',e=>{
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();q.focus();return}
- if(e.key==='Escape'){$('#fs').classList.remove('show');$('#qp').classList.remove('show')}
+ if(e.key==='Escape'){$('#fs').classList.remove('show');$('#qp').classList.remove('show');about(false)}
  if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)){e.preventDefault();toggle()}
 });
 
 /* ---------- init ---------- */
 $('#lg').innerHTML=ic('bolt');$('#lg').firstChild.style.stroke='#fff';
-$('#n-home').innerHTML=ic('home')+'Accueil';$('#n-all').innerHTML=ic('note')+'Tous les morceaux';$('#n-agenda').innerHTML=ic('cal')+'Agenda';$('#n-lib').innerHTML=ic('lib')+'Bibliothèque';
+$('#n-home').innerHTML=ic('home')+'Accueil';$('#n-all').innerHTML=ic('note')+'Tous les morceaux';$('#n-accueil').innerHTML=ic('coffee')+'Ambiance accueil';$('#n-lib').innerHTML=ic('lib')+'Bibliothèque';
 $('#bSide').innerHTML=ic('side');$('#sIc').innerHTML=ic('search');$('#fsX').innerHTML=ic('x');
 $('#bShuf').innerHTML=ic('shuf');$('#bPrev').innerHTML=ic('prev');$('#bNext').innerHTML=ic('next');$('#bRep').innerHTML=ic('rep');
-$('#bFav').innerHTML=ic('star');$('#bAg').innerHTML=ic('cal');$('#bQ').innerHTML=ic('list');$('#bFs').innerHTML=ic('exp');
+$('#bFav').innerHTML=ic('star');$('#bInfo').innerHTML=ic('info');$('#bQ').innerHTML=ic('list');$('#bFs').innerHTML=ic('exp');
 $('#fPrev').innerHTML=ic('prev');$('#fNext').innerHTML=ic('next');
 $('#vol').value=A.volume;
 if(LB&&LB.version)$('#ver').textContent='v'+LB.version;
 /* Mise à jour automatique : quand une nouvelle version est téléchargée, un bouton apparaît. */
-function updReady(v){if(!v)return;updV=v;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="btn pri" id="updBtn" style="width:100%;justify-content:center;padding:10px 14px;font-size:13px">${ic('bolt')} Installer la mise à jour ${esc(v)}</button><div class="sub" style="font-size:12px;margin:6px 4px 4px">S'installe toute seule dès que la musique est en pause depuis 2 min, hors horaires ou à la fermeture. LaserBeat redémarre (environ 20 s) puis la musique reprend.</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
-/* Installation automatique, seulement à un moment calme : musique arrêtée depuis 2 min, ou créneau « Hors horaires ». */
+function updReady(v){if(!v)return;updV=v;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="btn pri" id="updBtn" style="width:100%;justify-content:center;padding:10px 14px;font-size:13px">${ic('bolt')} Installer la mise à jour ${esc(v)}</button><div class="sub" style="font-size:12px;margin:6px 4px 4px">S'installe toute seule dès que la musique est en pause depuis 2 min, ou à la fermeture. LaserBeat redémarre (environ 20 s) puis la musique reprend.</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
+/* Installation automatique, seulement à un moment calme : musique arrêtée depuis 2 min (ou à la fermeture). */
 let updV=null,updDone=false,idleSince=null;
 function installUpd(why){
  if(!updV||updDone||!LB||!LB.installUpdate)return;
@@ -798,15 +781,15 @@ setInterval(()=>{
  if(!updV||updDone)return;
  const playing=!A.paused&&P.i>=0;
  if(playing)idleSince=null;else if(idleSince===null)idleSince=Date.now();
- if(curSlot()===SL[4])installUpd('hors horaires');
- else if(!playing&&Date.now()-idleSince>=120000)installUpd('musique arrêtée');
+ if(!playing&&Date.now()-idleSince>=120000)installUpd('musique arrêtée');
 },20000);
 if(LB&&LB.onUpdate){updReady(LB.updateReady);LB.onUpdate(updReady)}
 if(window.innerWidth<=860){$('#side').classList.add('off');$('#app').classList.add('nosb')}
 const h0=(location.hash||'').slice(1);
-V={name:['home','all','agenda','lib'].includes(h0)?h0:'home',arg:null};
+V={name:['home','all','lib'].includes(h0)?h0:'home',arg:null};
 render();
 resume();
+if(!store.get('v2',false)){P.repeat=1;store.set('v2',true);ui();saveState()}
 probe(TRACKS);
 window.addEventListener('beforeunload',saveState);
 })();

@@ -86,7 +86,7 @@ function start() {
   ipcMain.on('lib:load', e => {
     try { e.returnValue = library.loadAll(musicDirs); } catch (err) { log('lib:load', err); e.returnValue = []; }
   });
-  ipcMain.handle('lib:import', async () => {
+  ipcMain.handle('lib:import', async (e, playlist) => {
     const r = await dialog.showOpenDialog(win, {
       title: 'Ajouter des morceaux à LaserBeat',
       buttonLabel: 'Ajouter',
@@ -94,7 +94,7 @@ function start() {
       filters: [{ name: 'Fichiers audio', extensions: library.AUDIO_EXT.map(x => x.slice(1)) }]
     });
     if (r.canceled || !r.filePaths.length) return [];
-    try { return library.importFiles(musicDirs.user, r.filePaths); } catch (err) { log('lib:import', err); return []; }
+    try { return library.importFiles(musicDirs.user, r.filePaths, playlist); } catch (err) { log('lib:import', err); return []; }
   });
   ipcMain.handle('lib:confirm-delete', async (e, title) => {
     const r = await dialog.showMessageBox(win, {
@@ -118,16 +118,6 @@ function start() {
 
   /* ----- IPC : état du lecteur (anti-veille) et journal ----- */
   ipcMain.on('player:state', (e, playing) => setPlaying(!!playing));
-  // Redémarrage préventif (demandé par l'interface la nuit, pendant « Hors horaires »).
-  let restarting = false;
-  ipcMain.on('app:restart', () => {
-    if (restarting) return;
-    restarting = true;
-    log('redémarrage préventif');
-    if (config) config.flush();
-    app.relaunch();
-    app.quit();
-  });
   ipcMain.on('log', (e, msg) => log('[interface]', String(msg).slice(0, 2000)));
 
   app.on('child-process-gone', (e, d) => log('child-process-gone', d));

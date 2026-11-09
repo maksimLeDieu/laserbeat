@@ -20,7 +20,7 @@ contextBridge.exposeInMainWorld('laserbeat', {
     set: (key, value) => { cfg[key] = value; ipcRenderer.send('cfg:set', key, value); }
   },
   tracks,
-  importTracks: () => ipcRenderer.invoke('lib:import'),
+  importTracks: playlist => ipcRenderer.invoke('lib:import', String(playlist || '')),
   saveDuration: (id, dur) => ipcRenderer.send('lib:duration', id, dur),
   confirmDelete: title => ipcRenderer.invoke('lib:confirm-delete', String(title)),
   deleteTrack: id => ipcRenderer.invoke('lib:delete', String(id)),
@@ -28,6 +28,5 @@ contextBridge.exposeInMainWorld('laserbeat', {
   onUpdate: cb => ipcRenderer.on('update:ready', (e, v) => cb(String(v))),
   installUpdate: () => ipcRenderer.send('update:install'),
   setPlaying: playing => ipcRenderer.send('player:state', !!playing),
-  restartApp: () => ipcRenderer.send('app:restart'),
   log: msg => ipcRenderer.send('log', String(msg))
 });
