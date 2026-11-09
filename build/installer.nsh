@@ -1,5 +1,5 @@
 ﻿; LaserBeat - réglages supplémentaires de l'installateur NSIS (inclus par electron-builder)
-; Ajoute une page « Options » avec la case « Lancer LaserBeat au démarrage de Windows »
+; Ajoute une page « Options » avec la case « Lancer Musique ML au démarrage de Windows »
 ; (décochée par défaut). Le lancement au démarrage passe par la clé Run de l'utilisateur.
 
 !include "MUI2.nsh"
@@ -24,18 +24,18 @@
         StrCpy $LB_AutoStart ${BST_CHECKED}
       ${EndIf}
     ${EndIf}
-    !insertmacro MUI_HEADER_TEXT "Options" "Choisissez comment LaserBeat doit démarrer."
+    !insertmacro MUI_HEADER_TEXT "Options" "Choisissez comment Musique ML doit démarrer."
     nsDialogs::Create 1018
     Pop $0
     ${If} $0 == error
       Abort
     ${EndIf}
-    ${NSD_CreateCheckbox} 0 12u 100% 12u "Lancer LaserBeat au démarrage de Windows"
+    ${NSD_CreateCheckbox} 0 12u 100% 12u "Lancer Musique ML au démarrage de Windows"
     Pop $LB_AutoStartBox
     ${If} $LB_AutoStart == ${BST_CHECKED}
       ${NSD_Check} $LB_AutoStartBox
     ${EndIf}
-    ${NSD_CreateLabel} 0 32u 100% 36u "Si cette case est cochée, LaserBeat s'ouvrira tout seul à l'ouverture de la session Windows. Vous pourrez changer ce choix en relançant l'installateur."
+    ${NSD_CreateLabel} 0 32u 100% 36u "Si cette case est cochée, Musique ML s'ouvrira tout seul à l'ouverture de la session Windows. Vous pourrez changer ce choix en relançant l'installateur."
     Pop $0
     nsDialogs::Show
   FunctionEnd

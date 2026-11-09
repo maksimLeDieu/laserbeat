@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self' file:; media-src file: blob:">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LaserBeat</title>
+<title>Musique ML</title>
 <style>
-/* ===== LaserBeat — interface « pro » =====
+/* ===== Musique ML — interface « pro » =====
    Organisation façon lecteur de musique moderne : bibliothèque à gauche, contenu au centre,
-   « En cours de lecture » à droite, lecteur fixé en bas. Identité LaserBeat : noir profond, accent violet.
+   « En cours de lecture » à droite, lecteur fixé en bas. Identité Musique ML : noir profond, accent violet.
    Police intégrée (fonctionne hors ligne) : DM Sans. */
 @font-face{font-family:"DM Sans";src:url(fonts/dm-sans-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:block}
 @font-face{font-family:"DM Sans";src:url(fonts/dm-sans-latin-500-normal.woff2) format("woff2");font-weight:500;font-display:block}
@@ -42,6 +42,7 @@ svg.f{fill:currentColor;stroke:none}
 .top{display:flex;align-items:center;gap:8px;min-width:0}
 .brand{width:var(--lw);flex:none;display:flex;align-items:center;gap:10px;padding-left:14px;font-weight:800;font-size:19px;letter-spacing:-.03em;overflow:hidden}
 .app.mini .brand span{display:none}
+.mark{width:32px;height:32px;border-radius:8px;flex:none;display:block}
 .logo{width:32px;height:32px;border-radius:8px;background:var(--grad);display:grid;place-items:center;color:#fff;flex:none}
 .logo svg{width:18px;height:18px}
 .hbtn{width:48px;height:48px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;color:var(--mut);flex:none;transition:transform .15s,color .15s,background .15s}
@@ -331,18 +332,18 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
 <body>
 <div class="app" id="app">
  <header class="top">
-  <div class="brand"><div class="logo" id="lg"></div><span>LaserBeat</span></div>
+  <div class="brand"><img class="mark" src="img/logo.svg" alt=""><span>Musique ML</span></div>
   <button class="hbtn" data-act="go" data-v="home" id="n-home" title="Accueil"></button>
   <label class="search"><span id="sIc"></span><input id="q" placeholder="Que souhaitez-vous écouter ?" autocomplete="off"><kbd>Ctrl K</kbd></label>
   <div class="status" id="stat"><i></i><span id="statT"></span></div>
-  <button class="ibtn" id="bInfo" title="À propos de LaserBeat" aria-haspopup="dialog"></button>
+  <button class="ibtn" id="bInfo" title="À propos de Musique ML" aria-haspopup="dialog"></button>
  </header>
  <div class="body">
   <aside class="panel side" id="side">
    <div class="sh"><button class="libt" data-act="go" data-v="lib" id="n-lib" title="Bibliothèque"></button><button class="ibtn" id="bAdd" data-act="import" title="Ajouter des morceaux"></button><button class="ibtn" id="bSide"></button></div>
    <div class="chips"><button class="chip" data-act="go" data-v="all" id="n-all">Morceaux</button><button class="chip" data-act="open-pl" data-id="accueil" id="n-accueil">Ambiance accueil</button></div>
    <div id="sideList"></div>
-   <div class="sfoot"><div id="upd" hidden></div><div class="vline"><span>Musique originale LaserBeat</span><span id="ver"></span></div></div>
+   <div class="sfoot"><div id="upd" hidden></div><div class="vline"><span>Musique ML · Maxime Loret</span><span id="ver"></span></div></div>
   </aside>
   <main class="panel">
    <div id="main"><div class="mhead" id="mhead"><span id="mhPlay"></span><div id="ttl">Accueil</div></div><div id="view"></div></div>
@@ -373,9 +374,9 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
   </div>
  </footer>
  <div class="boot" id="boot" hidden><div class="bootc">
-  <div class="logo bootlogo" id="bootLogo"></div>
+  <img class="mark bootlogo" src="img/logo.svg" alt="">
   <div class="bootk" id="bootK">Mise à jour</div>
-  <h2 id="bootT">LaserBeat</h2>
+  <h2 id="bootT">Musique ML</h2>
   <p id="bootS"></p>
   <div class="bootbar"><i id="bootF"></i></div>
   <div class="bootp" id="bootP">0 %</div>
@@ -456,7 +457,7 @@ function plFor(name){
  if(!p){let h=0;for(const c of k)h=(h*31+c.charCodeAt(0))%360;p={id:'c-'+k,name:String(name).trim(),tags:['Mes morceaux'],h:[h,(h+70)%360],tracks:[]};PL.push(p)}
  return p;
 }
-const mkTrack=t=>({id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'LaserBeat Studio',bpm:t.bpm||0,dur:t.dur||0,url:t.url,img:typeof t.img==='string'&&/^file:/.test(t.img)?t.img:'',user:!!t.user});
+const mkTrack=t=>({id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'Musique ML',bpm:t.bpm||0,dur:t.dur||0,url:t.url,img:typeof t.img==='string'&&/^file:/.test(t.img)?t.img:'',user:!!t.user});
 const TRACKS=TR.map(mkTrack);
 /* Recalcule le contenu des playlists. LaserBeats liste les playlists qu'elle réunit vraiment. */
 function refreshPl(){
@@ -663,7 +664,7 @@ if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener){
  outputs().then(sig=>{outSig=sig});
  navigator.mediaDevices.addEventListener('devicechange',()=>{clearTimeout(devT);devT=setTimeout(onDevices,1500)});
 }
-/* Reprise : si LaserBeat jouait à sa fermeture (ou après une coupure), la musique repart. */
+/* Reprise : si Musique ML jouait à sa fermeture (ou après une coupure), la musique repart. */
 function resume(){
  const R=store.get('resume',null);if(!R||typeof R!=='object')return;
  P.shuffle=!!R.shuffle;P.repeat=[0,1,2].includes(R.repeat)?R.repeat:1;
@@ -742,7 +743,7 @@ const pyramid='<svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 3v
 const plIcon=p=>p.id==='fav'?ic('star'):p.id==='accueil'?ic('coffee'):(p.id==='imp'||String(p.id).startsWith('c-'))?ic('note'):pyramid;
 const nTxt=n=>n+' morceau'+(n>1?'x':'');
 const durTxt=s=>{s=Math.round(s);if(!s)return'';const m=Math.floor(s/60);return m>=60?Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min':m+' min '+String(s%60).padStart(2,'0')+' s'};
-const plDesc=p=>p.id==='fav'?'Vos morceaux préférés':p.id==='accueil'?'Musiques de l\'accueil, à part du laser game':p.id==='arena'?'La musique des parties de laser game':p.id==='beats'?'Toute la musique LaserBeat':p.tags.join(', ');
+const plDesc=p=>p.id==='fav'?'Vos morceaux préférés':p.id==='accueil'?'Musiques de l\'accueil, à part du laser game':p.id==='arena'?'La musique des parties de laser game':p.id==='beats'?'Toute la musique':p.tags.join(', ');
 function ui(){
  const t=P.queue[P.i],p=t?getPl(t.pl):null,playing=!A.paused&&t;
  $('#npT').textContent=t?t.title:'Rien en lecture';
@@ -783,7 +784,7 @@ function nowPanel(){
  el.innerHTML=`<div class="rp-art" style="${tArtH(t)}">${t.img?'':plIcon(p)}</div>
  <div class="rp-t"><div><h2 title="${esc(t.title)}">${esc(t.title)}</h2><span>${esc(p.name)}${t.bpm?' · '+t.bpm+' BPM':''}</span></div><button class="ibtn star ${favs.has(t.id)?'on':''}" data-act="fav" data-id="${t.id}" title="Favori">${ic('star')}</button></div>
  <div class="rp-card"><h4>Ensuite dans la file${P.shuffle&&P.repeat!==2?' <small>· aléatoire</small>':''}${P.repeat===2?' <small>· en boucle</small>':''}</h4>${up.length?up.map(k=>{const x=P.queue[k],q=getPl(x.pl);return `<button class="qi" data-q="${k}"><i style="${tArtH(x)}"></i><span><b>${esc(x.title)}</b><small>${esc(q.name)}</small></span></button>`}).join(''):'<p>La lecture s\'arrête après ce morceau.</p>'}</div>
- <div class="rp-card"><h4>À propos du morceau</h4><dl><dt>Playlist</dt><dd>${esc(p.name)}</dd><dt>Tempo</dt><dd>${t.bpm?t.bpm+' BPM':'—'}</dd><dt>Durée</dt><dd>${t.dur?fmt(t.dur):'—'}</dd><dt>Source</dt><dd>${t.user?'Morceau ajouté':'Musique originale LaserBeat'}</dd></dl></div>`;
+ <div class="rp-card"><h4>À propos du morceau</h4><dl><dt>Playlist</dt><dd>${esc(p.name)}</dd><dt>Tempo</dt><dd>${t.bpm?t.bpm+' BPM':'—'}</dd><dt>Durée</dt><dd>${t.dur?fmt(t.dur):'—'}</dd><dt>Source</dt><dd>${t.user?'Morceau ajouté':'Musique originale Musique ML'}</dd></dl></div>`;
 }
 
 /* ---------- vues ---------- */
@@ -831,22 +832,22 @@ const head=(p,kick,title,desc,icon)=>`<div class="ph"><div class="art" style="${
 function vPl(el){
  const p=getPl(V.arg),l=tracksOf(p.id),acc=p.id==='accueil',d=durTxt(l.reduce((s,t)=>s+(t.dur||0),0));
  const empty=p.id==='fav'?'Aucun favori pour le moment. Cliquez sur l\'étoile d\'un morceau pour l\'ajouter ici.'
-  :acc?'Aucune musique d\'accueil pour l\'instant. Cliquez sur « Ajouter des morceaux » pour choisir des MP3 : ils sont copiés dans LaserBeat et restent séparés de la musique du laser game.'
+  :acc?'Aucune musique d\'accueil pour l\'instant. Cliquez sur « Ajouter des morceaux » pour choisir des MP3 : ils sont copiés dans Musique ML et restent séparés de la musique du laser game.'
   :'Aucun morceau dans cette playlist.';
  const desc=p.id==='fav'?'Vos morceaux préférés':acc?'Ambiance pour l\'accueil, à part de la musique du laser game':p.tags.map(esc).join(', ');
- el.innerHTML=`<div class="pv">${head(p,acc?'Playlist · Accueil':'Playlist',p.name,`<b>LaserBeat</b> · ${desc} · ${nTxt(l.length)}${d?', '+d:''}`,plIcon(p))}
+ el.innerHTML=`<div class="pv">${head(p,acc?'Playlist · Accueil':'Playlist',p.name,`<b>Musique ML</b> · ${desc} · ${nTxt(l.length)}${d?', '+d:''}`,plIcon(p))}
  <div class="pacts">${l.length?`<button class="bigplay" data-act="pl-toggle" data-id="${p.id}" title="Écouter">${ic('play')}</button><button class="gbtn" data-act="shuf-pl" data-id="${p.id}" title="Lecture aléatoire">${ic('shuf')}</button>`:''}${acc&&LB&&LB.importTracks?`<button class="pill ${l.length?'':'pri'}" data-act="import" data-pl="Ambiance accueil">${ic('plus')} Ajouter des morceaux</button>`:''}</div>
  <div class="tlist">${l.length?rows(l,p.id):`<div class="empty">${empty}</div>`}</div></div>`;
 }
 function vAll(el){
  const d=durTxt(TRACKS.reduce((s,t)=>s+(t.dur||0),0));
  const l=TRACKS;
- el.innerHTML=`<div class="pv">${head({h:[255,320]},'Bibliothèque','Tous les morceaux',`<b>LaserBeat</b> · ${nTxt(TRACKS.length)}${d?', '+d:''} · cliquez sur un morceau pour le lancer`,ic('note'))}
+ el.innerHTML=`<div class="pv">${head({h:[255,320]},'Bibliothèque','Tous les morceaux',`<b>Musique ML</b> · ${nTxt(TRACKS.length)}${d?', '+d:''} · cliquez sur un morceau pour le lancer`,ic('note'))}
  <div class="pacts">${TRACKS.length?`<button class="bigplay" data-act="pl-toggle" data-id="beats" title="Écouter">${ic('play')}</button><button class="gbtn" data-act="shuf-pl" data-id="beats" title="Lecture aléatoire">${ic('shuf')}</button>`:''}</div>
  <div class="tlist">${l.length?rows(l):'<div class="empty">Aucun morceau.</div>'}</div></div>`;
 }
 function vLib(el){
- el.innerHTML=`<div class="pv">${head({h:[230,280]},'Bibliothèque','Vos playlists','Morceaux originaux composés pour le laser game. Les morceaux ajoutés sont copiés dans LaserBeat et restent disponibles hors ligne.',ic('lib'))}
+ el.innerHTML=`<div class="pv">${head({h:[230,280]},'Bibliothèque','Vos playlists','Morceaux originaux composés pour le laser game. Les morceaux ajoutés sont copiés dans Musique ML et restent disponibles hors ligne.',ic('lib'))}
  <div class="pacts"><button class="pill pri" data-act="import">${ic('plus')} Ajouter mes morceaux</button></div>
  <div class="tlist"><div class="cards">${PL.filter(shownPl).map(card).join('')}</div></div></div>`;
 }
@@ -905,10 +906,10 @@ function about(show){
  const m=$('#about');
  if(!show){m.hidden=true;return}
  $('#aboutBox').innerHTML=`<button class="ibtn x" data-close title="Fermer">${ic('x')}</button>
- <div class="mh"><div class="logo">${ic('bolt')}</div><div><h3 id="aboutT">À propos de LaserBeat</h3><small>Version ${esc(LB&&LB.version?LB.version:'')}</small></div></div>
- <h4>Propriété</h4><p><b>${AUTEUR} détient 100 % des droits sur LaserBeat.</b> Le logiciel, l'interface, le design et toutes les musiques ont été créés pour lui et sous sa direction, et sont sa propriété exclusive.</p>
- <h4>Légalité</h4><p><b>LaserBeat est 100 % légal.</b> Toutes les musiques sont des créations originales réalisées pour ${AUTEUR} : aucune œuvre d'un autre artiste n'est utilisée et aucun droit n'est dû à qui que ce soit pour leur diffusion.</p>
- <h4>Autorisation d'utilisation</h4><p>${AUTEUR} autorise ${UTILISATEUR}, par sa permission, à utiliser LaserBeat et à diffuser ses musiques dans les salles de laser game de <b>Trégueux</b>, <b>Quimper</b> et <b>Brest</b>.</p>
+ <div class="mh"><img class="mark" src="img/logo.svg" alt="" style="width:48px;height:48px;border-radius:11px"><div><h3 id="aboutT">À propos de Musique ML</h3><small>Version ${esc(LB&&LB.version?LB.version:'')}</small></div></div>
+ <h4>Propriété</h4><p><b>${AUTEUR} détient 100 % des droits sur Musique ML.</b> Le logiciel, l'interface, le design et toutes les musiques ont été créés pour lui et sous sa direction, et sont sa propriété exclusive.</p>
+ <h4>Légalité</h4><p><b>Musique ML est 100 % légal.</b> Toutes les musiques sont des créations originales réalisées pour ${AUTEUR} : aucune œuvre d'un autre artiste n'est utilisée et aucun droit n'est dû à qui que ce soit pour leur diffusion.</p>
+ <h4>Autorisation d'utilisation</h4><p>${AUTEUR} autorise ${UTILISATEUR}, par sa permission, à utiliser Musique ML et à diffuser ses musiques dans les salles de laser game de <b>Trégueux</b>, <b>Quimper</b> et <b>Brest</b>.</p>
  <p class="foot">© ${new Date().getFullYear()} ${AUTEUR} — tous droits réservés.<br>Composants techniques libres utilisés sous leurs licences : voir THIRD-PARTY-NOTICES.txt.</p>`;
  m.hidden=false;$('#aboutBox [data-close]').focus();
 }
@@ -942,7 +943,6 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ---------- init ---------- */
-$('#lg').innerHTML=ic('bolt');
 $('#n-home').innerHTML=ic('home');$('#n-lib').innerHTML=ic('lib')+'<span>Bibliothèque</span>';
 $('#bAdd').innerHTML=ic('plus');$('#bRpX').innerHTML=ic('x');
 $('#sIc').innerHTML=ic('search');$('#fsX').innerHTML=ic('x');
@@ -954,14 +954,14 @@ setMini(!!store.get('mini',false));
 setRp(rpW&&store.get('rp',true));
 if(LB&&LB.version)$('#ver').textContent='v'+LB.version;
 /* Mise à jour automatique : quand une nouvelle version est téléchargée, un bouton apparaît. */
-function updReady(v){if(!v)return;updV=v;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="pill pri" id="updBtn" title="Installer la mise à jour ${esc(v)}">${ic('bolt')}<span>Installer la mise à jour ${esc(v)}</span></button><div class="sub">Elle s'installera au prochain lancement de LaserBeat, ou tout de suite si vous cliquez ici (redémarrage d'environ 20 s, puis la musique reprend).</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
-/* La mise à jour téléchargée ne s'installe que sur décision : bouton, ou fermeture volontaire de LaserBeat. */
+function updReady(v){if(!v)return;updV=v;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="pill pri" id="updBtn" title="Installer la mise à jour ${esc(v)}">${ic('bolt')}<span>Installer la mise à jour ${esc(v)}</span></button><div class="sub">Elle s'installera au prochain lancement de Musique ML, ou tout de suite si vous cliquez ici (redémarrage d'environ 20 s, puis la musique reprend).</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
+/* La mise à jour téléchargée ne s'installe que sur décision : bouton, ou fermeture volontaire de Musique ML. */
 let updV=null,updDone=false;
 /* Écran de mise à jour : la barre avance vite puis ralentit (courbe « ease-out »), sans jamais reculer
    ni s'arrêter ; le pourcentage affiché correspond toujours à la longueur de la barre et atteint 100 % à la fin. */
 function updateScreen(kicker,titleTxt,sub,ms){
  const b=$('#boot');b.classList.remove('out');b.hidden=false;
- $('#bootLogo').innerHTML=ic('bolt');$('#bootK').textContent=kicker;$('#bootT').textContent=titleTxt;$('#bootS').textContent=sub;
+ $('#bootK').textContent=kicker;$('#bootT').textContent=titleTxt;$('#bootS').textContent=sub;
  return new Promise(res=>{
   const t0=performance.now();
   const step=()=>{
@@ -978,8 +978,8 @@ async function installUpd(why){
  updDone=true;logErr('Installation de la mise à jour '+updV+' ('+why+')');
  if(why!=='lancement')saveState(); // au lancement, on garde l'état de la session précédente pour la reprise
  const b=$('#updBtn');if(b){b.disabled=true;b.textContent='Installation…'}
- await updateScreen('Mise à jour','LaserBeat '+updV,'Préparation de la nouvelle version…',4000);
- $('#bootS').textContent='Installation en cours : LaserBeat redémarre dans un instant.';
+ await updateScreen('Mise à jour','Musique ML '+updV,'Préparation de la nouvelle version…',4000);
+ $('#bootS').textContent='Installation en cours : Musique ML redémarre dans un instant.';
  LB.installUpdate();
 }
 if(LB&&LB.onUpdate){updReady(LB.updateReady);LB.onUpdate(updReady)}
@@ -994,7 +994,7 @@ const migrateV2=!store.get('v2',false);if(migrateV2)store.set('v2',true);
  store.set('lastVersion',v);
  // ancienne version sans ce repère : on la reconnaît à son état de lecture déjà enregistré
  const updated=prev?prev!==v:hadResume;
- if(updated)updateScreen('Mise à jour installée','LaserBeat '+v,'Finalisation de la mise à jour…',3000).then(hideUpdateScreen);
+ if(updated)updateScreen('Mise à jour installée','Musique ML '+v,'Finalisation de la mise à jour…',3000).then(hideUpdateScreen);
 })();
 /* Lancement : s'il y a une mise à jour prête, elle s'installe AVANT de démarrer la musique.
    Sécurité : après 2 tentatives ratées pour une même version, on arrête de réessayer au lancement. */

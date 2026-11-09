@@ -109,12 +109,12 @@ function loadDir(dir, origin) {
   return out;
 }
 
-const README = `LaserBeat - vos morceaux
+const README = `Musique ML - vos morceaux
 ========================
 
 Ce dossier contient les morceaux ajoutés avec le bouton « Ajouter mes morceaux »
 (Bibliothèque). Vous pouvez aussi y copier directement des fichiers MP3 :
-ils apparaissent au prochain lancement de LaserBeat.
+ils apparaissent au prochain lancement de Musique ML.
 
 Le fichier morceaux.json décrit chaque morceau (modifiable avec le Bloc-notes) :
 
@@ -129,7 +129,7 @@ Le fichier morceaux.json décrit chaque morceau (modifiable avec le Bloc-notes) 
 - "playlist" : Laser Arena (musique des parties), Ambiance accueil, Mes imports, ou un nouveau nom
   (une nouvelle playlist est alors créée).
 - "duree" en secondes (0 = calculée automatiquement).
-Fermez LaserBeat avant de modifier ce fichier, puis relancez-le.
+Fermez Musique ML avant de modifier ce fichier, puis relancez-le.
 `;
 
 function ensureUserDir(dir) {

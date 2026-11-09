@@ -1,7 +1,7 @@
-LaserBeat - mentions des composants tiers
+Musique ML (LaserBeat) - mentions des composants tiers
 =========================================
 
-LaserBeat est construit avec les composants libres suivants :
+Musique ML est construit avec les composants libres suivants :
 
 - Electron (licence MIT) - voir LICENSE.electron.txt
 - Chromium et ses dépendances (licences diverses) - voir LICENSES.chromium.html

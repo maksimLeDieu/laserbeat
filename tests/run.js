@@ -67,14 +67,14 @@ const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
 /* ------------------------------------------------------------------ */
-test('Démarrage : fenêtre LaserBeat, sans menu, fichiers locaux, 6 morceaux', async () => {
+test('Démarrage : fenêtre Musique ML, sans menu, fichiers locaux, 6 morceaux', async () => {
   const { app, w, errors } = await launch(newDataDir('demarrage'));
   const info = await app.evaluate(({ BrowserWindow, Menu }) => {
     const b = BrowserWindow.getAllWindows()[0];
     return { n: BrowserWindow.getAllWindows().length, title: b.getTitle(), size: b.getSize(), min: b.getMinimumSize(), menu: Menu.getApplicationMenu(), url: b.webContents.getURL(), throttle: b.webContents.getBackgroundThrottling() };
   });
   assert(info.n === 1, 'une seule fenêtre attendue');
-  assert(info.title === 'LaserBeat', 'titre : ' + info.title);
+  assert(info.title === 'Musique ML', 'titre : ' + info.title);
   assert(info.min[0] === 1000 && info.min[1] === 640, 'taille minimale');
   assert(info.menu === null, 'menu par défaut présent');
   assert(info.url.startsWith('file:'), 'interface non locale : ' + info.url);

@@ -1,4 +1,6 @@
-# LaserBeat
+# Musique ML
+
+> Nom affiché : **Musique ML** (logo « ML » violet et noir). Le nom technique interne reste `LaserBeat` (fichiers, dossier `%APPDATA%\LaserBeat`, installateur `LaserBeat-Setup.exe`) pour que les mises à jour et les réglages déjà en place continuent de fonctionner.
 
 Lecteur de musique de bureau pour Windows, 100 % hors ligne, conçu pour les salles de laser game de Trégueux, Quimper et Brest.
 Electron 44 + electron-builder (installateur NSIS x64). L'interface est un fichier local : aucun navigateur, aucun serveur, aucun port réseau.

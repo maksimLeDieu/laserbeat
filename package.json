@@ -2,8 +2,8 @@
   "name": "laserbeat",
   "productName": "LaserBeat",
   "version": "2.5.0",
-  "description": "LaserBeat - lecteur de musique hors ligne pour le laser game",
-  "author": "LaserBeat",
+  "description": "Musique ML - lecteur de musique hors ligne pour le laser game",
+  "author": "Maxime Loret",
   "license": "UNLICENSED",
   "private": true,
   "main": "src/main.js",
@@ -20,7 +20,7 @@
   "build": {
     "appId": "fr.laserbeat.app",
     "productName": "LaserBeat",
-    "copyright": "LaserBeat",
+    "copyright": "© Maxime Loret",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -51,7 +51,7 @@
       ],
       "icon": "build/icon.ico",
       "executableName": "LaserBeat",
-      "legalTrademarks": "LaserBeat"
+      "legalTrademarks": "Musique ML"
     },
     "nsis": {
       "oneClick": false,
@@ -59,14 +59,14 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "LaserBeat",
+      "shortcutName": "Musique ML",
       "menuCategory": false,
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": false,
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
-      "uninstallDisplayName": "LaserBeat",
+      "uninstallDisplayName": "Musique ML",
       "installerLanguages": [
         "fr_FR"
       ],

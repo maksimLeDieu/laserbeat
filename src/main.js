@@ -88,7 +88,7 @@ function start() {
   });
   ipcMain.handle('lib:import', async (e, playlist) => {
     const r = await dialog.showOpenDialog(win, {
-      title: 'Ajouter des morceaux à LaserBeat',
+      title: 'Ajouter des morceaux à Musique ML',
       buttonLabel: 'Ajouter',
       properties: ['openFile', 'multiSelections'],
       filters: [{ name: 'Fichiers audio', extensions: library.AUDIO_EXT.map(x => x.slice(1)) }]
@@ -105,7 +105,7 @@ function start() {
       noLink: true,
       title: 'Supprimer un morceau',
       message: `Supprimer « ${String(title).slice(0, 120)} » ?`,
-      detail: 'Le morceau sera retiré de LaserBeat et son fichier effacé du dossier de vos morceaux. Cette action est définitive.'
+      detail: 'Le morceau sera retiré de Musique ML et son fichier effacé du dossier de vos morceaux. Cette action est définitive.'
     });
     return r.response === 0;
   });
@@ -153,7 +153,7 @@ function start() {
       minHeight: 640,
       center: true,
       show: false,
-      title: 'LaserBeat',
+      title: 'Musique ML',
       icon: path.join(__dirname, '..', 'assets', process.platform === 'win32' ? 'laserbeat.ico' : 'laserbeat.png'),
       backgroundColor: '#0a0910',
       autoHideMenuBar: true,
@@ -208,13 +208,13 @@ function start() {
       asking = true;
       dialog.showMessageBox(win, {
         type: 'question',
-        buttons: ['Réduire', 'Quitter LaserBeat', 'Annuler'],
+        buttons: ['Réduire', 'Quitter Musique ML', 'Annuler'],
         defaultId: 0,
         cancelId: 2,
         noLink: true,
-        title: 'LaserBeat',
-        message: 'Fermer LaserBeat ?',
-        detail: 'Réduire : la musique continue, LaserBeat reste dans la barre des tâches.\nQuitter : la musique s\'arrête.'
+        title: 'Musique ML',
+        message: 'Fermer Musique ML ?',
+        detail: 'Réduire : la musique continue, Musique ML reste dans la barre des tâches.\nQuitter : la musique s\'arrête.'
       }).then(r => {
         asking = false;
         if (!win || win.isDestroyed()) return;
