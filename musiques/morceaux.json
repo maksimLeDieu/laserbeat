@@ -4,5 +4,5 @@
   { "titre": "Mandelao", "fichier": "LaserBeat 3 - Mandelao.mp3", "playlist": "LaserBeats", "bpm": 150, "duree": 65.5, "photo": "LaserBeat 3 - Mandelao.webp" },
   { "titre": "Drift Hardbass", "fichier": "LaserBeat 4 - Drift Hardbass.mp3", "playlist": "LaserBeats", "bpm": 165, "duree": 74.3 },
   { "titre": "Drift Hardbass II", "fichier": "LaserBeat 5 - Drift Hardbass II.mp3", "playlist": "LaserBeats", "bpm": 170, "duree": 74.9, "photo": "LaserBeat 5 - Drift Hardbass II.webp" },
-  { "titre": "Hard Rock", "fichier": "LaserBeat 6 - Hard Rock.mp3", "playlist": "LaserBeats", "bpm": 144, "duree": 76.4 }
+  { "titre": "Hard Rock", "fichier": "LaserBeat 6 - Hard Rock.mp3", "playlist": "LaserBeats", "bpm": 144, "duree": 76.4, "photo": "LaserBeat 6 - Hard Rock.webp" }
 ]
