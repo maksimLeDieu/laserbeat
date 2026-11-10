@@ -60,6 +60,7 @@ CSS_DEMO = '''
 @container (max-width:440px){.qgrid{grid-template-columns:minmax(0,1fr)}}
 /* ----- Démo web : pas d'ajout de fichiers dans un navigateur ----- */
 #bAdd,[data-act="import"]{display:none!important}
+body:has(#fs.show) .demo-badge{display:none}
 .demo-badge{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 4px);z-index:90;font:600 11px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--ac2);background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.35);padding:3px 10px;border-radius:999px;pointer-events:none}
 '''
 
