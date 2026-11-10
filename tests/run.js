@@ -190,7 +190,14 @@ test('Ordre des morceaux : glisser-déposer, mémorisé, suivi par la lecture, r
   await w.click('.pli >> text=Laser Arena'); await w.waitForTimeout(300);
   assert((await names())[0] === 'Phonk Laser Game', 'ordre de départ inattendu');
   const rows = '#view .trow:not(.thead)';
-  await w.locator(rows).nth(0).dragTo(w.locator(rows).nth(2), { targetPosition: { x: 200, y: 48 } });   // lâché sur le bas de Mandelao : juste après
+  // petit écran (comme sur le PC de test de GitHub) : la liste défile, on vise donc après l'avoir affichée
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1000, 640)); await w.waitForTimeout(400);
+  await w.locator(rows).nth(2).scrollIntoViewIfNeeded(); await w.waitForTimeout(200);
+  const src = await w.locator(rows).nth(0).boundingBox(), dst = await w.locator(rows).nth(2).boundingBox();
+  await w.mouse.move(src.x + 200, src.y + src.height / 2); await w.mouse.down();
+  await w.mouse.move(src.x + 210, src.y + src.height / 2 + 10, { steps: 3 });
+  await w.mouse.move(dst.x + 200, dst.y + dst.height * 0.85, { steps: 10 });   // bas de Mandelao : juste après
+  await w.mouse.up(); await w.waitForTimeout(300);
   const after = await names();
   assert(after.slice(0, 3).join('|') === 'Phonk|Mandelao|Phonk Laser Game', 'ordre non modifié : ' + after.join(', '));
   assert(await w.isVisible('text=Ordre d\'origine'), 'bouton « Ordre d\'origine » absent');
