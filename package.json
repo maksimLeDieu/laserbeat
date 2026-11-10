@@ -9,7 +9,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win nsis --x64 --publish never",
+    "build": "node outils/cgu.js && electron-builder --win nsis --x64 --publish never",
     "test": "node tests/run.js",
     "demo": "python3 outils/demo-web.py"
   },
@@ -41,6 +41,12 @@
       }
     ],
     "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "onlyLoadAppFromAsar": true
+    },
     "win": {
       "target": [
         {
@@ -74,6 +80,7 @@
       "language": "1036",
       "multiLanguageInstaller": true,
       "include": "build/installer.nsh",
+      "license": "build/CGU.txt",
       "artifactName": "LaserBeat-Setup.${ext}",
       "displayLanguageSelector": false
     },

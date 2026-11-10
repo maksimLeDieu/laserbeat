@@ -100,6 +100,7 @@ def main():
     for f in os.listdir(os.path.join(RACINE, 'src', 'renderer', 'fonts')):
         if f.startswith('dm-sans-') and f.endswith('.woff2'):
             shutil.copy(os.path.join(RACINE, 'src', 'renderer', 'fonts', f), os.path.join(SORTIE, 'fonts', f))
+    shutil.copy(os.path.join(RACINE, 'src', 'renderer', 'legal.js'), os.path.join(SORTIE, 'legal.js'))
     for f in os.listdir(os.path.join(RACINE, 'src', 'renderer', 'img')):
         shutil.copy(os.path.join(RACINE, 'src', 'renderer', 'img', f), os.path.join(SORTIE, 'img', f))
 

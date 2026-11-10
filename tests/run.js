@@ -237,6 +237,49 @@ test('Paramètres (clic sur le logo) : fondu et volume égal désactivables, mé
   await close(app);
 });
 
+test('Informations légales : CGU, mentions légales, données personnelles, licences', async () => {
+  const chk = require('child_process').spawnSync(process.execPath, [path.join(ROOT, 'outils', 'cgu.js'), '--verifier'], { encoding: 'utf8' });
+  assert(chk.status === 0, 'build/CGU.txt (installateur) pas à jour : ' + (chk.stderr || chk.stdout));
+  const { app, w, errors } = await launch(newDataDir('legal'));
+  await w.click('#bBrand');
+  await w.click('[data-act="legal"][data-id="cgu"]');
+  assert((await w.textContent('#ttl')) === 'Informations légales', 'page non ouverte');
+  const t1 = await w.textContent('#view');
+  for (const m of ['Conditions générales d\'utilisation', 'Maxime Loret', 'Didier Floret', 'Trégueux', 'Quimper', 'Brest', 'SACEM', 'droit français']) assert(t1.includes(m), 'CGU incomplètes : ' + m);
+  await w.click('.lg-tabs >> text=Mentions légales');
+  assert((await w.textContent('#view')).includes('GitHub, Inc.'), 'mentions légales incomplètes');
+  await w.click('.lg-tabs >> text=Données personnelles');
+  assert((await w.textContent('#view')).includes('aucune donnée personnelle'), 'page données personnelles incomplète');
+  await w.click('.lg-tabs >> text=Licences libres');
+  assert((await w.textContent('#view')).includes('Electron'), 'licences incomplètes');
+  await w.click('#bInfo'); await w.click('#aboutBox [data-act="legal"]');
+  assert(!(await w.isVisible('#about')) && (await w.textContent('#view')).includes('Conditions générales'), 'lien de la fiche ⓘ vers les CGU');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
+test('Sécurité : pas de caméra/micro, pas d\'accès Internet depuis la page, pas de cadre extérieur', async () => {
+  const { app, w, errors } = await launch(newDataDir('securite'));
+  const r = await w.evaluate(async () => {
+    const out = {};
+    try { await navigator.mediaDevices.getUserMedia({ audio: true }); out.micro = 'autorisé'; } catch (e) { out.micro = e.name; }
+    try { await fetch('https://example.com/'); out.web = 'autorisé'; } catch (e) { out.web = 'bloqué'; }
+    const f = document.createElement('iframe'); f.src = 'https://example.com/'; document.body.appendChild(f);
+    await new Promise(r => setTimeout(r, 800));
+    try { out.cadre = f.contentWindow.location.href; } catch (e) { out.cadre = 'bloqué'; }
+    f.remove();
+    out.node = typeof require;
+    return out;
+  });
+  assert(r.micro !== 'autorisé', 'micro accessible');
+  assert(r.web === 'bloqué', 'accès Internet depuis la page');
+  assert(!/example\.com/.test(r.cadre), 'cadre extérieur chargé : ' + r.cadre);
+  assert(r.node === 'undefined', 'accès à Node.js depuis la page');
+  const bridge = await w.evaluate(() => Object.keys(window.laserbeat).sort().join(','));
+  assert(!/require|ipcRenderer|process|fs/.test(bridge), 'pont trop large : ' + bridge);
+  await close(app);
+});
+
 test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais de silence', async () => {
   const { app, w } = await launch(newDataDir('fondu'));
   await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');

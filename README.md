@@ -129,3 +129,19 @@ touches multimédia, pas de mise à jour automatique ni de reprise au démarrage
 restent dans le navigateur. Si l'interface change au point que l'outil ne s'y retrouve plus, il s'arrête avec
 un message plutôt que de produire une démo fausse.
 
+## Sécurité
+
+- Page isolée : `contextIsolation`, `sandbox`, aucun accès à Node.js depuis l'interface, pont minimal (`src/preload.js`).
+- Chaque échange avec le processus principal est refusé s'il ne vient pas de la page de Musique ML ; réglages limités aux clés `lb_…` et à 2 Mo.
+- Aucune autorisation (caméra, micro, position, notifications, périphériques) : seul le plein écran est permis.
+- La page ne peut joindre aucun site Internet ni ouvrir de fenêtre, de cadre ou de page externe ; seule la mise à jour (processus principal) contacte GitHub.
+- Politique de sécurité du contenu stricte (`default-src 'none'`, pas de `<base>`, pas d'envoi de formulaire).
+- Fusibles Electron : exécution en mode Node désactivée, `NODE_OPTIONS` ignoré, application chargée uniquement depuis `app.asar`.
+- Tests automatiques dédiés (micro, accès Internet, cadres, pont).
+
+## Informations légales
+
+Les CGU, mentions légales, la page « Données personnelles » et les licences libres sont dans `src/renderer/legal.js`
+(affichées dans Paramètres > Informations légales). L'installateur affiche les CGU à accepter (`build/CGU.txt`),
+produit à partir de ce même fichier : `node outils/cgu.js` (les tests vérifient qu'il est à jour).
+

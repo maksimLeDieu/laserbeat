@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self' file:; media-src file: blob:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self' file:; media-src file: blob:">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Musique ML</title>
 <style>
@@ -210,6 +210,16 @@ body.playing .eqs i{animation-play-state:running}
 .sw::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s cubic-bezier(.3,.7,0,1)}
 .sw[aria-checked="true"]{background:var(--ac)}
 .sw[aria-checked="true"]::after{transform:translateX(20px)}
+
+/* informations légales */
+.lg{padding:24px 24px 48px;max-width:860px;min-height:100%;background:linear-gradient(180deg,hsl(262 30% 17%) 0,var(--panel) 220px)}
+.lg-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0 26px}
+.lg h1{font-size:32px;font-weight:800;letter-spacing:-.03em;margin-top:18px}
+.lg .maj{color:var(--mut);font-size:13px;margin-top:6px}
+.lg h4{font-size:16px;font-weight:700;margin:26px 0 8px;color:#fff}
+.lg p,.lg li{color:var(--tx2);line-height:1.7;font-size:14.5px;max-width:72ch;user-select:text}
+.lg p+p{margin-top:10px}
+.lg ul{margin:8px 0 0 20px;display:flex;flex-direction:column;gap:6px}
 
 /* accueil */
 .home{padding:24px 24px 32px;background:linear-gradient(180deg,hsl(var(--hh) 42% 24%) 0,var(--panel) 330px);transition:--hh .7s}
@@ -467,6 +477,7 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
   <footer class="fs-foot"><div class="fs-next" id="fsNext"></div></footer>
  </div>
 </div>
+<script src="legal.js"></script>
 <audio id="audio" preload="auto"></audio>
 <audio id="audio2" preload="auto"></audio>
 
@@ -509,6 +520,9 @@ const IC={
  info:['','<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'],
  down:['','<polyline points="6 9 12 15 18 9"/>'],
  user:['','<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'],
+ doc:['','<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>'],
+ lock:['','<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'],
+ code:['','<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'],
  grip:['f','<circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>'],
  trash:['','<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>']
 };
@@ -692,6 +706,8 @@ function saveState(){
  store.set('resume',{pl:P.plId,id:t?t.id:null,t:t?Math.floor(A.currentTime||0):0,playing:!!t&&want,shuffle:P.shuffle,repeat:P.repeat});
 }
 function logErr(m){try{if(LB)LB.log(m)}catch(e){}}
+window.addEventListener('error',e=>logErr('Erreur interface : '+(e.message||e)+' ('+(e.filename||'').split('/').pop()+':'+(e.lineno||0)+')'));
+window.addEventListener('unhandledrejection',e=>logErr('Promesse rejetée : '+(e.reason&&e.reason.message||e.reason)));
 [A,B].forEach(el=>{
  el.addEventListener('ended',e=>{if(e.target===A)next(true)});
  el.addEventListener('play',e=>{if(e.target===A)ui()});
@@ -886,6 +902,14 @@ function nowPanel(){
 /* ---------- vues ---------- */
 let V={name:'home',arg:null};
 const titles={home:'Accueil',all:'Tous les morceaux',lib:'Bibliothèque',search:'Recherche',settings:'Paramètres'};
+const LEGAL=Array.isArray(window.LEGAL)?window.LEGAL:[];
+function vLegal(el){
+ const doc=LEGAL.find(d=>d.id===V.arg)||LEGAL[0];
+ if(!doc){el.innerHTML='<div class="lg"><div class="empty">Textes légaux introuvables.</div></div>';return}
+ const body=doc.blocs.map(([t,v])=>t==='h'?`<h4>${esc(v)}</h4>`:t==='l'?`<ul>${v.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:`<p>${esc(v)}</p>`).join('');
+ el.innerHTML=`<div class="lg"><div class="lg-tabs">${LEGAL.map(d=>`<button class="chip ${d.id===doc.id?'on':''}" data-act="legal" data-id="${d.id}">${esc(d.titre)}</button>`).join('')}</div>
+ <h1>${esc(doc.titre)}</h1><p class="maj">Mise à jour : ${esc(doc.maj)}</p>${body}</div>`;
+}
 const sw=(k,on,label)=>`<button class="sw" role="switch" aria-checked="${on}" aria-label="${esc(label)}" data-act="set" data-k="${k}"></button>`;
 const setRow=(icon,title,txt,ctl)=>`<div class="set-row"><span class="set-ic">${ic(icon)}</span><div class="set-txt"><b>${title}</b><small>${txt}</small></div>${ctl}</div>`;
 function vSettings(el){
@@ -905,6 +929,12 @@ function vSettings(el){
  </div></section>
  <section class="set-sec"><h3>À propos</h3><div class="set-card">
   ${setRow('info','Musique ML','Propriété, légalité et autorisation d\'utilisation.',`<button class="pill" data-act="about">Voir</button>`)}
+ </div></section>
+ <section class="set-sec"><h3>Informations légales</h3><div class="set-card">
+  ${setRow('doc','Conditions générales d\'utilisation','Licence d\'utilisation, ce qui est permis et interdit, responsabilités.',`<button class="pill" data-act="legal" data-id="cgu">Lire</button>`)}
+  ${setRow('doc','Mentions légales','Éditeur, propriété intellectuelle, hébergement des mises à jour.',`<button class="pill" data-act="legal" data-id="mentions">Lire</button>`)}
+  ${setRow('lock','Données personnelles','Aucune donnée collectée : ce qui reste sur l\'ordinateur et la seule connexion à Internet.',`<button class="pill" data-act="legal" data-id="donnees">Lire</button>`)}
+  ${setRow('code','Licences libres','Composants libres utilisés et leurs licences.',`<button class="pill" data-act="legal" data-id="licences">Lire</button>`)}
  </div></section>
  </div>`;
 }
@@ -982,8 +1012,8 @@ function render(){
  const el=$('#view');
  const h=V.name==='pl'?getPl(V.arg).h[0]:V.name==='lib'?230:255;
  $('#main').style.cssText=`--h1:hsl(${h} 48% 34%);--h2:hsl(${h} 42% 15%);--hc:hsl(${h} 38% 20%)`;
- ({home:vHome,all:vAll,lib:vLib,pl:vPl,search:vSearch,settings:vSettings}[V.name])(el);
- $('#ttl').textContent=V.name==='pl'?getPl(V.arg).name:titles[V.name];
+ ({home:vHome,all:vAll,lib:vLib,pl:vPl,search:vSearch,settings:vSettings,legal:vLegal}[V.name])(el);
+ $('#ttl').textContent=V.name==='pl'?getPl(V.arg).name:V.name==='legal'?'Informations légales':titles[V.name];
  const mp=V.name==='pl'?V.arg:V.name==='all'?'beats':null;
  $('#mhPlay').innerHTML=mp&&tracksOf(mp).length?`<button class="bigplay" data-act="pl-toggle" data-id="${mp}" title="Écouter">${ic('play')}</button>`:'';
  ['home','all','lib'].forEach(n=>$('#n-'+n).classList.toggle('on',V.name===n));
@@ -1018,6 +1048,7 @@ function act(n,d){
    break;
   }
   case 'about':about(true);break;
+  case 'legal':about(false);go('legal',d.id);break;
   case 'login':sheet(`<h3>Connexion</h3><p style="margin-top:10px">La connexion arrive dans une prochaine version de Musique ML.</p>`);break;
   case 'reset-order':delete ORDER[d.id];store.set('order',ORDER);syncQueue(d.id);render();break;
  }
@@ -1061,7 +1092,7 @@ function about(show){
  <h4>Propriété</h4><p><b>${AUTEUR} détient 100 % des droits sur Musique ML.</b> Le logiciel, l'interface, le design et toutes les musiques ont été créés pour lui et sous sa direction, et sont sa propriété exclusive.</p>
  <h4>Légalité</h4><p><b>Musique ML est 100 % légal.</b> Toutes les musiques sont des créations originales réalisées pour ${AUTEUR} : aucune œuvre d'un autre artiste n'est utilisée et aucun droit n'est dû à qui que ce soit pour leur diffusion.</p>
  <h4>Autorisation d'utilisation</h4><p>${AUTEUR} autorise ${UTILISATEUR}, par sa permission, à utiliser Musique ML et à diffuser ses musiques dans les salles de laser game de <b>Trégueux</b>, <b>Quimper</b> et <b>Brest</b>.</p>
- <p class="foot">© ${new Date().getFullYear()} ${AUTEUR} — tous droits réservés.<br>Composants techniques libres utilisés sous leurs licences : voir THIRD-PARTY-NOTICES.txt.</p>`;
+ <p class="foot">© ${new Date().getFullYear()} ${AUTEUR} — tous droits réservés.<br>Composants techniques libres utilisés sous leurs licences : voir THIRD-PARTY-NOTICES.txt.<br><button class="pill" style="margin-top:12px" data-act="legal" data-id="cgu">Conditions d'utilisation et mentions légales</button></p>`;
  m.hidden=false;$('#aboutBox [data-close]').focus();
 }
 function sheet(html){$('#aboutBox').innerHTML=`<button class="ibtn x" data-close title="Fermer">${ic('x')}</button>`+html;$('#about').hidden=false;$('#aboutBox [data-close]').focus()}
@@ -1221,6 +1252,7 @@ $('#bFav').innerHTML=ic('star');$('#bInfo').innerHTML=ic('info');$('#bQ').innerH
 $('#fPrev').innerHTML=ic('prev');$('#fNext').innerHTML=ic('next');
 $('#vol').value=vol;$('#vol').style.setProperty('--v',vol*100+'%');
 setMini(!!store.get('mini',false));
+document.querySelectorAll('button[title]:not([aria-label])').forEach(b=>b.setAttribute('aria-label',b.title));
 setRp(rpW&&store.get('rp',true));
 if(LB&&LB.version)$('#ver').textContent='v'+LB.version;
 /* Mise à jour automatique : quand une nouvelle version est téléchargée, un bouton apparaît. */

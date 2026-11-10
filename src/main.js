@@ -6,7 +6,8 @@
  * - Son maintenu fenêtre réduite, pas de mise en veille pendant la lecture.
  * - Réglages dans %APPDATA%\LaserBeat\config.json, morceaux ajoutés dans %APPDATA%\LaserBeat\musiques.
  */
-const { app, BrowserWindow, Menu, ipcMain, powerSaveBlocker, dialog, globalShortcut } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, powerSaveBlocker, dialog, globalShortcut, session } = require('electron');
+const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs');
 const { Config } = require('./config');
@@ -15,6 +16,7 @@ const { setupUpdater } = require('./updater');
 
 const APP_ID = 'fr.laserbeat.app';
 const INDEX = path.join(__dirname, 'renderer', 'index.html');
+const INDEX_URL = pathToFileURL(INDEX).href;
 
 /* ---------- options Chromium (avant 'ready') ---------- */
 // Lecture sans geste préalable (Agenda, reprise automatique au lancement).
@@ -77,18 +79,28 @@ function start() {
     }
   }
 
+  /* ----- Sécurité des échanges avec la page -----
+     Chaque demande doit venir de la page de Musique ML elle-même (jamais d'une autre page ou d'un cadre). */
+  const fromApp = e => { try { const u = e.senderFrame && e.senderFrame.url; return !!u && u.split('#')[0] === INDEX_URL; } catch (err) { return false; } };
+  const on = (ch, fn) => ipcMain.on(ch, (e, ...a) => { if (!fromApp(e)) { log('IPC refusé', ch); e.returnValue = null; return; } fn(e, ...a); });
+  const handle = (ch, fn) => ipcMain.handle(ch, (e, ...a) => { if (!fromApp(e)) { log('IPC refusé', ch); return null; } return fn(e, ...a); });
+
   /* ----- IPC : réglages ----- */
-  ipcMain.on('cfg:load', e => { e.returnValue = config.all(); });
-  ipcMain.on('cfg:set', (e, key, value) => {
-    if (typeof key === 'string' && key.startsWith('lb_')) config.set(key, value);
+  on('cfg:load', e => { e.returnValue = config.all(); });
+  on('cfg:set', (e, key, value) => {
+    // seulement les réglages de Musique ML (lb_...), et jamais une valeur démesurée
+    if (typeof key !== 'string' || !/^lb_[a-zA-Z0-9_]{1,40}$/.test(key)) return;
+    let size = 0; try { size = JSON.stringify(value === undefined ? null : value).length; } catch (err) { return; }
+    if (size > 2 * 1024 * 1024) { log('réglage trop gros refusé', key, size); return; }
+    config.set(key, value);
   });
 
   /* ----- IPC : morceaux ----- */
-  ipcMain.on('app:version', e => { e.returnValue = app.getVersion(); });
-  ipcMain.on('lib:load', e => {
+  on('app:version', e => { e.returnValue = app.getVersion(); });
+  on('lib:load', e => {
     try { e.returnValue = library.loadAll(musicDirs); } catch (err) { log('lib:load', err); e.returnValue = []; }
   });
-  ipcMain.handle('lib:import', async (e, playlist) => {
+  handle('lib:import', async (e, playlist) => {
     const r = await dialog.showOpenDialog(win, {
       title: 'Ajouter des morceaux à Musique ML',
       buttonLabel: 'Ajouter',
@@ -98,7 +110,7 @@ function start() {
     if (r.canceled || !r.filePaths.length) return [];
     try { return library.importFiles(musicDirs.user, r.filePaths, playlist); } catch (err) { log('lib:import', err); return []; }
   });
-  ipcMain.handle('lib:confirm-delete', async (e, title) => {
+  handle('lib:confirm-delete', async (e, title) => {
     const r = await dialog.showMessageBox(win, {
       type: 'question',
       buttons: ['Supprimer', 'Annuler'],
@@ -111,20 +123,20 @@ function start() {
     });
     return r.response === 0;
   });
-  ipcMain.handle('lib:delete', (e, id) => {
+  handle('lib:delete', (e, id) => {
     try { return library.deleteTrack(musicDirs.user, id); } catch (err) { log('lib:delete', err); return false; }
   });
   // Lecture d'un morceau connu (fourni ou ajouté) pour mesurer son volume : jamais un autre fichier du disque.
-  ipcMain.handle('lib:read', async (e, id) => {
+  handle('lib:read', async (e, id) => {
     try { return await library.readAudio(musicDirs, id); } catch (err) { log('lib:read', err); return null; }
   });
-  ipcMain.on('lib:duration', (e, id, dur) => {
+  on('lib:duration', (e, id, dur) => {
     try { library.saveDuration(musicDirs.user, id, dur); } catch (err) { log('lib:duration', err); }
   });
 
   /* ----- IPC : état du lecteur (anti-veille) et journal ----- */
-  ipcMain.on('player:state', (e, playing) => setPlaying(!!playing));
-  ipcMain.on('log', (e, msg) => log('[interface]', String(msg).slice(0, 2000)));
+  on('player:state', (e, playing) => setPlaying(!!playing));
+  on('log', (e, msg) => log('[interface]', String(msg).slice(0, 2000)));
 
   app.on('child-process-gone', (e, d) => log('child-process-gone', d));
 
@@ -136,10 +148,33 @@ function start() {
     };
     try { fs.mkdirSync(musicDirs.user, { recursive: true }); } catch (err) { log('mkdir', err); }
     Menu.setApplicationMenu(null);
+    lockDown();
     log('démarrage', app.getVersion(), musicDirs);
     createWindow();
     registerMediaKeys();
     updater = setupUpdater({ log, getWindow: () => win });
+  });
+
+  /* ----- verrous de sécurité -----
+     - aucune autorisation (caméra, micro, position, notifications...) : seul le plein écran est permis ;
+     - la page ne peut joindre aucun site Internet (la seule connexion du logiciel, les mises à jour,
+       part du processus principal) ;
+     - aucune fenêtre, aucun cadre intégré (webview) ni aucune navigation ailleurs que la page de Musique ML. */
+  function lockDown() {
+    const ses = session.defaultSession;
+    ses.setPermissionRequestHandler((wc, permission, cb) => cb(permission === 'fullscreen'));
+    ses.setPermissionCheckHandler((wc, permission) => permission === 'fullscreen' || permission === 'media');
+    ses.setDevicePermissionHandler(() => false);
+    ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*', 'ftp://*/*'] }, (d, cb) => {
+      const fromPage = typeof d.webContentsId === 'number' && d.webContentsId > 0;
+      if (fromPage) log('accès Internet bloqué depuis la page :', d.url.slice(0, 200));
+      cb({ cancel: fromPage });
+    });
+  }
+  app.on('web-contents-created', (e, wc) => {
+    wc.setWindowOpenHandler(() => ({ action: 'deny' }));
+    wc.on('will-attach-webview', ev => ev.preventDefault());
+    wc.on('will-navigate', (ev, url) => { if (url.split('#')[0] !== INDEX_URL) ev.preventDefault(); });
   });
 
   /* ----- touches multimédia du clavier (lecture/pause, suivant, précédent, stop) -----
