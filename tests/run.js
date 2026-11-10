@@ -160,7 +160,7 @@ test('Volume égal : chaque morceau est ramené au même niveau, mesure des morc
   await close(app);
 });
 
-test('Mode écran : grande pochette, morceau suivant, Échap pour sortir', async () => {
+test('Mode écran : grande pochette, morceau suivant, clic sur la bannière, Échap pour sortir', async () => {
   const { app, w, errors } = await launch(newDataDir('ecran'));
   await w.click('text=Jouer la musique');
   assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
@@ -172,6 +172,13 @@ test('Mode écran : grande pochette, morceau suivant, Échap pour sortir', async
   await w.keyboard.press('Escape');
   assert(await waitFor(async () => !(await w.isVisible('#fs')), 3000), 'Échap ne quitte pas le mode écran');
   assert(await playing(w), 'la musique s\'est arrêtée');
+  // un clic sur la bannière du lecteur (titre en bas) ouvre aussi le plein écran
+  await w.click('#npT');
+  assert(await w.isVisible('#fs'), 'clic sur la bannière : plein écran non affiché');
+  await w.keyboard.press('Escape');
+  assert(await waitFor(async () => !(await w.isVisible('#fs')), 3000), 'Échap ne quitte pas (bannière)');
+  await w.click('#bPlay'); await w.waitForTimeout(300);
+  assert(!(await w.isVisible('#fs')), 'le bouton lecture/pause ne doit pas ouvrir le plein écran');
   assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
 });

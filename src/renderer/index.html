@@ -255,7 +255,11 @@ body.playing .eqs i{animation-play-state:running}
 
 /* ---- lecteur (bas) ---- */
 .player{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1.35fr) minmax(0,1fr);align-items:center;gap:16px;padding:0 8px}
-.np{display:flex;align-items:center;gap:14px;min-width:0}
+.np{display:flex;align-items:center;gap:14px;min-width:0;border-radius:8px;padding:4px 6px;margin:-4px -6px;transition:background .15s}
+.player.has-track{cursor:pointer}
+.player.has-track .np:hover{background:var(--hover)}
+.player.has-track .np:hover .meta b{text-decoration:underline}
+.player button,.player input,.player .bar{cursor:pointer}
 .thumb{width:56px;height:56px;border-radius:4px;background:var(--panel2);flex:none}
 .meta{min-width:0}
 .meta b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -783,6 +787,7 @@ function ui(){
  $('#npT').textContent=t?t.title:'Rien en lecture';
  $('#npS').textContent=t?p.name:'Choisissez une playlist';
  $('#npArt').style.cssText=t?tArt(t):'';
+ $('#player').classList.toggle('has-track',!!t);$('#player').title=t?'Cliquer pour afficher en plein écran':'';
  $('#bPlay').innerHTML=ic(playing?'pause':'play');$('#fPlay').innerHTML=ic(playing?'pause':'play');
  $('#bShuf').classList.toggle('on',P.shuffle);
  const r=$('#bRep');r.classList.toggle('on',P.repeat>0);r.classList.toggle('rep1',P.repeat===2);
@@ -996,6 +1001,11 @@ function fsWake(){const f=$('#fs');f.classList.remove('idle');clearTimeout(idleT
 function fsOpen(){ui();$('#fs').classList.add('show');fsWake();try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
 function fsClose(){$('#fs').classList.remove('show','idle');clearTimeout(idleT);try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(e){}}
 $('#bFs').onclick=fsOpen;$('#fsX').onclick=fsClose;
+/* Clic sur la bannière du lecteur (pochette, titre ou fond) : la musique s'ouvre en plein écran. */
+$('#player').addEventListener('click',e=>{
+ if(P.i<0||e.target.closest('button,input,.bar,.vol'))return;
+ fsOpen();
+});
 $('#fs').addEventListener('mousemove',fsWake);$('#fs').addEventListener('click',fsWake);
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&$('#fs').classList.contains('show'))fsClose()});
 const q=$('#q');
