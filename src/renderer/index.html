@@ -292,6 +292,8 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
 /* ---- mode écran : pour un écran ou une télé visible des clients ---- */
 #fs{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;color:#fff;background:#000;overflow:hidden}
 #fs.show{display:flex}
+#fs.pre{background:transparent}
+#fs.pre>*{opacity:0}
 #fs.idle{cursor:none}
 .fs-bg{position:absolute;inset:-12%;background-size:cover;background-position:center;filter:blur(70px) saturate(1.4) brightness(.42);transform:scale(1.05);z-index:0}
 #fs>*:not(.fs-bg){position:relative;z-index:1}
@@ -998,8 +1000,48 @@ $('#vol').oninput=e=>{setVol(+e.target.value);ui()};
 /* Mode écran : plein écran avec grande pochette ; les commandes et la souris se cachent après 3 s sans bouger. */
 let idleT=null;
 function fsWake(){const f=$('#fs');f.classList.remove('idle');clearTimeout(idleT);idleT=setTimeout(()=>f.classList.add('idle'),3000)}
-function fsOpen(){ui();$('#fs').classList.add('show');fsWake();try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
-function fsClose(){$('#fs').classList.remove('show','idle');clearTimeout(idleT);try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(e){}}
+/* Animation d'ouverture : la petite pochette de la bannière s'agrandit jusqu'à sa place en grand,
+   le fond apparaît en fondu et les textes montent ; à la fermeture, tout repart vers la bannière. */
+const calm=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const EASE='cubic-bezier(.2,.8,.2,1)';
+let fsBusy=false;
+function fromThumb(){ // transformation qui place la grande pochette exactement sur la petite
+ const a=$('#npArt').getBoundingClientRect(),b=$('#fsArt').getBoundingClientRect();
+ if(!a.width||!b.width)return null;
+ return `translate(${a.left-b.left}px,${a.top-b.top}px) scale(${a.width/b.width},${a.height/b.height})`;
+}
+function fsParts(){return [...document.querySelectorAll('#fs .fs-top,#fs .fs-info>*,#fs .fs-ctl')]}
+function fsOpen(){
+ if(fsBusy||$('#fs').classList.contains('show'))return;
+ ui();const f=$('#fs');f.classList.add('show','pre');fsWake();
+ let started=false;
+ const go=()=>{
+  if(started)return;started=true;document.removeEventListener('fullscreenchange',go);
+  f.classList.remove('pre');
+  if(calm())return;
+  fsBusy=true;const art=$('#fsArt'),T=fromThumb();
+  f.animate([{backgroundColor:'rgba(0,0,0,0)'},{backgroundColor:'rgba(0,0,0,1)'}],{duration:380,easing:'ease-out'});
+  $('#fsBg').animate([{opacity:0},{opacity:1}],{duration:600,easing:'ease-out'});
+  if(T){art.style.transformOrigin='0 0';art.animate([{transform:T,borderRadius:'4px'},{transform:'none',borderRadius:'14px'}],{duration:560,easing:EASE}).onfinish=()=>{art.style.transformOrigin='';fsBusy=false}}else fsBusy=false;
+  fsParts().forEach((el,i)=>el.animate([{opacity:0,transform:'translateY(26px)'},{opacity:1,transform:'none'}],{duration:480,delay:160+i*55,easing:EASE,fill:'backwards'}));
+ };
+ document.addEventListener('fullscreenchange',go);
+ try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(r&&r.catch)r.catch(go);if(!r)go()}catch(e){go()}
+ setTimeout(go,250); // si le plein écran tarde ou n'est pas permis, l'animation part quand même
+}
+function fsClose(){
+ const f=$('#fs');if(!f.classList.contains('show')||fsBusy)return;
+ const anims=[];
+ const done=()=>{fsBusy=false;f.classList.remove('show','idle','pre');clearTimeout(idleT);anims.forEach(a=>a.cancel());$('#fsArt').style.transformOrigin='';try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(e){}};
+ if(calm())return done();
+ fsBusy=true;const art=$('#fsArt'),T=fromThumb();
+ fsParts().forEach(el=>anims.push(el.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(18px)'}],{duration:220,easing:'ease-in',fill:'forwards'})));
+ anims.push($('#fsBg').animate([{opacity:1},{opacity:0}],{duration:420,easing:'ease-in',fill:'forwards'}));
+ anims.push(f.animate([{backgroundColor:'rgba(0,0,0,1)'},{backgroundColor:'rgba(0,0,0,0)'}],{duration:440,easing:'ease-in',fill:'forwards'}));
+ if(T){art.style.transformOrigin='0 0';const a=art.animate([{transform:'none',borderRadius:'14px'},{transform:T,borderRadius:'4px'}],{duration:460,easing:EASE,fill:'forwards'});anims.push(a);a.onfinish=done}
+ else setTimeout(done,440);
+}
+
 $('#bFs').onclick=fsOpen;$('#fsX').onclick=fsClose;
 /* Clic sur la bannière du lecteur (pochette, titre ou fond) : la musique s'ouvre en plein écran. */
 $('#player').addEventListener('click',e=>{
