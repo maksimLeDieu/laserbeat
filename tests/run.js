@@ -210,6 +210,33 @@ test('Ordre des morceaux : glisser-déposer, mémorisé, suivi par la lecture, r
   await close(app);
 });
 
+test('Paramètres (clic sur le logo) : fondu et volume égal désactivables, mémorisés', async () => {
+  const dir = newDataDir('parametres');
+  let { app, w, errors } = await launch(dir);
+  await w.click('#bBrand');
+  assert((await w.textContent('#ttl')) === 'Paramètres', 'page Paramètres non ouverte');
+  assert(await w.isVisible('text=Connexion'), 'Connexion absente');
+  const sw = k => w.getAttribute(`.sw[data-k="${k}"]`, 'aria-checked');
+  assert((await sw('xfade')) === 'true' && (await sw('norm')) === 'true', 'réglages par défaut incorrects');
+  await w.click('.sw[data-k="norm"]'); await w.click('.sw[data-k="xfade"]');
+  assert((await sw('norm')) === 'false' && (await sw('xfade')) === 'false', 'interrupteurs sans effet');
+  await w.click('[data-act="login"]');
+  assert(await w.isVisible('#about'), 'fenêtre Connexion absente'); await w.keyboard.press('Escape');
+  await close(app);
+  ({ app, w, errors } = await launch(dir));
+  await w.click('#bBrand');
+  assert((await sw('norm')) === 'false' && (await sw('xfade')) === 'false', 'réglages non mémorisés');
+  await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  const v = await w.evaluate(() => [...document.querySelectorAll('audio')].filter(a => !a.paused).map(a => a.volume));
+  assert(v.length === 1 && Math.abs(v[0] - 0.8) < 0.01, 'volume égal toujours appliqué : ' + v.join(','));
+  await seekNearEnd(w, 2.5); await w.waitForTimeout(1200);
+  const both = await w.evaluate(() => [...document.querySelectorAll('audio')].filter(a => !a.paused).length);
+  assert(both === 1, 'fondu toujours actif (deux lecteurs en même temps)');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
 test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais de silence', async () => {
   const { app, w } = await launch(newDataDir('fondu'));
   await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
