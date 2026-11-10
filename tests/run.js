@@ -160,6 +160,49 @@ test('Volume égal : chaque morceau est ramené au même niveau, mesure des morc
   await close(app);
 });
 
+test('Mode écran : grande pochette, morceau suivant, Échap pour sortir', async () => {
+  const { app, w, errors } = await launch(newDataDir('ecran'));
+  await w.click('text=Jouer la musique');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  await w.click('#bFs');
+  assert(await w.isVisible('#fs'), 'mode écran non affiché');
+  assert((await w.textContent('#fsT')) === 'Phonk Laser Game', 'mauvais titre : ' + await w.textContent('#fsT'));
+  assert((await w.textContent('#fsNext')).includes('Phonk'), 'morceau suivant absent');
+  assert((await w.textContent('#fsNow')).includes('Laser Arena'), 'playlist absente');
+  await w.keyboard.press('Escape');
+  assert(await waitFor(async () => !(await w.isVisible('#fs')), 3000), 'Échap ne quitte pas le mode écran');
+  assert(await playing(w), 'la musique s\'est arrêtée');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
+test('Ordre des morceaux : glisser-déposer, mémorisé, suivi par la lecture, retour à l\'ordre d\'origine', async () => {
+  const dir = newDataDir('ordre');
+  let { app, w, errors } = await launch(dir);
+  const names = () => w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
+  await w.click('.pli >> text=Laser Arena'); await w.waitForTimeout(300);
+  assert((await names())[0] === 'Phonk Laser Game', 'ordre de départ inattendu');
+  const rows = '#view .trow:not(.thead)';
+  await w.locator(rows).nth(0).dragTo(w.locator(rows).nth(2), { targetPosition: { x: 200, y: 48 } });   // lâché sur le bas de Mandelao : juste après
+  const after = await names();
+  assert(after.slice(0, 3).join('|') === 'Phonk|Mandelao|Phonk Laser Game', 'ordre non modifié : ' + after.join(', '));
+  assert(await w.isVisible('text=Ordre d\'origine'), 'bouton « Ordre d\'origine » absent');
+  await close(app);
+  ({ app, w, errors } = await launch(dir));                         // relance : l'ordre est gardé
+  await w.click('.pli >> text=Laser Arena'); await w.waitForTimeout(300);
+  assert((await names()).slice(0, 3).join('|') === 'Phonk|Mandelao|Phonk Laser Game', 'ordre perdu après relance');
+  await w.click('#view .bigplay');
+  assert(await waitFor(async () => (await title(w)) === 'Phonk', 8000), 'la lecture ne suit pas le nouvel ordre');
+  await w.click('#bNext');
+  assert(await waitFor(async () => (await title(w)) === 'Mandelao', 5000), 'le morceau suivant ne suit pas le nouvel ordre');
+  await w.click('text=Ordre d\'origine');
+  assert((await names())[0] === 'Phonk Laser Game', 'ordre d\'origine non rétabli');
+  await w.click('#bNext');
+  assert(await waitFor(async () => (await title(w)) === 'Drift Hardbass', 5000), 'la file ne suit pas l\'ordre d\'origine : ' + await title(w));
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
 test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais de silence', async () => {
   const { app, w } = await launch(newDataDir('fondu'));
   await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');

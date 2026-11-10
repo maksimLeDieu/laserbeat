@@ -171,6 +171,13 @@ body.playing .eqs i{animation-play-state:running}
 .star.on svg{fill:var(--ac2)}
 .trow .del:hover{color:var(--red)}
 .trow .ibtn svg{width:18px;height:18px}
+.trow[draggable="true"]{position:relative}
+.trow .grip{position:absolute;left:-2px;top:50%;margin-top:-9px;color:var(--mut);opacity:0;cursor:grab}
+.trow .grip svg{width:16px;height:18px}
+.trow[draggable="true"]:hover .grip{opacity:.8}
+.trow.dragging{opacity:.35}
+.trow.drop-before{box-shadow:inset 0 3px 0 var(--ac2)}
+.trow.drop-after{box-shadow:inset 0 -3px 0 var(--ac2)}
 .thead{height:36px;border-bottom:1px solid var(--line);border-radius:0;margin-bottom:8px;cursor:default;font-size:13px}
 .thead:hover{background:none}
 .thead svg{width:16px;height:16px}
@@ -278,22 +285,38 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-webkit-slider-thumb{opacity:1}
 
 /* ---- plein écran ---- */
-#fs{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;color:#fff;text-align:center;padding:30px}
-#fs::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:-1}
+/* ---- mode écran : pour un écran ou une télé visible des clients ---- */
+#fs{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;color:#fff;background:#000;overflow:hidden}
 #fs.show{display:flex}
-#fs .big{width:min(360px,48vh);height:min(360px,48vh);border-radius:10px;box-shadow:0 40px 80px -24px rgba(0,0,0,.85)}
-#fs h2{font-size:40px;font-weight:900;letter-spacing:-.04em}
-#fs p{opacity:.8;font-size:16px;margin-top:4px}
-#fs .ctl{display:flex;gap:22px;align-items:center}
-#fs .ctl .ibtn{color:#fff;width:44px;height:44px}
-#fs .ctl .ibtn svg{width:26px;height:26px}
-#fs .pp{width:64px;height:64px}
+#fs.idle{cursor:none}
+.fs-bg{position:absolute;inset:-12%;background-size:cover;background-position:center;filter:blur(70px) saturate(1.4) brightness(.42);transform:scale(1.05);z-index:0}
+#fs>*:not(.fs-bg){position:relative;z-index:1}
+.fs-top{display:flex;align-items:center;gap:12px;padding:28px 40px 0;font-weight:700;font-size:18px}
+.fs-top .mark{width:40px;height:40px;border-radius:10px}
+.fs-now{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;background:rgba(0,0,0,.35);padding:8px 16px;border-radius:999px}
+.fs-now i{width:9px;height:9px;border-radius:50%;background:var(--ac2);box-shadow:0 0 0 4px rgba(139,92,246,.3)}
+.fs-main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:clamp(28px,5vw,80px);padding:20px 6vw}
+#fs .big{width:min(46vh,40vw);aspect-ratio:1;border-radius:14px;flex:none;box-shadow:0 50px 100px -30px rgba(0,0,0,.9)}
+.fs-info{min-width:0;max-width:44vw;display:flex;flex-direction:column;gap:14px}
+#fs h2{font-size:clamp(40px,6.4vw,104px);font-weight:900;letter-spacing:-.045em;line-height:.98;overflow-wrap:anywhere}
+#fs p{font-size:clamp(17px,1.7vw,26px);opacity:.82}
+.fs-prog{display:flex;align-items:center;gap:14px;margin-top:18px;font-size:15px;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.75)}
+#fs .bar{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.25)}
+#fs .bar i{background:#fff;border-radius:3px}
+.fs-next{font-size:16px;color:rgba(255,255,255,.72);display:flex;align-items:center;gap:12px;margin-top:6px}
+.fs-next b{color:#fff;font-weight:700}
+.fs-next i{width:44px;height:44px;border-radius:6px;flex:none}
+.fs-ctl{display:flex;gap:24px;align-items:center;justify-content:center;padding:0 0 32px;transition:opacity .4s}
+#fs.idle .fs-ctl{opacity:0;pointer-events:none}
+#fs .fs-ctl .ibtn{color:#fff;width:48px;height:48px}
+#fs .fs-ctl .ibtn svg{width:28px;height:28px}
+#fs .pp{width:66px;height:66px}
 #fs .pp svg{width:26px;height:26px}
-#fs .bar{flex:none;width:min(520px,80vw);background:rgba(255,255,255,.3)}
-#fs .bar i{background:#fff}
-#fs .x{position:absolute;right:24px;top:24px;color:#fff;width:44px;height:44px;background:rgba(0,0,0,.3)}
+#fs .x{background:rgba(255,255,255,.12)}
+#fs .eq{height:34px}
+@media (max-width:700px){.fs-main{flex-direction:column;justify-content:center;text-align:center}.fs-info{max-width:none;align-items:center}#fs .big{width:min(60vw,40vh)}.fs-prog{width:80vw}}
 .eq{display:flex;gap:4px;height:26px;align-items:flex-end}
-.eq i{width:5px;background:#fff;border-radius:3px;height:30%;animation:eq 1s infinite ease-in-out;animation-play-state:paused}
+.eq i{width:6px;background:#fff;border-radius:3px;height:30%;animation:eq 1s infinite ease-in-out;animation-play-state:paused}
 .playing .eq i{animation-play-state:running}
 .eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}.eq i:nth-child(4){animation-delay:.1s}.eq i:nth-child(5){animation-delay:.3s}
 @keyframes eq{0%,100%{height:25%}50%{height:100%}}
@@ -370,7 +393,7 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
   <div class="tools">
    <button class="ibtn" id="bQ" title="En cours de lecture et file d'attente"></button>
    <div class="vol"><button class="ibtn" id="bVol" title="Volume"></button><input type="range" id="vol" min="0" max="1" step="0.01" aria-label="Volume"></div>
-   <button class="ibtn" id="bFs" title="Plein écran"></button>
+   <button class="ibtn" id="bFs" title="Mode écran (plein écran)"></button>
   </div>
  </footer>
  <div class="boot" id="boot" hidden><div class="bootc">
@@ -382,13 +405,14 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
   <div class="bootp" id="bootP">0 %</div>
  </div></div>
  <div class="modal" id="about" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="aboutT" id="aboutBox"></div></div>
- <div id="fs">
-  <button class="ibtn x" id="fsX" title="Fermer"></button>
-  <div class="big" id="fsArt"></div>
-  <div class="eq"><i></i><i></i><i></i><i></i><i></i></div>
-  <div><h2 id="fsT"></h2><p id="fsS"></p></div>
-  <div class="bar" id="fsBar"><i id="fsF"></i></div>
-  <div class="ctl"><button class="ibtn" id="fPrev"></button><button class="pp" id="fPlay"></button><button class="ibtn" id="fNext"></button></div>
+ <div id="fs" role="dialog" aria-label="Mode écran">
+  <div class="fs-bg" id="fsBg"></div>
+  <header class="fs-top"><img class="mark" src="img/logo.svg" alt=""><span>Musique ML</span><span class="fs-now"><i></i><span id="fsNow">En lecture</span></span></header>
+  <main class="fs-main"><div class="big" id="fsArt"></div>
+   <div class="fs-info"><div class="eq"><i></i><i></i><i></i><i></i><i></i></div><h2 id="fsT"></h2><p id="fsS"></p>
+    <div class="fs-prog"><span id="fsC">0:00</span><div class="bar" id="fsBar"><i id="fsF"></i></div><span id="fsD">0:00</span></div>
+    <div class="fs-next" id="fsNext"></div></div></main>
+  <footer class="fs-ctl"><button class="ibtn" id="fPrev" title="Précédent"></button><button class="pp" id="fPlay" title="Lecture / pause"></button><button class="ibtn" id="fNext" title="Suivant"></button><button class="ibtn x" id="fsX" title="Quitter le mode écran (Échap)"></button></footer>
  </div>
 </div>
 <audio id="audio" preload="auto"></audio>
@@ -431,6 +455,7 @@ const IC={
  note:['','<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'],
  coffee:['','<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'],
  info:['','<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'],
+ grip:['f','<circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>'],
  trash:['','<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>']
 };
 const ic=(n,extra='')=>{const [f,p]=IC[n];return `<svg viewBox="0 0 24 24" class="${f} ${extra}">${p}</svg>`};
@@ -481,7 +506,10 @@ const allTracks=()=>TRACKS;
 /* Favoris et écoutes récentes : on oublie les morceaux qui n'existent plus. */
 const known=new Set(TRACKS.map(t=>t.id));
 let favs=new Set((store.get('favs',[])||[]).filter(id=>known.has(id)));
-const tracksOf=id=>id==='fav'?TRACKS.filter(t=>favs.has(t.id)):(getPl(id).tracks||[]);
+/* Ordre des morceaux choisi par glisser-déposer (par playlist) ; les morceaux non classés gardent l'ordre d'origine, à la fin. */
+let ORDER=store.get('order',{});if(!ORDER||typeof ORDER!=='object')ORDER={};
+function ordered(id,l){const o=ORDER[id];if(!Array.isArray(o)||!o.length)return l;const pos=new Map(o.map((x,i)=>[x,i]));const r=(t,i)=>pos.has(t.id)?pos.get(t.id):1e6+i;return l.map((t,i)=>[t,r(t,i)]).sort((a,b)=>a[1]-b[1]).map(x=>x[0])}
+const tracksOf=id=>ordered(id,id==='fav'?TRACKS.filter(t=>favs.has(t.id)):(getPl(id).tracks||[]));
 const trackById=id=>TRACKS.find(t=>t.id===id);
 const trackUrl=t=>t.url;
 
@@ -624,7 +652,7 @@ function logErr(m){try{if(LB)LB.log(m)}catch(e){}}
  el.addEventListener('timeupdate',e=>{
   if(e.target!==A)return;
   const d=A.duration,c=A.currentTime,r=d?c/d*100:0;
-  $('#barF').style.width=r+'%';$('#fsF').style.width=r+'%';
+  $('#barF').style.width=r+'%';$('#fsF').style.width=r+'%';$('#fsC').textContent=fmt(c);$('#fsD').textContent=fmt(d);
   $('#tmC').textContent=fmt(c);$('#tm').textContent=fmt(d);
   maybeCrossfade();
  });
@@ -764,8 +792,11 @@ function ui(){
  if(LB&&!!playing!==lastPlaying){lastPlaying=!!playing;LB.setPlaying(lastPlaying)}
  document.body.classList.toggle('playing',!!playing);
  $('#fs').classList.toggle('playing',!!playing);
- $('#fs').style.cssText=artStyle(p||PL[1]); // fond du plein écran
- if(t){$('#fsArt').style.cssText=tArt(t);$('#fsT').textContent=t.title;$('#fsS').textContent=p.name}
+ if(t){$('#fsArt').style.cssText=tArt(t);$('#fsBg').style.cssText=tArt(t);$('#fsT').textContent=t.title;$('#fsS').textContent=p.name+(t.bpm?' · '+t.bpm+' BPM':'');
+  $('#fsNow').textContent=(playing?'En lecture · ':'En pause · ')+getPl(P.plId).name;
+  const k=P.repeat===2?P.i:peekNext(),x=k>=0?P.queue[k]:null;
+  $('#fsNext').innerHTML=x?`<i style="${tArtH(x)}"></i><span>À suivre<br><b>${esc(x.title)}</b></span>`:'';}
+ else{$('#fsT').textContent='Rien en lecture';$('#fsS').textContent='Appuyez sur lecture pour lancer Laser Arena';$('#fsNext').innerHTML='';$('#fsNow').textContent='En pause';$('#fsBg').style.cssText=artStyle(PL[1]);$('#fsArt').style.cssText=artStyle(PL[1])}
  document.querySelectorAll('[data-tid]').forEach(r=>r.classList.toggle('cur',!!t&&r.dataset.tid===t.id));
  document.querySelectorAll('#sideList .pli').forEach(b=>b.classList.toggle('playing',!!playing&&b.dataset.id===P.plId));
  // Gros bouton lecture d'une playlist : « pause » quand c'est elle qui joue.
@@ -808,11 +839,11 @@ function tcard(t){
 const qPl=p=>`<div class="qt" data-act="open-pl" data-id="${p.id}" data-h="${p.h[0]}"><i style="${esc(pArt(p))}">${p.img?'':plIcon(p)}</i><span>${esc(p.name)}</span>${tracksOf(p.id).length?`<button class="fplay" data-act="play-pl" data-id="${p.id}" title="Écouter">${ic('play')}</button>`:''}</div>`;
 const qTr=t=>{const p=getPl(t.pl);return `<div class="qt" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" data-h="${p.h[0]}"><i style="${tArtH(t)}">${t.img?'':ic('note')}</i><span>${esc(t.title)}</span><button class="fplay" data-act="play-track" data-id="${t.id}" data-pl="${t.pl}" title="Écouter">${ic('play')}</button></div>`};
 const thead=()=>`<div class="trow thead"><span class="n">#</span><span>Titre</span><span class="c-pl">Playlist</span><span class="c-bpm">Tempo</span><span></span><span class="dur" title="Durée">${ic('clock')}</span></div>`;
-function trow(t,i,plId){
+function trow(t,i,plId,drag){
  const p=getPl(t.pl),cur=P.queue[P.i]&&P.queue[P.i].id===t.id;
- return `<div class="trow ${cur?'cur':''}" data-act="play-track" data-id="${t.id}" data-pl="${plId}" data-tid="${t.id}"><span class="n"><span class="num">${i+1}</span><span class="pi">${ic('play')}</span><span class="eqs"><i></i><i></i><i></i></span></span><span class="th"><i style="${tArtH(t)}"></i><span class="tt"><span class="tn">${esc(t.title)}</span><span class="sa">${esc(t.artist)}</span></span></span><span class="m c-pl">${esc(p.name)}</span><span class="m c-bpm">${t.bpm?t.bpm+' BPM':''}</span><span class="ta"><button class="ibtn star ${favs.has(t.id)?'on':''}" data-act="fav" data-id="${t.id}" title="Favori">${ic('star')}</button>${t.user&&LB&&LB.deleteTrack?`<button class="ibtn del" data-act="del" data-id="${t.id}" title="Supprimer ce morceau importé">${ic('trash')}</button>`:''}</span><span class="m dur">${t.dur?fmt(t.dur):'—'}</span></div>`;
+ return `<div class="trow ${cur?'cur':''}" data-act="play-track" data-id="${t.id}" data-pl="${plId}" data-tid="${t.id}"${drag?' draggable="true" title="Cliquer pour écouter, faire glisser pour changer l\'ordre"':''}>${drag?`<span class="grip" aria-hidden="true">${ic('grip')}</span>`:''}<span class="n"><span class="num">${i+1}</span><span class="pi">${ic('play')}</span><span class="eqs"><i></i><i></i><i></i></span></span><span class="th"><i style="${tArtH(t)}"></i><span class="tt"><span class="tn">${esc(t.title)}</span><span class="sa">${esc(t.artist)}</span></span></span><span class="m c-pl">${esc(p.name)}</span><span class="m c-bpm">${t.bpm?t.bpm+' BPM':''}</span><span class="ta"><button class="ibtn star ${favs.has(t.id)?'on':''}" data-act="fav" data-id="${t.id}" title="Favori">${ic('star')}</button>${t.user&&LB&&LB.deleteTrack?`<button class="ibtn del" data-act="del" data-id="${t.id}" title="Supprimer ce morceau importé">${ic('trash')}</button>`:''}</span><span class="m dur">${t.dur?fmt(t.dur):'—'}</span></div>`;
 }
-const rows=(l,plId)=>thead()+l.map((t,i)=>trow(t,i,plId||t.pl)).join('');
+const rows=(l,plId)=>thead()+l.map((t,i)=>trow(t,i,plId||t.pl,!!plId)).join('');
 function recentTracks(){
  let l=recent.map(trackById).filter(Boolean);
  if(l.length<6)PL.filter(p=>!p.special&&p.id!=='beats').forEach(p=>{const t=p.tracks[0];if(t&&!l.includes(t))l.push(t)});[0,1,2,3,4,5].forEach(i=>{const t=TRACKS[i];if(t&&!l.includes(t)&&l.length<6)l.push(t)});
@@ -842,7 +873,7 @@ function vPl(el){
   :'Aucun morceau dans cette playlist.';
  const desc=p.id==='fav'?'Vos morceaux préférés':acc?'Ambiance pour l\'accueil, à part de la musique du laser game':p.tags.map(esc).join(', ');
  el.innerHTML=`<div class="pv">${head(p,acc?'Playlist · Accueil':'Playlist',p.name,`<b>Musique ML</b> · ${desc} · ${nTxt(l.length)}${d?', '+d:''}`,plIcon(p))}
- <div class="pacts">${l.length?`<button class="bigplay" data-act="pl-toggle" data-id="${p.id}" title="Écouter">${ic('play')}</button><button class="gbtn" data-act="shuf-pl" data-id="${p.id}" title="Lecture aléatoire">${ic('shuf')}</button>`:''}${acc&&LB&&LB.importTracks?`<button class="pill ${l.length?'':'pri'}" data-act="import" data-pl="Ambiance accueil">${ic('plus')} Ajouter des morceaux</button>`:''}</div>
+ <div class="pacts">${l.length?`<button class="bigplay" data-act="pl-toggle" data-id="${p.id}" title="Écouter">${ic('play')}</button><button class="gbtn" data-act="shuf-pl" data-id="${p.id}" title="Lecture aléatoire">${ic('shuf')}</button>`:''}${acc&&LB&&LB.importTracks?`<button class="pill ${l.length?'':'pri'}" data-act="import" data-pl="Ambiance accueil">${ic('plus')} Ajouter des morceaux</button>`:''}${Array.isArray(ORDER[p.id])&&ORDER[p.id].length?`<button class="pill" data-act="reset-order" data-id="${p.id}" title="Revenir à l'ordre d'origine des morceaux">Ordre d'origine</button>`:''}</div>
  <div class="tlist">${l.length?rows(l,p.id):`<div class="empty">${empty}</div>`}</div></div>`;
 }
 function vAll(el){
@@ -895,6 +926,7 @@ function act(n,d){
   case 'fav':toggleFav(d.id);break;
   case 'del':delTrack(d.id);break;
   case 'import':importTracks(d.pl);break;
+  case 'reset-order':delete ORDER[d.id];store.set('order',ORDER);syncQueue(d.id);render();break;
  }
 }
 document.addEventListener('click',e=>{
@@ -903,6 +935,26 @@ document.addEventListener('click',e=>{
  const q=e.target.closest('[data-q]');
  if(q){load(+q.dataset.q);return}
 });
+/* Glisser-déposer : changer l'ordre des morceaux d'une playlist (mémorisé). */
+let dragId=null;
+function syncQueue(pid){ // la playlist en cours suit le nouvel ordre, sans couper le morceau qui joue
+ if(P.plId!==pid||P.i<0)return;
+ const cur=P.queue[P.i],l=tracksOf(pid);
+ if(!cur||l.length!==P.queue.length||!l.includes(cur))return;
+ P.queue=l.slice();P.i=l.indexOf(cur);P.nx=null;clearTimeout(preT);preT=setTimeout(preloadNext,300);
+}
+function clearDrop(){document.querySelectorAll('.drop-before,.drop-after').forEach(r=>r.classList.remove('drop-before','drop-after'))}
+$('#view').addEventListener('dragstart',e=>{const r=e.target.closest&&e.target.closest('.trow[draggable="true"]');if(!r)return;dragId=r.dataset.id;r.classList.add('dragging');try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragId)}catch(x){}});
+$('#view').addEventListener('dragover',e=>{const r=dragId&&e.target.closest('.trow[draggable="true"]');if(!r)return;e.preventDefault();clearDrop();if(r.dataset.id===dragId)return;const b=r.getBoundingClientRect();r.classList.add(e.clientY<b.top+b.height/2?'drop-before':'drop-after')});
+$('#view').addEventListener('dragleave',e=>{if(!e.relatedTarget||!$('#view').contains(e.relatedTarget))clearDrop()});
+$('#view').addEventListener('drop',e=>{
+ const r=dragId&&e.target.closest('.trow[draggable="true"]');if(!r)return;e.preventDefault();
+ const before=r.classList.contains('drop-before'),pid=r.dataset.pl,ids=tracksOf(pid).map(t=>t.id);clearDrop();
+ if(r.dataset.id===dragId||!ids.includes(dragId))return;
+ ids.splice(ids.indexOf(dragId),1);ids.splice(ids.indexOf(r.dataset.id)+(before?0:1),0,dragId);
+ ORDER[pid]=ids;store.set('order',ORDER);syncQueue(pid);render();
+});
+$('#view').addEventListener('dragend',()=>{dragId=null;clearDrop();document.querySelectorAll('.dragging').forEach(r=>r.classList.remove('dragging'))});
 /* Accueil : la couleur du haut suit la tuile survolée. */
 $('#view').addEventListener('mouseover',e=>{const t=e.target.closest('.qt[data-h]'),h=$('#home');if(t&&h)h.style.setProperty('--hh',t.dataset.h)});
 $('#main').addEventListener('scroll',onScroll,{passive:true});
@@ -938,13 +990,19 @@ function setMini(on){$('#app').classList.toggle('mini',on);$('#bSide').innerHTML
 $('#bSide').onclick=()=>{const m=!$('#app').classList.contains('mini');setMini(m);store.set('mini',m)};
 $('#bVol').onclick=()=>{setVol(vol===0?.8:0);$('#vol').value=vol;ui()};
 $('#vol').oninput=e=>{setVol(+e.target.value);ui()};
-$('#bFs').onclick=()=>{ui();$('#fs').classList.add('show')};
-$('#fsX').onclick=()=>$('#fs').classList.remove('show');
+/* Mode écran : plein écran avec grande pochette ; les commandes et la souris se cachent après 3 s sans bouger. */
+let idleT=null;
+function fsWake(){const f=$('#fs');f.classList.remove('idle');clearTimeout(idleT);idleT=setTimeout(()=>f.classList.add('idle'),3000)}
+function fsOpen(){ui();$('#fs').classList.add('show');fsWake();try{const r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
+function fsClose(){$('#fs').classList.remove('show','idle');clearTimeout(idleT);try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(e){}}
+$('#bFs').onclick=fsOpen;$('#fsX').onclick=fsClose;
+$('#fs').addEventListener('mousemove',fsWake);$('#fs').addEventListener('click',fsWake);
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&$('#fs').classList.contains('show'))fsClose()});
 const q=$('#q');
 q.addEventListener('input',()=>{const v=q.value.trim();if(v)go('search',v);else go('home')});
 document.addEventListener('keydown',e=>{
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();q.focus();return}
- if(e.key==='Escape'){$('#fs').classList.remove('show');about(false)}
+ if(e.key==='Escape'){if($('#fs').classList.contains('show'))fsClose();about(false)}
  if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)){e.preventDefault();toggle()}
 });
 
