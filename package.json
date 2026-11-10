@@ -1,7 +1,7 @@
 {
   "name": "laserbeat",
   "productName": "LaserBeat",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "description": "Musique ML - lecteur de musique hors ligne pour le laser game",
   "author": "Maxime Loret",
   "license": "UNLICENSED",
