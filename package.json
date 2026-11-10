@@ -10,7 +10,8 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win nsis --x64 --publish never",
-    "test": "node tests/run.js"
+    "test": "node tests/run.js",
+    "demo": "python3 outils/demo-web.py"
   },
   "devDependencies": {
     "electron": "44.9.3",

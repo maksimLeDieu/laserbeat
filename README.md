@@ -113,3 +113,19 @@ src/renderer/index.html  l'interface validée (même design), adaptée au logici
 build/installer.nsh    page « Options » de l'installateur (lancement au démarrage)
 musiques/              les MP3 fournis + morceaux.json
 ```
+
+## Démo web (aperçu avant de modifier le logiciel)
+
+Les changements d'interface s'essaient d'abord dans une démo web, avant d'être ajoutés au logiciel Windows.
+La démo est générée à partir du code du logiciel (même interface, mêmes morceaux, mêmes images) :
+
+```
+npm run demo        # ou : python3 outils/demo-web.py
+```
+
+Le dossier `dist-demo/` obtenu contient `index.html` et tous ses fichiers, prêts à être publiés comme page web.
+Dans la démo, seul le lien avec Windows est remplacé : pas d'ajout ni de suppression de morceaux, pas de
+touches multimédia, pas de mise à jour automatique ni de reprise au démarrage. Les réglages (volume, favoris)
+restent dans le navigateur. Si l'interface change au point que l'outil ne s'y retrouve plus, il s'arrête avec
+un message plutôt que de produire une démo fausse.
+
