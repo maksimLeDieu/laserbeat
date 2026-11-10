@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('laserbeat', {
   tracks,
   importTracks: playlist => ipcRenderer.invoke('lib:import', String(playlist || '')),
   saveDuration: (id, dur) => ipcRenderer.send('lib:duration', id, dur),
+  readAudio: id => ipcRenderer.invoke('lib:read', String(id)),
+  onMediaKey: cb => ipcRenderer.on('media:key', (e, a) => cb(String(a))),
   confirmDelete: title => ipcRenderer.invoke('lib:confirm-delete', String(title)),
   deleteTrack: id => ipcRenderer.invoke('lib:delete', String(id)),
   updateReady,

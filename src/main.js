@@ -6,7 +6,7 @@
  * - Son maintenu fenêtre réduite, pas de mise en veille pendant la lecture.
  * - Réglages dans %APPDATA%\LaserBeat\config.json, morceaux ajoutés dans %APPDATA%\LaserBeat\musiques.
  */
-const { app, BrowserWindow, Menu, ipcMain, powerSaveBlocker, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, powerSaveBlocker, dialog, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { Config } = require('./config');
@@ -23,7 +23,9 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
-app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+// HardwareMediaKeyHandling : les touches multimédia sont gérées par Musique ML lui-même (voir registerMediaKeys),
+// sinon Chromium les traiterait aussi et une pression compterait deux fois.
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion,HardwareMediaKeyHandling');
 
 if (process.platform === 'win32') app.setAppUserModelId(APP_ID);
 // Tests automatiques uniquement : dossier de données isolé (jamais utilisé en temps normal).
@@ -112,6 +114,10 @@ function start() {
   ipcMain.handle('lib:delete', (e, id) => {
     try { return library.deleteTrack(musicDirs.user, id); } catch (err) { log('lib:delete', err); return false; }
   });
+  // Lecture d'un morceau connu (fourni ou ajouté) pour mesurer son volume : jamais un autre fichier du disque.
+  ipcMain.handle('lib:read', async (e, id) => {
+    try { return await library.readAudio(musicDirs, id); } catch (err) { log('lib:read', err); return null; }
+  });
   ipcMain.on('lib:duration', (e, id, dur) => {
     try { library.saveDuration(musicDirs.user, id, dur); } catch (err) { log('lib:duration', err); }
   });
@@ -132,8 +138,22 @@ function start() {
     Menu.setApplicationMenu(null);
     log('démarrage', app.getVersion(), musicDirs);
     createWindow();
+    registerMediaKeys();
     updater = setupUpdater({ log, getWindow: () => win });
   });
+
+  /* ----- touches multimédia du clavier (lecture/pause, suivant, précédent, stop) -----
+     Elles marchent même quand la fenêtre est réduite, cachée ou derrière une autre application. */
+  function registerMediaKeys() {
+    const keys = { MediaPlayPause: 'playpause', MediaNextTrack: 'next', MediaPreviousTrack: 'prev', MediaStop: 'stop' };
+    for (const [key, action] of Object.entries(keys)) {
+      try {
+        const ok = globalShortcut.register(key, () => { if (win && !win.isDestroyed()) win.webContents.send('media:key', action); });
+        if (!ok) log('touche multimédia déjà utilisée par une autre application :', key);
+      } catch (err) { log('touche multimédia', key, err); }
+    }
+  }
+  app.on('will-quit', () => { try { globalShortcut.unregisterAll(); } catch (e) { /* rien */ } });
 
   app.on('window-all-closed', () => app.quit());
   // Fermeture voulue (Quitter, mise à jour, redémarrage de nuit, arrêt de Windows) : la fenêtre se ferme sans question.

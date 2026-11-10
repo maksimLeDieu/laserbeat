@@ -1,8 +1,8 @@
 [
-  { "titre": "Phonk Laser Game", "fichier": "LaserBeat 1 - Phonk Laser Game.mp3", "playlist": "Laser Arena", "bpm": 145, "duree": 80.5, "photo": "LaserBeat 1 - Phonk Laser Game.webp" },
-  { "titre": "Phonk", "fichier": "LaserBeat 2 - Phonk.mp3", "playlist": "Laser Arena", "bpm": 145, "duree": 61.1, "photo": "LaserBeat 2 - Phonk.webp" },
-  { "titre": "Mandelao", "fichier": "LaserBeat 3 - Mandelao.mp3", "playlist": "Laser Arena", "bpm": 150, "duree": 65.5, "photo": "LaserBeat 3 - Mandelao.webp" },
-  { "titre": "Drift Hardbass", "fichier": "LaserBeat 4 - Drift Hardbass.mp3", "playlist": "Laser Arena", "bpm": 165, "duree": 74.3, "photo": "LaserBeat 4 - Drift Hardbass.webp" },
-  { "titre": "Drift Hardbass II", "fichier": "LaserBeat 5 - Drift Hardbass II.mp3", "playlist": "Laser Arena", "bpm": 170, "duree": 74.9, "photo": "LaserBeat 5 - Drift Hardbass II.webp" },
-  { "titre": "Hard Rock", "fichier": "LaserBeat 6 - Hard Rock.mp3", "playlist": "Laser Arena", "bpm": 144, "duree": 76.4, "photo": "LaserBeat 6 - Hard Rock.webp" }
+  { "titre": "Phonk Laser Game", "fichier": "LaserBeat 1 - Phonk Laser Game.mp3", "playlist": "Laser Arena", "bpm": 145, "duree": 80.5, "photo": "LaserBeat 1 - Phonk Laser Game.webp", "lufs": -6.1 },
+  { "titre": "Phonk", "fichier": "LaserBeat 2 - Phonk.mp3", "playlist": "Laser Arena", "bpm": 145, "duree": 61.1, "photo": "LaserBeat 2 - Phonk.webp", "lufs": -4.6 },
+  { "titre": "Mandelao", "fichier": "LaserBeat 3 - Mandelao.mp3", "playlist": "Laser Arena", "bpm": 150, "duree": 65.5, "photo": "LaserBeat 3 - Mandelao.webp", "lufs": -6.2 },
+  { "titre": "Drift Hardbass", "fichier": "LaserBeat 4 - Drift Hardbass.mp3", "playlist": "Laser Arena", "bpm": 165, "duree": 74.3, "photo": "LaserBeat 4 - Drift Hardbass.webp", "lufs": -5.1 },
+  { "titre": "Drift Hardbass II", "fichier": "LaserBeat 5 - Drift Hardbass II.mp3", "playlist": "Laser Arena", "bpm": 170, "duree": 74.9, "photo": "LaserBeat 5 - Drift Hardbass II.webp", "lufs": -4.8 },
+  { "titre": "Hard Rock", "fichier": "LaserBeat 6 - Hard Rock.mp3", "playlist": "Laser Arena", "bpm": 144, "duree": 76.4, "photo": "LaserBeat 6 - Hard Rock.webp", "lufs": -7.3 }
 ]

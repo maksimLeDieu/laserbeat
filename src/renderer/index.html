@@ -457,7 +457,9 @@ function plFor(name){
  if(!p){let h=0;for(const c of k)h=(h*31+c.charCodeAt(0))%360;p={id:'c-'+k,name:String(name).trim(),tags:['Mes morceaux'],h:[h,(h+70)%360],tracks:[]};PL.push(p)}
  return p;
 }
-const mkTrack=t=>({id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'Musique ML',bpm:t.bpm||0,dur:t.dur||0,url:t.url,img:typeof t.img==='string'&&/^file:/.test(t.img)?t.img:'',user:!!t.user});
+/* Volume mesuré de chaque morceau (LUFS) : fourni par morceaux.json, sinon mesuré une fois puis mémorisé. */
+let LUFS=store.get('lufs',{});if(!LUFS||typeof LUFS!=='object')LUFS={};
+const mkTrack=t=>({lufs:typeof t.lufs==='number'?t.lufs:(typeof LUFS[t.id]==='number'?LUFS[t.id]:null),id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'Musique ML',bpm:t.bpm||0,dur:t.dur||0,url:t.url,img:typeof t.img==='string'&&/^file:/.test(t.img)?t.img:'',user:!!t.user});
 const TRACKS=TR.map(mkTrack);
 /* Recalcule le contenu des playlists. LaserBeats liste les playlists qu'elle réunit vraiment. */
 function refreshPl(){
@@ -500,7 +502,11 @@ let A=$('#audio'),B=$('#audio2');
 const P={queue:[],i:-1,plId:null,shuffle:false,repeat:1,nx:null};
 let want=false; // vrai tant que la musique doit jouer (faux après une pause voulue)
 let vol=store.get('vol',.8);if(!(vol>=0&&vol<=1))vol=.8;
-function setVol(v){vol=v;A.volume=v;if(!fade)B.volume=v;store.set('vol',v);$('#vol').style.setProperty('--v',v*100+'%')}
+/* Même volume pour tous les morceaux : chaque morceau est ramené au niveau du plus doux (jamais monté, seulement baissé). */
+const TARGET_LUFS=-7.5;
+const gainOf=t=>t&&typeof t.lufs==='number'&&t.lufs>TARGET_LUFS?Math.max(.25,Math.pow(10,(TARGET_LUFS-t.lufs)/20)):1;
+const vg=el=>vol*(+el.dataset.g||1);
+function setVol(v){vol=v;A.volume=vg(A);if(!fade)B.volume=vg(B);store.set('vol',v);$('#vol').style.setProperty('--v',v*100+'%')}
 /* Fondu enchaîné : FADE secondes avant la fin, le morceau suivant démarre dans l'autre lecteur
    et monte pendant que le premier descend (courbe à puissance constante : pas de creux de volume). */
 const FADE=3;
@@ -509,7 +515,7 @@ function cancelFade(){
  if(!fade)return;
  clearInterval(fade.timer);const o=fade.out;fade=null;
  o.pause();o.removeAttribute('src');o.dataset.tid='';o.load();
- A.volume=vol;B.volume=vol;
+ A.volume=vg(A);B.volume=vg(B);
 }
 function startFade(o){
  cancelFade();
@@ -517,8 +523,8 @@ function startFade(o){
  const t0=performance.now();A.volume=0;
  fade={out:o,timer:setInterval(()=>{
   const p=Math.min(1,(performance.now()-t0)/(FADE*1000));
-  A.volume=vol*Math.sin(p*Math.PI/2);o.volume=vol*Math.cos(p*Math.PI/2);
-  if(p>=1){clearInterval(fade.timer);fade=null;o.pause();o.removeAttribute('src');o.load();o.volume=vol;A.volume=vol;preloadNext()}
+  A.volume=vg(A)*Math.sin(p*Math.PI/2);o.volume=vg(o)*Math.cos(p*Math.PI/2);
+  if(p>=1){clearInterval(fade.timer);fade=null;o.pause();o.removeAttribute('src');o.load();o.volume=vol;A.volume=vg(A);preloadNext()}
  },50)};
 }
 function maybeCrossfade(){
@@ -549,7 +555,7 @@ function load(i,at){
   const o=A;A=B;B=o; // le morceau est déjà prêt dans le lecteur de réserve
   o.pause();o.removeAttribute('src');o.dataset.tid='';o.load();
  }else A.src=url;
- A.dataset.tid=t.id;
+ A.dataset.tid=t.id;A.dataset.g=gainOf(t);if(!fade)A.volume=vg(A);
  if(at>0)A.currentTime=at;
  const pr=A.play();if(pr&&pr.catch)pr.catch(()=>ui());
  recent=[t.id].concat(recent.filter(x=>x!==t.id)).slice(0,12);store.set('recent',recent);
@@ -566,7 +572,7 @@ function preloadNext(){
  const t=P.queue[peekNext()];
  if(!t){if(B.getAttribute('src')){B.removeAttribute('src');B.dataset.tid='';B.load()}return}
  if(B.dataset.tid===t.id&&B.getAttribute('src')===trackUrl(t)&&!B.error)return;
- B.dataset.tid=t.id;B.src=trackUrl(t);
+ B.dataset.tid=t.id;B.dataset.g=gainOf(t);B.volume=vg(B);B.src=trackUrl(t);
 }
 function toggle(){
  if(P.i<0){playQueue(tracksOf('arena'),0,'arena');return}
@@ -722,7 +728,7 @@ async function importTracks(playlist){
  refreshPl();
  const t0=trackById(list[0].id);
  go('pl',t0?t0.pl:'imp');
- probe(added);
+ probe(added);setTimeout(measureAll,1500);
 }
 if('mediaSession' in navigator){try{
  navigator.mediaSession.setActionHandler('play',()=>{if(A.paused)toggle()});
@@ -753,7 +759,7 @@ function ui(){
  $('#bShuf').classList.toggle('on',P.shuffle);
  const r=$('#bRep');r.classList.toggle('on',P.repeat>0);r.classList.toggle('rep1',P.repeat===2);
  $('#bFav').classList.toggle('on',!!(t&&favs.has(t.id)));
- $('#bVol').innerHTML=ic(A.volume===0?'mute':'vol');
+ $('#bVol').innerHTML=ic(vol===0?'mute':'vol');
  topStatus();
  if(LB&&!!playing!==lastPlaying){lastPlaying=!!playing;LB.setPlaying(lastPlaying)}
  document.body.classList.toggle('playing',!!playing);
@@ -784,7 +790,7 @@ function nowPanel(){
  el.innerHTML=`<div class="rp-art" style="${tArtH(t)}">${t.img?'':plIcon(p)}</div>
  <div class="rp-t"><div><h2 title="${esc(t.title)}">${esc(t.title)}</h2><span>${esc(p.name)}${t.bpm?' · '+t.bpm+' BPM':''}</span></div><button class="ibtn star ${favs.has(t.id)?'on':''}" data-act="fav" data-id="${t.id}" title="Favori">${ic('star')}</button></div>
  <div class="rp-card"><h4>Ensuite dans la file${P.shuffle&&P.repeat!==2?' <small>· aléatoire</small>':''}${P.repeat===2?' <small>· en boucle</small>':''}</h4>${up.length?up.map(k=>{const x=P.queue[k],q=getPl(x.pl);return `<button class="qi" data-q="${k}"><i style="${tArtH(x)}"></i><span><b>${esc(x.title)}</b><small>${esc(q.name)}</small></span></button>`}).join(''):'<p>La lecture s\'arrête après ce morceau.</p>'}</div>
- <div class="rp-card"><h4>À propos du morceau</h4><dl><dt>Playlist</dt><dd>${esc(p.name)}</dd><dt>Tempo</dt><dd>${t.bpm?t.bpm+' BPM':'—'}</dd><dt>Durée</dt><dd>${t.dur?fmt(t.dur):'—'}</dd><dt>Source</dt><dd>${t.user?'Morceau ajouté':'Musique originale Musique ML'}</dd></dl></div>`;
+ <div class="rp-card"><h4>À propos du morceau</h4><dl><dt>Playlist</dt><dd>${esc(p.name)}</dd><dt>Tempo</dt><dd>${t.bpm?t.bpm+' BPM':'—'}</dd><dt>Durée</dt><dd>${t.dur?fmt(t.dur):'—'}</dd><dt>Volume</dt><dd>${typeof t.lufs!=='number'?'mesure en cours…':gainOf(t)<1?'égalisé ('+(20*Math.log10(gainOf(t))).toFixed(1).replace('.',',')+' dB)':'référence'}</dd><dt>Source</dt><dd>${t.user?'Morceau ajouté':'Musique originale'}</dd></dl></div>`;
 }
 
 /* ---------- vues ---------- */
@@ -930,7 +936,7 @@ window.addEventListener('resize',()=>{const w=window.innerWidth>=1100;if(w!==rpW
 /* Bibliothèque réduite (icônes seules) ou complète. */
 function setMini(on){$('#app').classList.toggle('mini',on);$('#bSide').innerHTML=ic(on?'lib':'side');$('#bSide').title=on?'Afficher la bibliothèque':'Réduire la bibliothèque'}
 $('#bSide').onclick=()=>{const m=!$('#app').classList.contains('mini');setMini(m);store.set('mini',m)};
-$('#bVol').onclick=()=>{setVol(A.volume===0?.8:0);$('#vol').value=vol;ui()};
+$('#bVol').onclick=()=>{setVol(vol===0?.8:0);$('#vol').value=vol;ui()};
 $('#vol').oninput=e=>{setVol(+e.target.value);ui()};
 $('#bFs').onclick=()=>{ui();$('#fs').classList.add('show')};
 $('#fsX').onclick=()=>$('#fs').classList.remove('show');
@@ -942,6 +948,59 @@ document.addEventListener('keydown',e=>{
  if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)){e.preventDefault();toggle()}
 });
 
+/* ---------- volume égal : mesure des morceaux ----------
+   Mesure du volume perçu (norme EBU R128 / ITU BS.1770 : filtre « K » puis moyenne sur des blocs de 400 ms,
+   en ignorant les silences). Faite une seule fois par morceau, en arrière-plan, puis mémorisée. */
+const KW=[[1.53512485958697,-2.69169618940638,1.19839281085285,-1.69065929318241,0.73248077421585],[1,-2,1,-1.99004745483398,0.99007225036621]];
+function lufsOf(buf){
+ const sr=buf.sampleRate,step=Math.round(sr*.1),blk=step*4,n=buf.length;
+ if(n<blk)return null;
+ const nb=Math.floor((n-blk)/step)+1,sq=new Float64Array(Math.floor(n/step)+1);
+ for(let c=0;c<Math.min(2,buf.numberOfChannels);c++){
+  let inp=buf.getChannelData(c);
+  for(const [b0,b1,b2,a1,a2] of KW){
+   const out=new Float32Array(n);let x1=0,x2=0,y1=0,y2=0;
+   for(let i=0;i<n;i++){const v=inp[i],r=b0*v+b1*x1+b2*x2-a1*y1-a2*y2;x2=x1;x1=v;y2=y1;y1=r;out[i]=r}
+   inp=out;
+  }
+  for(let i=0;i<n;i++)sq[Math.floor(i/step)]+=inp[i]*inp[i];
+ }
+ const z=[];for(let k=0;k<nb;k++){z.push((sq[k]+sq[k+1]+sq[k+2]+sq[k+3])/blk)}
+ const L=v=>-0.691+10*Math.log10(v);
+ const abs=z.filter(v=>v>0&&L(v)>-70);if(!abs.length)return null;
+ const rel=L(abs.reduce((a,b)=>a+b,0)/abs.length)-10;
+ const g=abs.filter(v=>L(v)>rel);
+ return Math.round(L(g.reduce((a,b)=>a+b,0)/g.length)*10)/10;
+}
+async function measure(t){
+ if(!LB||!LB.readAudio)return;
+ const bytes=await LB.readAudio(t.id);if(!bytes)return;
+ const ab=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+ const ctx=new OfflineAudioContext(2,1,48000);
+ const buf=await ctx.decodeAudioData(ab);
+ const v=lufsOf(buf);if(v===null)return;
+ t.lufs=v;LUFS[t.id]=v;store.set('lufs',LUFS);
+ // morceau déjà chargé : sa correction s'applique tout de suite
+ [A,B].forEach(el=>{if(el.dataset.tid===t.id){el.dataset.g=gainOf(t);if(!fade)el.volume=vg(el)}});
+ if(P.queue[P.i]&&P.queue[P.i].id===t.id)nowPanel();
+}
+let measuring=false;
+async function measureAll(){
+ if(measuring)return;measuring=true;
+ try{for(const t of TRACKS.filter(x=>typeof x.lufs!=='number')){
+  try{await measure(t)}catch(e){logErr('Mesure du volume impossible : '+t.title+' ('+e+')');t.lufs=undefined}
+  await new Promise(r=>setTimeout(r,800));
+ }}finally{measuring=false}
+}
+
+/* ---------- touches multimédia du clavier ---------- */
+if(LB&&LB.onMediaKey)LB.onMediaKey(a=>{
+ if(a==='playpause')toggle();
+ else if(a==='next')next(false);
+ else if(a==='prev')prev();
+ else if(a==='stop'&&!A.paused)toggle();
+});
+
 /* ---------- init ---------- */
 $('#n-home').innerHTML=ic('home');$('#n-lib').innerHTML=ic('lib')+'<span>Bibliothèque</span>';
 $('#bAdd').innerHTML=ic('plus');$('#bRpX').innerHTML=ic('x');
@@ -949,7 +1008,7 @@ $('#sIc').innerHTML=ic('search');$('#fsX').innerHTML=ic('x');
 $('#bShuf').innerHTML=ic('shuf');$('#bPrev').innerHTML=ic('prev');$('#bNext').innerHTML=ic('next');$('#bRep').innerHTML=ic('rep');
 $('#bFav').innerHTML=ic('star');$('#bInfo').innerHTML=ic('info');$('#bQ').innerHTML=ic('panel');$('#bFs').innerHTML=ic('exp');
 $('#fPrev').innerHTML=ic('prev');$('#fNext').innerHTML=ic('next');
-$('#vol').value=A.volume;$('#vol').style.setProperty('--v',A.volume*100+'%');
+$('#vol').value=vol;$('#vol').style.setProperty('--v',vol*100+'%');
 setMini(!!store.get('mini',false));
 setRp(rpW&&store.get('rp',true));
 if(LB&&LB.version)$('#ver').textContent='v'+LB.version;
@@ -1011,6 +1070,7 @@ function launchTryOk(v){
  if(migrateV2){P.repeat=1;ui();saveState()}
 })();
 probe(TRACKS);
+setTimeout(measureAll,5000);
 window.addEventListener('beforeunload',saveState);
 })();
 </script>

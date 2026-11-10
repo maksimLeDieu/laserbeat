@@ -118,6 +118,48 @@ test('Interface : panneau « En cours de lecture », bouton lecture/pause de la 
   await close(app);
 });
 
+test('Touches multimédia du clavier : lecture/pause, suivant, précédent', async () => {
+  const { app, w, errors } = await launch(newDataDir('touches'));
+  const reg = await app.evaluate(({ globalShortcut }) => ['MediaPlayPause', 'MediaNextTrack', 'MediaPreviousTrack'].map(k => globalShortcut.isRegistered(k)));
+  if (process.platform === 'win32') assert(reg.every(Boolean), 'touches non enregistrées : ' + reg.join(','));
+  const key = a => app.evaluate(({ BrowserWindow }, a) => BrowserWindow.getAllWindows()[0].webContents.send('media:key', a), a);
+  await key('playpause');
+  assert(await waitFor(() => playing(w), 10000), 'lecture/pause ne lance pas la musique');
+  assert((await title(w)) === 'Phonk Laser Game', 'mauvais premier morceau : ' + await title(w));
+  await key('next');
+  assert(await waitFor(async () => (await title(w)) === 'Phonk', 4000), 'suivant ne marche pas');
+  await key('prev');
+  assert(await waitFor(async () => (await title(w)) === 'Phonk Laser Game', 4000), 'précédent ne marche pas');
+  await key('playpause');
+  assert(await waitFor(async () => !(await playing(w)), 4000), 'lecture/pause ne met pas en pause');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
+test('Volume égal : chaque morceau est ramené au même niveau, mesure des morceaux ajoutés', async () => {
+  const dir = newDataDir('volume');
+  const src = path.join(tmpRoot, 'Copie de Phonk.mp3');
+  fs.copyFileSync(SAMPLE_MP3, src);
+  const { app, w, errors } = await launch(dir);
+  const vols = () => w.evaluate(() => [...document.querySelectorAll('audio')].filter(a => !a.paused).map(a => a.volume));
+  await w.click('text=Jouer la musique');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  // Phonk Laser Game : -6,1 LUFS -> -1,4 dB ; Phonk : -4,6 LUFS -> -2,9 dB (volume général 0,8)
+  const near = (v, x) => Math.abs(v - x) < 0.01;
+  assert(await waitFor(async () => { const v = await vols(); return v.length === 1 && near(v[0], 0.8 * Math.pow(10, -1.4 / 20)); }, 4000), 'correction absente : ' + (await vols()).join(','));
+  await w.click('#bNext');
+  assert(await waitFor(async () => { const v = await vols(); return v.length === 1 && near(v[0], 0.8 * Math.pow(10, -2.9 / 20)); }, 6000), 'correction du morceau suivant absente : ' + (await vols()).join(','));
+  // morceau ajouté : mesuré automatiquement (même fichier que Phonk, donc environ -4,6 LUFS)
+  await app.evaluate(({ dialog }, src) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [src] }); }, src);
+  await w.click('#n-lib'); await w.click('text=Ajouter mes morceaux');
+  const measured = () => w.evaluate(() => (window.laserbeat.store.get('lb_lufs') || {})['u:copie de phonk.mp3']);
+  assert(await waitFor(async () => typeof (await measured()) === 'number', 30000, 1000), 'volume du morceau ajouté non mesuré');
+  const m = await measured();
+  assert(Math.abs(m - (-4.6)) <= 0.5, 'mesure incorrecte : ' + m + ' LUFS (attendu -4,6)');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
 test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais de silence', async () => {
   const { app, w } = await launch(newDataDir('fondu'));
   await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
@@ -144,7 +186,9 @@ test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais
   const ons = last.decks.filter(d => d.on);
   assert(ons.length === 1, 'les deux lecteurs jouent encore après le fondu');
   const vol = await w.inputValue('#vol');
-  assert(Math.abs(ons[0].v - Number(vol)) < 0.02, 'volume final incorrect');
+  // volume final = volume réglé x correction « volume égal » du morceau (Phonk : -2,9 dB)
+  const corr = { 'Phonk Laser Game': -1.4, 'Phonk': -2.9 }[last.title] || 0;
+  assert(Math.abs(ons[0].v - Number(vol) * Math.pow(10, corr / 20)) < 0.02, 'volume final incorrect : ' + ons[0].v);
   await close(app);
 });
 

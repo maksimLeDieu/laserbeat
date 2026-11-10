@@ -65,6 +65,7 @@ function makeTrack(origin, dir, file, e) {
     dur: num(e.duree !== undefined ? e.duree : e.dur),
     url: pathToFileURL(path.join(dir, file)).href,
     img: photoUrl(dir, e.photo || e.image),
+    lufs: isFinite(Number(e.lufs)) && Number(e.lufs) < 0 ? Number(e.lufs) : null,
     user: origin === 'u'
   };
 }
@@ -231,4 +232,17 @@ function deleteTrack(dir, id) {
   return true;
 }
 
-module.exports = { AUDIO_EXT, loadAll, importFiles, saveDuration, deleteTrack };
+// Contenu d'un morceau (pour mesurer son volume). Seulement un fichier audio des deux dossiers de morceaux.
+async function readAudio(dirs, id) {
+  if (typeof id !== 'string') return null;
+  const dir = id.startsWith('b:') ? dirs.builtin : id.startsWith('u:') ? dirs.user : null;
+  if (!dir) return null;
+  const key = id.slice(2);
+  const name = fs.readdirSync(dir).find(n => keyOf(n) === key);
+  if (!name || !isAudio(name)) return null;
+  const full = path.resolve(dir, name);
+  if (!full.startsWith(path.resolve(dir) + path.sep)) return null;
+  return fs.promises.readFile(full);
+}
+
+module.exports = { AUDIO_EXT, loadAll, importFiles, saveDuration, deleteTrack, readAudio };
