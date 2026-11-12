@@ -643,7 +643,7 @@ const fmt=s=>{if(!isFinite(s))return'0:00';s=Math.floor(s);return Math.floor(s/6
 /* Deux lecteurs audio : pendant qu'un morceau joue, le suivant est déjà chargé dans l'autre,
    pour enchaîner sans blanc. A = lecteur actif, B = lecteur de réserve. */
 let A=$('#audio'),B=$('#audio2');
-const P={queue:[],i:-1,plId:null,shuffle:false,repeat:1,nx:null};
+const P={queue:[],i:-1,plId:null,shuffle:false,repeat:1,nx:null,seen:[]}; // seen : morceaux déjà passés dans le tour aléatoire en cours
 let want=false; // vrai tant que la musique doit jouer (faux après une pause voulue)
 let vol=store.get('vol',.8);if(!(vol>=0&&vol<=1))vol=.8;
 /* Même volume pour tous les morceaux : chaque morceau est ramené au niveau du plus doux (jamais monté, seulement baissé). */
@@ -685,6 +685,7 @@ let recent=(pget('recent',[])||[]).filter(id=>known.has(id));
 let preT=null,errs=0;
 function playQueue(list,start,plId,at){
  if(!list.length)return;
+ if(plId!==P.plId)P.seen=[]; // autre playlist : nouveau tour aléatoire
  P.queue=list.slice();P.plId=plId;P.nx=null;load(Math.max(0,start),at);
 }
 function load(i,at){
@@ -693,6 +694,7 @@ function load(i,at){
  const xf=xfMode&&!A.paused;
  if(!xf)cancelFade();
  P.i=i;want=true;loadN++;
+ if(!P.seen.includes(t.id))P.seen.push(t.id);
  const url=trackUrl(t);
  const ready=B.dataset.tid===t.id&&B.getAttribute('src')===url&&!B.error;
  if(xf){
@@ -710,9 +712,19 @@ function load(i,at){
  ui();saveState();
  clearTimeout(preT);if(!fade)preT=setTimeout(preloadNext,1500);
 }
+/* Aléatoire sans répétition : on tire parmi les morceaux pas encore passés dans ce tour.
+   Quand toute la playlist est passée, un nouveau tour commence (sans rejouer tout de suite le morceau en cours). */
+function pickShuffle(){
+ const rest=[];
+ P.queue.forEach((t,k)=>{if(k!==P.i&&!P.seen.includes(t.id))rest.push(k)});
+ if(rest.length)return rest[Math.floor(Math.random()*rest.length)];
+ P.seen=[];
+ const all=[];P.queue.forEach((t,k)=>{if(k!==P.i)all.push(k)});
+ return all[Math.floor(Math.random()*all.length)];
+}
 function peekNext(){
  const n=P.queue.length;if(!n||P.repeat===2)return -1;
- if(P.shuffle&&n>1){if(P.nx===null||P.nx===P.i||P.nx>=n){do{P.nx=Math.floor(Math.random()*n)}while(P.nx===P.i)}return P.nx}
+ if(P.shuffle&&n>1){if(P.nx===null||P.nx===P.i||P.nx>=n)P.nx=pickShuffle();return P.nx}
  return P.i+1<n?P.i+1:0;
 }
 function preloadNext(){
@@ -753,7 +765,7 @@ function next(fromEnd){
  if(!P.queue.length)return;
  if(fromEnd&&P.repeat===2){A.currentTime=0;A.play().catch(()=>{});return}
  let n;
- if(P.shuffle&&P.queue.length>1){n=P.nx!==null&&P.nx!==P.i&&P.nx<P.queue.length?P.nx:-1;if(n<0)do{n=Math.floor(Math.random()*P.queue.length)}while(n===P.i)}
+ if(P.shuffle&&P.queue.length>1){n=P.nx!==null&&P.nx!==P.i&&P.nx<P.queue.length?P.nx:-1;if(n<0)n=pickShuffle()}
  else n=P.i+1;
  P.nx=null;
  if(n>=P.queue.length){
@@ -774,7 +786,7 @@ function toggleFav(id){
 }
 function saveState(){
  const t=P.queue[P.i];
- store.set('resume',{pl:P.plId,id:t?t.id:null,t:t?Math.floor(A.currentTime||0):0,playing:!!t&&want,shuffle:P.shuffle,repeat:P.repeat});
+ store.set('resume',{pl:P.plId,id:t?t.id:null,t:t?Math.floor(A.currentTime||0):0,playing:!!t&&want,shuffle:P.shuffle,repeat:P.repeat,seen:P.seen.slice(-500)});
 }
 function logErr(m){try{if(LB)LB.log(m)}catch(e){}}
 window.addEventListener('error',e=>logErr('Erreur interface : '+(e.message||e)+' ('+(e.filename||'').split('/').pop()+':'+(e.lineno||0)+')'));
@@ -846,6 +858,7 @@ if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener){
 function resume(){
  const R=store.get('resume',null);if(!R||typeof R!=='object')return;
  P.shuffle=!!R.shuffle;P.repeat=[0,1,2].includes(R.repeat)?R.repeat:1;
+ P.plId=R.pl||null;P.seen=Array.isArray(R.seen)?R.seen.filter(x=>typeof x==='string').slice(-500):[]; // le tour aléatoire continue après un redémarrage
  if(!R.playing||!R.id){ui();return}
  const t=trackById(R.id);
  if(!t){ // morceau retiré depuis : on repart sur sa playlist (ou Laser Arena) plutôt que de rester muet

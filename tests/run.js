@@ -467,6 +467,40 @@ test('Fenêtre réduite/cachée : la musique continue et enchaîne', async () =>
   await close(app);
 });
 
+test('Aléatoire : aucun morceau rejoué avant que toute la playlist soit passée', async () => {
+  const { app, w, errors } = await launch(newDataDir('aleatoire'));
+  await w.click('.pli >> text=Laser Arena');
+  await w.click('#view [data-act="shuf-pl"]');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  const n = (await w.$$('#view .trow:not(.thead)')).length;
+  assert(n === 13, 'morceaux de la playlist : ' + n);
+  // trois tours complets en passant au suivant : chaque tour contient chaque morceau une seule fois
+  const order = [await title(w)];
+  for (let k = 1; k < n * 3; k++) {
+    const before = order[order.length - 1];
+    await w.click('#bNext');
+    assert(await waitFor(async () => (await title(w)) !== before, 5000, 100), 'le morceau ne change pas');
+    order.push(await title(w));
+  }
+  for (let c = 0; c < 3; c++) {
+    const tour = order.slice(c * n, (c + 1) * n);
+    assert(new Set(tour).size === n, 'morceau répété dans le tour ' + (c + 1) + ' : ' + tour.join(', '));
+  }
+  for (let k = 1; k < order.length; k++) assert(order[k] !== order[k - 1], 'même morceau deux fois de suite');
+  assert(order.slice(0, n).join('|') !== order.slice(n, 2 * n).join('|'), 'les tours ont le même ordre (pas aléatoire)');
+  // fin de morceau naturelle (avec fondu) : le suivant n'est pas un morceau déjà passé dans le tour
+  await w.click('#bNext'); await w.waitForTimeout(400);
+  const a = await title(w);
+  await seekNearEnd(w, 4);
+  assert(await waitFor(async () => (await title(w)) !== a, 8000, 200), 'pas d\'enchaînement');
+  // après un redémarrage, le tour continue : pas de répétition
+  await w.waitForTimeout(2500);
+  const seenBefore = await w.evaluate(() => JSON.parse(JSON.stringify(window.laserbeat.store.get('lb_resume').seen)));
+  assert(seenBefore.length >= 2 && seenBefore.length <= n, 'tour non mémorisé : ' + seenBefore.length);
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
 test('Fin de playlist : la musique continue (répétition de la playlist par défaut)', async () => {
   const { app, w } = await launch(newDataDir('fin-playlist'));
   await w.click('.pli >> text=LaserBeats');

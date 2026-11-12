@@ -8,6 +8,13 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.13.1', date: '12 novembre 2026',
+      items: [
+        "Lecture aléatoire corrigée : un morceau ne repasse plus tant que tous les autres de la playlist n'ont pas été joués.",
+        "Le tour en cours est gardé en mémoire, même après avoir fermé et relancé Musique ML."
+      ]
+    },
+    {
       v: '2.13.0', date: '12 novembre 2026',
       items: [
         "7 nouveaux morceaux dans Laser Arena : Apex Drift, Nitro Favela, Donk Division, Ghost Lap, Redline, Overtake et Night Raid.",
