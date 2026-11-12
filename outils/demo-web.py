@@ -72,7 +72,7 @@ PONT_DEMO = '''<div class="demo-badge">Démo web</div>
  var P='mlweb_',mem={};
  function get(k){try{var v=localStorage.getItem(P+k);return v===null?(k in mem?mem[k]:undefined):JSON.parse(v)}catch(e){return mem[k]}}
  function set(k,v){mem[k]=v;try{localStorage.setItem(P+k,JSON.stringify(v))}catch(e){}}
- // première visite : on fait comme si l'on venait de mettre à jour, pour montrer « Quoi de neuf »
+ // première visite : on fait comme si l'on venait de mettre à jour, pour montrer la fenêtre « Mise à jour »
  if(get('lb_lastVersion')===undefined&&%(precedente)s)set('lb_lastVersion',%(precedente)s);
  window.laserbeat={
   version:%(version)s,

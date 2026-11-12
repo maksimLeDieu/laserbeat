@@ -6,7 +6,7 @@
  * - Son maintenu fenêtre réduite, pas de mise en veille pendant la lecture.
  * - Réglages dans %APPDATA%\LaserBeat\config.json, morceaux ajoutés dans %APPDATA%\LaserBeat\musiques.
  */
-const { app, BrowserWindow, Menu, ipcMain, powerSaveBlocker, dialog, globalShortcut, session, safeStorage } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, powerSaveBlocker, dialog, globalShortcut, session, safeStorage, shell } = require('electron');
 const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs');
@@ -14,6 +14,7 @@ const { Config } = require('./config');
 const library = require('./library');
 const { Accounts } = require('./accounts');
 const { setupUpdater } = require('./updater');
+const raccourcis = require('./raccourcis');
 
 const APP_ID = 'fr.laserbeat.app';
 /* Comptes des salles : système prêt mais PAS ENCORE ACTIVÉ. Passer à true pour l'ouvrir aux salles.
@@ -171,7 +172,30 @@ function start() {
     createWindow();
     registerMediaKeys();
     updater = setupUpdater({ log, getWindow: () => win });
+    setTimeout(fixShortcuts, 5000);
   });
+
+  /* ----- logo ML dans la barre des tâches -----
+     Une fois par version installée (après le démarrage, sans le ralentir) : on répare nos raccourcis
+     (épinglé dans la barre des tâches, Bureau, menu Démarrer) pour qu'ils affichent le logo ML. */
+  function fixShortcuts() {
+    if (process.platform !== 'win32' || !app.isPackaged || process.env.LASERBEAT_TEST) return;
+    const mark = path.join(app.getPath('userData'), 'raccourcis.txt');
+    try { if (fs.readFileSync(mark, 'utf8').trim() === app.getVersion()) return; } catch (e) { /* jamais fait */ }
+    try {
+      const fixed = raccourcis.repairShortcuts({
+        shell, exe: process.execPath, appId: APP_ID, log,
+        dirs: raccourcis.shortcutDirs(app.getPath('appData'), app.getPath('desktop'))
+      });
+      log('raccourcis réparés :', fixed.length);
+      if (fixed.length) {
+        // rafraîchit le cache d'icônes de Windows (sinon l'ancienne icône peut rester affichée)
+        const exe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'ie4uinit.exe');
+        if (fs.existsSync(exe)) require('child_process').execFile(exe, ['-show'], { windowsHide: true, timeout: 20000 }, () => {});
+      }
+      fs.writeFileSync(mark, app.getVersion());
+    } catch (e) { log('raccourcis', e.message); }
+  }
 
   /* ----- verrous de sécurité -----
      - aucune autorisation (caméra, micro, position, notifications...) : seul le plein écran est permis ;

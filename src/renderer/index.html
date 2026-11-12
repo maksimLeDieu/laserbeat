@@ -424,7 +424,7 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
 .mbox h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ac2);margin:18px 0 6px}
 .mbox p{color:var(--tx2);line-height:1.6;font-size:14px}
 .mbox .foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
-/* ---- « Quoi de neuf » ---- */
+/* ---- fenêtre « Mise à jour » (nouveautés) ---- */
 .nk{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ac2);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:2px}
 .nk svg{width:14px;height:14px}
 .nv{margin-top:16px;padding:16px 18px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
@@ -1148,7 +1148,7 @@ function about(show){
  m.hidden=false;$('#aboutBox [data-close]').focus();
 }
 function sheet(html){$('#aboutBox').innerHTML=`<button class="ibtn x" data-close title="Fermer">${ic('x')}</button>`+html;$('#about').hidden=false;$('#aboutBox [data-close]').focus()}
-/* ---------- « Quoi de neuf » : nouveautés de chaque version (notes.js) ---------- */
+/* ---------- fenêtre « Mise à jour » : nouveautés de chaque version (notes.js) ---------- */
 const vcmp=(a,b)=>{const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<3;i++){const d=(x[i]||0)-(y[i]||0);if(d)return d<0?-1:1}return 0};
 const NOTES_ALL=(window.NOTES||[]).filter(n=>n&&/^\d+\.\d+\.\d+$/.test(n.v)&&Array.isArray(n.items)).sort((a,b)=>vcmp(b.v,a.v));
 /* since = version d'avant la mise à jour : on montre ce qui est arrivé depuis. Sans « since » : tout l'historique. */
@@ -1158,7 +1158,7 @@ function showNotes(since){
  if(!list.length)return false;
  const more=since&&list.length>3;if(more)list=list.slice(0,3);
  const hist=!since||NOTES_ALL.some(n=>vcmp(n.v,cur)<=0&&!list.includes(n));
- sheet(`<div class="mh"><img class="mark" src="img/logo.svg" alt="" style="width:48px;height:48px;border-radius:11px"><div><div class="nk">${ic('spark')}${since?'Mise à jour installée':'Historique'}</div><h3 id="aboutT">Quoi de neuf</h3><small>Musique ML ${esc(cur)}</small></div></div>`
+ sheet(`<div class="mh"><img class="mark" src="img/logo.svg" alt="" style="width:48px;height:48px;border-radius:11px"><div><div class="nk">${ic('spark')}${since?'Nouveautés':'Historique'}</div><h3 id="aboutT">${since?'Mise à jour':'Mises à jour'}</h3><small>Musique ML ${esc(cur)}</small></div></div>`
   +list.map((n,i)=>`<section class="nv${i===0&&vcmp(n.v,cur)===0?' cur':''}"><div class="nvh"><b>Version ${esc(n.v)}</b>${n.date?`<span>${esc(n.date)}</span>`:''}</div><ul class="nl">${n.items.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></section>`).join('')
   +`<div class="nfoot">${since&&hist?'<button class="linkb nall" type="button" data-act="notes">Voir tout l\'historique</button>':'<span></span>'}<button class="pill pri" type="button" data-close>${since?'C\'est noté':'Fermer'}</button></div>`);
  const ok=$('#aboutBox .nfoot .pill');if(ok)ok.focus();
@@ -1407,7 +1407,7 @@ const migrateV2=!store.get('v2',false);if(migrateV2)store.set('v2',true);
  store.set('lastVersion',v);
  // ancienne version sans ce repère : on la reconnaît à son état de lecture déjà enregistré
  const updated=prev?prev!==v:hadResume;
- // puis, une seule fois, la fenêtre « Quoi de neuf » avec ce qui a changé depuis la version d'avant
+ // puis, une seule fois, la fenêtre « Mise à jour » avec ce qui a changé depuis la version d'avant
  if(updated)updateScreen('Mise à jour installée','Musique ML '+v,'Finalisation de la mise à jour…',3000).then(()=>{hideUpdateScreen();setTimeout(()=>showNotes(prev&&/^\d+\.\d+\.\d+$/.test(prev)?prev:((NOTES_ALL.find(n=>vcmp(n.v,v)<0)||{}).v||'0.0.0')),450)});
 })();
 /* Lancement : s'il y a une mise à jour prête, elle s'installe AVANT de démarrer la musique.

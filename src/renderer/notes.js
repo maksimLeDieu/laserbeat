@@ -1,5 +1,5 @@
 /*
- * « Quoi de neuf » : les nouveautés de chaque version, affichées une fois après la mise à jour
+ * Fenêtre « Mise à jour » : les nouveautés de chaque version, affichées une fois après la mise à jour
  * et toujours consultables dans Paramètres > À propos > Nouveautés.
  * À chaque nouvelle version : ajouter une entrée EN TÊTE de liste (les tests le vérifient).
  * Phrases courtes, du point de vue de la personne qui utilise l'appli.
@@ -10,7 +10,8 @@
     {
       v: '2.10.0', date: '12 novembre 2026',
       items: [
-        "Quoi de neuf : après chaque mise à jour, cette fenêtre présente les nouveautés.",
+        "Après chaque mise à jour, cette fenêtre présente les nouveautés de la nouvelle version.",
+        "Le logo ML s'affiche dans la barre des tâches de Windows, à la place de la page blanche.",
         "L'historique des nouveautés reste disponible dans Paramètres (logo ML en haut à gauche), rubrique À propos."
       ]
     },

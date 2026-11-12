@@ -626,7 +626,7 @@ test('Premier lancement après une mise à jour : écran « Mise à jour install
   await close(again.app);
 });
 
-test('Quoi de neuf : nouveautés montrées une fois après la mise à jour, historique dans Paramètres', async () => {
+test('Fenêtre « Mise à jour » : nouveautés montrées une fois après la mise à jour, historique dans Paramètres', async () => {
   // notes.js doit décrire la version publiée, en tête de liste
   const g = {}; new Function('window', fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'notes.js'), 'utf8'))(g);
   const pkgV = require(path.join(ROOT, 'package.json')).version;
@@ -636,7 +636,7 @@ test('Quoi de neuf : nouveautés montrées une fois après la mise à jour, hist
   const dir = newDataDir('nouveautes');
   fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ lb_lastVersion: prevV, lb_v2: true }));
   const { app, w, errors } = await launch(dir);
-  assert(await waitFor(async () => (await w.isVisible('#about')) && (await w.textContent('#aboutBox')).includes('Quoi de neuf'), 9000), 'fenêtre « Quoi de neuf » absente après la mise à jour');
+  assert(await waitFor(async () => (await w.isVisible('#about')) && (await w.textContent('#aboutBox')).includes('Nouveautés') && (await w.textContent('#aboutT')) === 'Mise à jour', 9000), 'fenêtre « Mise à jour » absente après la mise à jour');
   const box = await w.textContent('#aboutBox');
   assert(box.includes('Version ' + pkgV) && box.includes(g.NOTES[0].items[0]), 'nouveautés de la version ' + pkgV + ' absentes');
   assert(!box.includes('Version ' + prevV), 'les nouveautés déjà vues (' + prevV + ') ne doivent pas réapparaître');
@@ -655,6 +655,34 @@ test('Quoi de neuf : nouveautés montrées une fois après la mise à jour, hist
   await sleep(1000);
   assert(!(await again.w.isVisible('#about')), 'nouveautés réaffichées à un lancement normal');
   await close(again.app);
+});
+
+test('Raccourcis Windows : logo ML remis sur nos raccourcis, ceux des autres logiciels intacts', async () => {
+  const { repairShortcuts, shortcutDirs } = require(path.join(ROOT, 'src', 'raccourcis.js'));
+  const appData = newDataDir('raccourcis'), desk = path.join(appData, 'Bureau');
+  const dirs = shortcutDirs(appData, desk);
+  dirs.forEach(d => fs.mkdirSync(d, { recursive: true }));
+  const links = {
+    [path.join(dirs[0], 'LaserBeat.lnk')]: { target: 'C:\\Users\\x\\AppData\\Local\\Programs\\laserbeat\\LaserBeat.exe', icon: 'C:\\ancien\\icone.ico' },
+    [path.join(dirs[0], 'Navigateur.lnk')]: { target: 'C:\\Program Files\\Nav\\nav.exe', icon: '' },
+    [path.join(dirs[2], 'Musique ML.lnk')]: { target: 'C:\\autre\\LaserBeat.exe', appUserModelId: 'fr.laserbeat.app' },
+    [path.join(desk, 'Jeu.lnk')]: { target: 'C:\\Jeux\\jeu.exe' }
+  };
+  Object.keys(links).forEach(f => fs.writeFileSync(f, ''));
+  fs.writeFileSync(path.join(desk, 'notes.txt'), '');
+  const written = {};
+  const shell = {
+    readShortcutLink: f => { if (!links[f]) throw new Error('pas un raccourci'); return links[f]; },
+    writeShortcutLink: (f, op, o) => { written[f] = { op, ...o }; return true; }
+  };
+  const exe = 'C:\\Users\\x\\AppData\\Local\\Programs\\laserbeat\\LaserBeat.exe';
+  const fixed = repairShortcuts({ shell, exe, appId: 'fr.laserbeat.app', dirs });
+  assert(fixed.length === 2, 'raccourcis réparés : ' + fixed.length);
+  for (const f of fixed) {
+    const o = written[f];
+    assert(o.op === 'update' && o.target === exe && o.icon === exe && o.iconIndex === 0 && o.appUserModelId === 'fr.laserbeat.app', 'raccourci mal réparé : ' + f);
+  }
+  assert(!written[path.join(dirs[0], 'Navigateur.lnk')] && !written[path.join(desk, 'Jeu.lnk')], 'raccourci d\'un autre logiciel modifié');
 });
 
 test('Sortie audio modifiée : le morceau repart au même endroit', async () => {

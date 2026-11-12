@@ -96,7 +96,7 @@ GitHub (`maksimLeDieu/laserbeat`, onglet Releases).
 - Sécurité : après 2 tentatives ratées pour une même version, LaserBeat ne réessaie plus au lancement.
 - Réglages, favoris, morceaux ajoutés et lancement au démarrage sont conservés.
 
-- **Quoi de neuf** : juste après l'écran « Mise à jour installée », une fenêtre présente une seule fois les
+- **Fenêtre « Mise à jour »** : juste après l'écran « Mise à jour installée », une fenêtre présente une seule fois les
   nouveautés arrivées depuis la version d'avant. L'historique complet reste dans Paramètres › À propos › Nouveautés.
 
 Publier une nouvelle version : augmenter `version` dans `package.json`, ajouter **en tête** de
