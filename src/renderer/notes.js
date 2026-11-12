@@ -8,6 +8,13 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.13.0', date: '12 novembre 2026',
+      items: [
+        "7 nouveaux morceaux dans Laser Arena : Apex Drift, Nitro Favela, Donk Division, Ghost Lap, Redline, Overtake et Night Raid.",
+        "Comme les autres, ils sont joués au même niveau sonore (volume égal)."
+      ]
+    },
+    {
       v: '2.12.0', date: '12 novembre 2026',
       items: [
         "Comptes des salles : dans Paramètres (logo ML), « Se connecter », choisissez Quimper, Brest ou Saint-Brieuc.",

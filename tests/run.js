@@ -67,7 +67,7 @@ const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
 /* ------------------------------------------------------------------ */
-test('Démarrage : fenêtre Musique ML, sans menu, fichiers locaux, 6 morceaux', async () => {
+test('Démarrage : fenêtre Musique ML, sans menu, fichiers locaux, 13 morceaux', async () => {
   const { app, w, errors } = await launch(newDataDir('demarrage'));
   const info = await app.evaluate(({ BrowserWindow, Menu }) => {
     const b = BrowserWindow.getAllWindows()[0];
@@ -80,7 +80,7 @@ test('Démarrage : fenêtre Musique ML, sans menu, fichiers locaux, 6 morceaux',
   assert(info.url.startsWith('file:'), 'interface non locale : ' + info.url);
   assert(info.throttle === false, 'ralentissement en arrière-plan actif');
   const n = await w.evaluate(() => window.laserbeat.tracks.length);
-  assert(n === 6, 'morceaux fournis : ' + n);
+  assert(n === 13, 'morceaux fournis : ' + n);
   assert(/^v\d+\.\d+\.\d+/.test(await w.textContent('#ver')), 'version non affichée');
   assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
@@ -473,7 +473,7 @@ test('Fin de playlist : la musique continue (répétition de la playlist par dé
   assert(await w.evaluate(() => document.querySelector('#bRep').classList.contains('on')), 'répétition non active par défaut');
   const rows = await w.$$('#view .trow:not(.thead)');
   await rows[rows.length - 1].click();                               // dernier morceau de la playlist
-  assert(await waitFor(async () => (await title(w)) === 'Hard Rock' && await playing(w), 10000), 'dernier morceau non lancé');
+  assert(await waitFor(async () => (await title(w)) === 'Night Raid' && await playing(w), 10000), 'dernier morceau non lancé');
   await w.waitForTimeout(2500); await seekNearEnd(w, 1);
   assert(await waitFor(async () => (await title(w)) === 'Phonk Laser Game' && await playing(w), 10000), 'la musique s\'arrête en fin de playlist');
   await close(app);
@@ -508,7 +508,7 @@ test('Page « Ambiance accueil » : ajout de morceaux séparés du laser game', 
   assert(!arena.includes('Ambiance douce'), 'musique d\'accueil mélangée à Laser Arena');
   await w.click('.pli >> text=LaserBeats'); await w.waitForTimeout(300);
   const all = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
-  assert(all.includes('Ambiance douce') && all.includes('Mandelao') && all.length === 7, 'LaserBeats ne réunit pas toute la musique : ' + all.join(', '));
+  assert(all.includes('Ambiance douce') && all.includes('Mandelao') && all.includes('Night Raid') && all.length === 14, 'LaserBeats ne réunit pas toute la musique : ' + all.join(', '));
   assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
 });

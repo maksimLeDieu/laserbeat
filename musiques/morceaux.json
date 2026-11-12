@@ -4,5 +4,12 @@
   { "titre": "Mandelao", "fichier": "LaserBeat 3 - Mandelao.mp3", "playlist": "Laser Arena", "bpm": 150, "duree": 65.5, "photo": "LaserBeat 3 - Mandelao.webp", "lufs": -6.2 },
   { "titre": "Drift Hardbass", "fichier": "LaserBeat 4 - Drift Hardbass.mp3", "playlist": "Laser Arena", "bpm": 165, "duree": 74.3, "photo": "LaserBeat 4 - Drift Hardbass.webp", "lufs": -5.1 },
   { "titre": "Drift Hardbass II", "fichier": "LaserBeat 5 - Drift Hardbass II.mp3", "playlist": "Laser Arena", "bpm": 170, "duree": 74.9, "photo": "LaserBeat 5 - Drift Hardbass II.webp", "lufs": -4.8 },
-  { "titre": "Hard Rock", "fichier": "LaserBeat 6 - Hard Rock.mp3", "playlist": "Laser Arena", "bpm": 144, "duree": 76.4, "photo": "LaserBeat 6 - Hard Rock.webp", "lufs": -7.3 }
+  { "titre": "Hard Rock", "fichier": "LaserBeat 6 - Hard Rock.mp3", "playlist": "Laser Arena", "bpm": 144, "duree": 76.4, "photo": "LaserBeat 6 - Hard Rock.webp", "lufs": -7.3 },
+  { "titre": "Apex Drift", "fichier": "LaserBeat 7 - Apex Drift.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 73.3, "lufs": -4.2 },
+  { "titre": "Nitro Favela", "fichier": "LaserBeat 9 - Nitro Favela.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 71.4, "lufs": -5.3 },
+  { "titre": "Donk Division", "fichier": "LaserBeat 10 - Donk Division.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 72.4, "lufs": -4.2 },
+  { "titre": "Ghost Lap", "fichier": "LaserBeat 11 - Ghost Lap.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 70.5, "lufs": -5.8 },
+  { "titre": "Redline", "fichier": "LaserBeat 12 - Redline.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 73.6, "lufs": -5.5 },
+  { "titre": "Overtake", "fichier": "LaserBeat 13 - Overtake.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 71.8, "lufs": -3.8 },
+  { "titre": "Night Raid", "fichier": "LaserBeat 15 - Night Raid.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 72.4, "lufs": -6.4 }
 ]
