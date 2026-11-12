@@ -501,6 +501,70 @@ test('Aléatoire : aucun morceau rejoué avant que toute la playlist soit passé
   await close(app);
 });
 
+test('Lire ensuite : clic droit sur un morceau, il passe après celui en cours, puis l\'ordre reprend', async () => {
+  const { app, w, errors } = await launch(newDataDir('lire-ensuite'));
+  await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
+  assert(await waitFor(async () => (await title(w)) === 'Phonk Laser Game' && await playing(w), 10000), 'pas de lecture');
+  const ask = async name => {
+    await w.click(`#view .trow:not(.thead):has(.tn:text-is("${name}"))`, { button: 'right' });
+    assert(await w.isVisible('#ctx'), 'menu du clic droit absent');
+    await w.click('#ctx [data-act="play-next"]');
+    assert(!(await w.isVisible('#ctx')), 'menu resté ouvert');
+  };
+  const nextIs = async (name, msg) => { await w.click('#bNext'); assert(await waitFor(async () => (await title(w)) === name, 5000, 100), msg + ' : ' + await title(w)); };
+  // le morceau en cours ne peut pas être « lu ensuite »
+  await w.click('#view .trow:not(.thead):has(.tn:text-is("Phonk Laser Game"))', { button: 'right' });
+  assert(await w.isDisabled('#ctx [data-act="play-next"]'), 'morceau en cours proposé');
+  await w.keyboard.press('Escape');
+  assert(!(await w.isVisible('#ctx')), 'Échap ne ferme pas le menu');
+  // deux demandes : elles passent dans l'ordre demandé, puis la playlist reprend où elle en était
+  await ask('Drift Hardbass II'); await ask('Donk Division');
+  assert((await title(w)) === 'Phonk Laser Game' && await playing(w), 'la demande a coupé le morceau en cours');
+  await nextIs('Drift Hardbass II', '1re demande');
+  await nextIs('Donk Division', '2e demande');
+  await nextIs('Phonk', 'reprise de l\'ordre');
+  await nextIs('Mandelao', 'suite de l\'ordre');
+  // fin de morceau naturelle (avec fondu) : la demande passe aussi
+  await ask('Night Raid');
+  await seekNearEnd(w, 4);
+  assert(await waitFor(async () => (await title(w)) === 'Night Raid', 8000, 200), 'demande ignorée en fin de morceau : ' + await title(w));
+  await w.waitForTimeout(3500);
+  await nextIs('Drift Hardbass', 'reprise après la fin de morceau');
+  // en aléatoire : la demande passe en premier
+  await w.click('#bShuf');
+  await ask('Redline');
+  await nextIs('Redline', 'demande en aléatoire');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
+test('Mise à jour à la demande : Paramètres > Mise à jour, recherche puis « Installer maintenant »', async () => {
+  // rien de nouveau : « à jour »
+  let { app, w, errors } = await launch(newDataDir('maj-demande-0'));
+  await w.click('#bBrand');
+  assert(await w.isVisible('#setUpd'), 'rubrique Mise à jour absente des Paramètres');
+  const last = await w.$$eval('.set-sec h3', r => r[r.length - 1].textContent);
+  assert(last === 'Mise à jour', 'la rubrique Mise à jour n\'est pas tout en bas : ' + last);
+  await w.click('[data-act="upd-check"]');
+  assert(await waitFor(async () => (await w.textContent('#updTxt')).includes('à jour.'), 5000, 100), 'message « à jour » absent');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+  // une version existe : téléchargement, puis bouton d'installation
+  const dir = newDataDir('maj-demande-1');
+  ({ app, w, errors } = await launch(dir, { LASERBEAT_TEST_MANUAL_UPDATE: '9.9.9' }));
+  await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  await w.click('#bBrand');
+  await w.click('[data-act="upd-check"]');
+  assert(await waitFor(async () => (await w.textContent('#setUpd')).includes('9.9.9'), 3000, 50), 'version trouvée non annoncée');
+  assert(await playing(w), 'la recherche a coupé la musique');
+  assert(await waitFor(() => w.isVisible('[data-act="upd-install"]'), 6000, 200), 'bouton « Installer maintenant » absent');
+  await w.click('[data-act="upd-install"]');
+  assert(await waitFor(async () => (await w.isVisible('#boot')) && (await w.textContent('#bootK')).includes('Mise à jour'), 5000, 100), 'écran de mise à jour absent');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
 test('Fin de playlist : la musique continue (répétition de la playlist par défaut)', async () => {
   const { app, w } = await launch(newDataDir('fin-playlist'));
   await w.click('.pli >> text=LaserBeats');

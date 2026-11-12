@@ -7,6 +7,8 @@
  *   (écran « Mise à jour », installation silencieuse, redémarrage). Sinon, la musique démarre.
  * - PENDANT L'UTILISATION : les nouvelles versions sont seulement téléchargées en arrière-plan,
  *   sans couper la musique ; elles s'installeront au lancement suivant (ou par le bouton, ou en quittant).
+ * - À LA DEMANDE : Paramètres > Mise à jour > « Rechercher une mise à jour » lance la recherche tout de suite ;
+ *   si une version existe, elle se télécharge puis le bouton « Installer maintenant » apparaît.
  * - Jamais pendant un arrêt de Windows. Sans Internet, rien ne se passe et la musique démarre normalement.
  */
 const { app, ipcMain } = require('electron');
@@ -22,6 +24,14 @@ function setupUpdater({ log, getWindow }) {
   if (!app.isPackaged || process.platform !== 'win32' || process.env.LASERBEAT_TEST) {
     // Tests : LASERBEAT_TEST_LAUNCH_UPDATE simule une mise à jour prête au lancement.
     ipcMain.handle('update:launch-check', async () => process.env.LASERBEAT_TEST_LAUNCH_UPDATE || null);
+    // Tests : LASERBEAT_TEST_MANUAL_UPDATE simule une version trouvée à la demande, prête 1,5 s plus tard.
+    ipcMain.handle('update:check', async () => {
+      const v = process.env.LASERBEAT_TEST && process.env.LASERBEAT_TEST_MANUAL_UPDATE;
+      if (!v) return { status: 'none' };
+      if (ready) return { status: 'ready', version: ready };
+      setTimeout(() => { ready = v; const w = getWindow(); if (w && !w.isDestroyed()) w.webContents.send('update:ready', ready); }, 1500);
+      return { status: 'downloading', version: v };
+    });
     ipcMain.on('update:install', () => {});
     return { onSessionEnd() {} };
   }
@@ -32,6 +42,7 @@ function setupUpdater({ log, getWindow }) {
   } catch (err) {
     log('[maj] module indisponible', err);
     ipcMain.handle('update:launch-check', async () => null);
+    ipcMain.handle('update:check', async () => ({ status: 'error' }));
     ipcMain.on('update:install', () => {});
     return { onSessionEnd() {} };
   }
@@ -81,6 +92,30 @@ function setupUpdater({ log, getWindow }) {
   };
   check();                          // tout de suite, pour le lancement
   setInterval(check, CHECK_EVERY_MS);
+
+  // Recherche à la demande (Paramètres > Mise à jour). Le téléchargement suit tout seul ;
+  // l'interface est prévenue par 'update:ready' quand la version est prête à installer.
+  const newer = (a, b) => {
+    const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+    for (let i = 0; i < 3; i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0; }
+    return false;
+  };
+  let manual = null;
+  ipcMain.handle('update:check', () => {
+    if (ready) return { status: 'ready', version: ready };
+    if (!manual) {
+      manual = Promise.resolve()
+        .then(() => autoUpdater.checkForUpdates())
+        .then(r => {
+          const v = r && r.updateInfo && r.updateInfo.version ? String(r.updateInfo.version) : null;
+          if (ready) return { status: 'ready', version: ready };
+          return v && newer(v, app.getVersion()) ? { status: 'downloading', version: v } : { status: 'none' };
+        })
+        .catch(err => { log('[maj] recherche à la demande impossible', err && err.message ? err.message : String(err)); return { status: 'error' }; })
+        .then(res => { manual = null; return res; });
+    }
+    return manual;
+  });
 
   // L'interface attend cette réponse (au plus LAUNCH_WAIT_MS) avant de démarrer la musique.
   ipcMain.handle('update:launch-check', () => launchResult);

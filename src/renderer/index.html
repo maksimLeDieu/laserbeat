@@ -430,6 +430,14 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
 .mbox h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ac2);margin:18px 0 6px}
 .mbox p{color:var(--tx2);line-height:1.6;font-size:14px}
 .mbox .foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
+/* ---- menu du clic droit sur un morceau ---- */
+.ctx{position:fixed;z-index:70;min-width:200px;max-width:280px;background:#2a2a33;border:1px solid var(--line);border-radius:8px;padding:6px;box-shadow:0 16px 40px -8px rgba(0,0,0,.8)}
+.ctx[hidden]{display:none}
+.ctx-t{font-size:12px;color:var(--mut);padding:6px 10px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx button{display:flex;align-items:center;gap:10px;width:100%;height:38px;padding:0 10px;border-radius:6px;font-size:14px;font-weight:600;color:#fff;text-align:left}
+.ctx button svg{width:16px;height:16px;flex:none}
+.ctx button:hover,.ctx button:focus-visible{background:rgba(255,255,255,.1);outline:none}
+.ctx button:disabled{opacity:.4;cursor:default;background:none}
 /* ---- fenêtre « Mise à jour » (nouveautés) ---- */
 .nk{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ac2);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:2px}
 .nk svg{width:14px;height:14px}
@@ -501,6 +509,7 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
   <div class="bootbar"><i id="bootF"></i></div>
   <div class="bootp" id="bootP">0 %</div>
  </div></div>
+ <div class="ctx" id="ctx" role="menu" hidden></div>
  <div class="modal" id="about" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="aboutT" id="aboutBox"></div></div>
  <div id="fs" role="dialog" aria-label="Mode écran">
   <div class="fs-bg"><div class="fs-blob" id="fsBg"></div></div>
@@ -643,7 +652,7 @@ const fmt=s=>{if(!isFinite(s))return'0:00';s=Math.floor(s);return Math.floor(s/6
 /* Deux lecteurs audio : pendant qu'un morceau joue, le suivant est déjà chargé dans l'autre,
    pour enchaîner sans blanc. A = lecteur actif, B = lecteur de réserve. */
 let A=$('#audio'),B=$('#audio2');
-const P={queue:[],i:-1,plId:null,shuffle:false,repeat:1,nx:null,seen:[]}; // seen : morceaux déjà passés dans le tour aléatoire en cours
+const P={queue:[],i:-1,plId:null,shuffle:false,repeat:1,nx:null,seen:[],after:[],retId:null,done:[]}; // seen : morceaux déjà passés dans le tour aléatoire en cours
 let want=false; // vrai tant que la musique doit jouer (faux après une pause voulue)
 let vol=store.get('vol',.8);if(!(vol>=0&&vol<=1))vol=.8;
 /* Même volume pour tous les morceaux : chaque morceau est ramené au niveau du plus doux (jamais monté, seulement baissé). */
@@ -686,6 +695,7 @@ let preT=null,errs=0;
 function playQueue(list,start,plId,at){
  if(!list.length)return;
  if(plId!==P.plId)P.seen=[]; // autre playlist : nouveau tour aléatoire
+ P.after=[];P.retId=null;P.done=[];
  P.queue=list.slice();P.plId=plId;P.nx=null;load(Math.max(0,start),at);
 }
 function load(i,at){
@@ -722,8 +732,30 @@ function pickShuffle(){
  const all=[];P.queue.forEach((t,k)=>{if(k!==P.i)all.push(k)});
  return all[Math.floor(Math.random()*all.length)];
 }
+/* « Lire ensuite » : les morceaux demandés passent juste après celui en cours, dans l'ordre des demandes.
+   Ensuite la lecture reprend où elle en était (ordre de la playlist) ou continue le tour aléatoire. */
+function afterIdx(){
+ while(P.after.length){const k=P.queue.findIndex(x=>x.id===P.after[0]);if(k<0||k===P.i){P.after.shift();continue}return k}
+ return -1;
+}
+function backIdx(){ // où reprendre l'ordre normal après les morceaux demandés
+ const n=P.queue.length;let k=P.retId?P.queue.findIndex(x=>x.id===P.retId):-1;
+ if(k<0)return -1;
+ for(let j=0;j<n&&P.done.includes(P.queue[k].id);j++)k=(k+1)%n; // déjà passé à la demande : on ne le rejoue pas tout de suite
+ return k;
+}
+function playNext(id){
+ const t=trackById(id);if(!t)return;
+ if(P.i<0){const l=tracksOf(t.pl);playQueue(l,Math.max(0,l.findIndex(x=>x.id===id)),t.pl);return}
+ if(P.queue[P.i]&&P.queue[P.i].id===id)return;
+ if(!P.queue.some(x=>x.id===id))P.queue.splice(P.i+1,0,t); // morceau d'une autre playlist : ajouté à la file en cours
+ P.after=P.after.filter(x=>x!==id);P.after.push(id);P.nx=null;
+ ui();clearTimeout(preT);preT=setTimeout(preloadNext,300);
+}
 function peekNext(){
  const n=P.queue.length;if(!n||P.repeat===2)return -1;
+ const f=afterIdx();if(f>=0)return f;
+ if(!P.shuffle&&P.retId){const b=backIdx();if(b>=0)return b}
  if(P.shuffle&&n>1){if(P.nx===null||P.nx===P.i||P.nx>=n)P.nx=pickShuffle();return P.nx}
  return P.i+1<n?P.i+1:0;
 }
@@ -764,8 +796,12 @@ function toggle(){
 function next(fromEnd){
  if(!P.queue.length)return;
  if(fromEnd&&P.repeat===2){A.currentTime=0;A.play().catch(()=>{});return}
- let n;
- if(P.shuffle&&P.queue.length>1){n=P.nx!==null&&P.nx!==P.i&&P.nx<P.queue.length?P.nx:-1;if(n<0)n=pickShuffle()}
+ let n;const f=afterIdx();
+ if(f>=0){
+  if(!P.shuffle&&!P.retId){const c=P.queue[(P.i+1)%P.queue.length];P.retId=c?c.id:null;P.done=[]}
+  P.done.push(P.after.shift());n=f;
+ }else if(!P.shuffle&&P.retId){n=backIdx();P.retId=null;P.done=[];if(n<0)n=P.i+1}
+ else if(P.shuffle&&P.queue.length>1){n=P.nx!==null&&P.nx!==P.i&&P.nx<P.queue.length?P.nx:-1;if(n<0)n=pickShuffle()}
  else n=P.i+1;
  P.nx=null;
  if(n>=P.queue.length){
@@ -975,8 +1011,12 @@ function nowPanel(){
  $('#rpT').textContent=getPl(P.plId).name;
  let up=[];
  if(P.repeat===2)up=[P.i];
- else if(P.shuffle){const k=peekNext();if(k>=0)up=[k]}
- else for(let j=1;j<n&&up.length<8;j++){const k=P.i+j;if(k>=n&&P.repeat!==1)break;up.push(k%n)}
+ else{
+  const asked=P.after.map(id=>P.queue.findIndex(x=>x.id===id)).filter(k=>k>=0&&k!==P.i);up=asked.slice(0,8);
+  if(P.shuffle){if(!up.length){const k=peekNext();if(k>=0)up=[k]}}
+  else{const b=P.retId?backIdx():-1,base=b>=0?b:P.i+1;
+   for(let j=0;j<n&&up.length<8;j++){const k=base+j;if(k>=n&&P.repeat!==1)break;const m=k%n;if(m!==P.i&&!up.includes(m)&&!(b>=0&&P.done.includes(P.queue[m].id)))up.push(m)}}
+ }
  el.innerHTML=`<div class="rp-art" style="${tArtH(t)}">${t.img?'':plIcon(p)}</div>
  <div class="rp-t"><div><h2 title="${esc(t.title)}">${esc(t.title)}</h2><span>${esc(p.name)}${t.bpm?' · '+t.bpm+' BPM':''}</span></div><button class="ibtn star ${favs.has(t.id)?'on':''}" data-act="fav" data-id="${t.id}" title="Favori">${ic('star')}</button></div>
  <div class="rp-card"><h4>Ensuite dans la file${P.shuffle&&P.repeat!==2?' <small>· aléatoire</small>':''}${P.repeat===2?' <small>· en boucle</small>':''}</h4>${up.length?up.map(k=>{const x=P.queue[k],q=getPl(x.pl);return `<button class="qi" data-q="${k}"><i style="${tArtH(x)}"></i><span><b>${esc(x.title)}</b><small>${esc(q.name)}</small></span></button>`}).join(''):'<p>La lecture s\'arrête après ce morceau.</p>'}</div>
@@ -1025,6 +1065,7 @@ function vSettings(el){
   ${setRow('lock','Données personnelles','Aucune donnée collectée : ce qui reste sur l\'ordinateur et la seule connexion à Internet.',`<button class="pill" data-act="legal" data-id="donnees">Lire</button>`)}
   ${setRow('code','Licences libres','Composants libres utilisés et leurs licences.',`<button class="pill" data-act="legal" data-id="licences">Lire</button>`)}
  </div></section>
+ <section class="set-sec" id="setUpd"><h3>Mise à jour</h3><div class="set-card">${updRow()}</div></section>
  </div>`;
 }
 const playBtn=(id,act)=>`<button class="fplay" data-act="${act}" data-id="${id}" title="Écouter">${ic('play')}</button>`;
@@ -1137,6 +1178,9 @@ function act(n,d){
    break;
   }
   case 'about':about(true);break;
+  case 'play-next':ctxClose();playNext(d.id);break;
+  case 'upd-check':updCheck();break;
+  case 'upd-install':installUpd('paramètres');break;
   case 'notes':showNotes(null);break;
   case 'legal':about(false);go('legal',d.id);break;
   case 'acct-login':if(ACC)loginSheet();break;
@@ -1147,6 +1191,23 @@ function act(n,d){
   case 'reset-order':delete ORDER[d.id];pset('order',ORDER);syncQueue(d.id);render();break;
  }
 }
+/* Clic droit sur un morceau : petit menu « Lire ensuite ». */
+function ctxClose(){const m=$('#ctx');if(m&&!m.hidden){m.hidden=true;m.innerHTML=''}}
+document.addEventListener('contextmenu',e=>{
+ const r=e.target.closest&&e.target.closest('.trow[data-id]');
+ ctxClose();if(!r)return;
+ e.preventDefault();
+ const t=trackById(r.dataset.id);if(!t)return;
+ const m=$('#ctx'),cur=P.queue[P.i]&&P.queue[P.i].id===t.id;
+ m.innerHTML=`<div class="ctx-t">${esc(t.title)}</div><button type="button" data-act="play-next" data-id="${esc(t.id)}"${cur?' disabled':''}>${ic('next')}<span>${P.i<0?'Écouter':'Lire ensuite'}</span></button>`;
+ m.hidden=false;
+ const w=m.offsetWidth,h=m.offsetHeight;
+ m.style.left=Math.max(8,Math.min(e.clientX,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(e.clientY,innerHeight-h-8))+'px';
+ const b=m.querySelector('button');if(b&&!b.disabled)b.focus();
+});
+document.addEventListener('mousedown',e=>{if(!e.target.closest('#ctx'))ctxClose()});
+window.addEventListener('blur',ctxClose);window.addEventListener('resize',ctxClose);
+document.addEventListener('wheel',ctxClose,{passive:true});
 document.addEventListener('click',e=>{
  const a=e.target.closest('[data-act]');
  if(a){e.stopPropagation();act(a.dataset.act,a.dataset);return}
@@ -1349,7 +1410,7 @@ const q=$('#q');
 q.addEventListener('input',()=>{const v=q.value.trim();if(v)go('search',v);else go('home')});
 document.addEventListener('keydown',e=>{
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();q.focus();return}
- if(e.key==='Escape'){if($('#fs').classList.contains('show'))fsClose();about(false)}
+ if(e.key==='Escape'){ctxClose();if($('#fs').classList.contains('show'))fsClose();about(false)}
  if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)){e.preventDefault();toggle()}
 });
 
@@ -1420,9 +1481,29 @@ document.querySelectorAll('button[title]:not([aria-label])').forEach(b=>b.setAtt
 setRp(rpW&&store.get('rp',true));
 if(LB&&LB.version)$('#ver').textContent='v'+LB.version;
 /* Mise à jour automatique : quand une nouvelle version est téléchargée, un bouton apparaît. */
-function updReady(v){if(!v)return;updV=v;const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="pill pri" id="updBtn" title="Installer la mise à jour ${esc(v)}">${ic('bolt')}<span>Installer la mise à jour ${esc(v)}</span></button><div class="sub">Elle s'installera au prochain lancement de Musique ML, ou tout de suite si vous cliquez ici (redémarrage d'environ 20 s, puis la musique reprend).</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
+function updReady(v){if(!v)return;updV=v;updPaint();const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="pill pri" id="updBtn" title="Installer la mise à jour ${esc(v)}">${ic('bolt')}<span>Installer la mise à jour ${esc(v)}</span></button><div class="sub">Elle s'installera au prochain lancement de Musique ML, ou tout de suite si vous cliquez ici (redémarrage d'environ 20 s, puis la musique reprend).</div>`;$('#updBtn').onclick=()=>installUpd('bouton')}
 /* La mise à jour téléchargée ne s'installe que sur décision : bouton, ou fermeture volontaire de Musique ML. */
 let updV=null,updDone=false;
+/* Mise à jour à la demande (Paramètres > Mise à jour) : recherche, téléchargement, puis « Installer maintenant ». */
+let updState='idle',updNew=null; // idle | checking | none | downloading | error
+function updRow(){
+ const v=LB&&LB.version?LB.version:'';
+ if(updV)return setRow('bolt','Version '+esc(updV)+' prête','Vous avez la version '+esc(v)+'. L\'installation prend quelques secondes : Musique ML redémarre et la musique reprend.',`<button class="pill pri" data-act="upd-install">Installer maintenant</button>`);
+ const txt={idle:'Musique ML se met aussi à jour tout seul à chaque lancement.',checking:'Recherche d\'une nouvelle version…',none:'Musique ML est à jour.',
+  downloading:'Version '+esc(updNew||'')+' trouvée : téléchargement en cours, sans couper la musique…',error:'Recherche impossible. Vérifiez la connexion Internet, puis réessayez.'}[updState];
+ const busy=updState==='checking'||updState==='downloading';
+ return setRow('bolt','Musique ML '+esc(v),`<span id="updTxt" role="status">${txt}</span>`,`<button class="pill" data-act="upd-check"${busy?' disabled':''}>${busy?'Patientez…':'Rechercher une mise à jour'}</button>`);
+}
+function updPaint(){const s=$('#setUpd .set-card');if(s)s.innerHTML=updRow()}
+async function updCheck(){
+ if(updV||updState==='checking'||updState==='downloading'||!LB||!LB.checkUpdate)return;
+ updState='checking';updPaint();
+ let r=null;try{r=await LB.checkUpdate()}catch(e){r=null}
+ if(r&&r.status==='ready'){updReady(r.version);return}
+ if(r&&r.status==='downloading'){updState='downloading';updNew=r.version||null}
+ else updState=r&&r.status==='none'?'none':'error';
+ updPaint();
+}
 /* Écran de mise à jour : la barre avance vite puis ralentit (courbe « ease-out »), sans jamais reculer
    ni s'arrêter ; le pourcentage affiché correspond toujours à la longueur de la barre et atteint 100 % à la fin. */
 function updateScreen(kicker,titleTxt,sub,ms){

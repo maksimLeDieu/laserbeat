@@ -8,6 +8,13 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.14.0', date: '12 novembre 2026',
+      items: [
+        "Lire ensuite : clic droit sur un morceau, puis « Lire ensuite ». Il passe juste après celui en cours, puis la lecture reprend normalement.",
+        "Mise à jour à la demande : dans Paramètres (logo ML), tout en bas, « Rechercher une mise à jour », puis « Installer maintenant ». Plus besoin de relancer Musique ML pour vérifier."
+      ]
+    },
+    {
       v: '2.13.1', date: '12 novembre 2026',
       items: [
         "Lecture aléatoire corrigée : un morceau ne repasse plus tant que tous les autres de la playlist n'ont pas été joués.",

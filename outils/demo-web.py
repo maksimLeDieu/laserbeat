@@ -106,6 +106,7 @@ PONT_DEMO = '''<div class="demo-badge">Démo web</div>
   updateReady:null,
   onUpdate:function(){},
   launchUpdateCheck:function(){return Promise.resolve(null)},
+  checkUpdate:function(){return new Promise(function(r){setTimeout(function(){r({status:'none'})},900)})},
   setPlaying:function(){},
   log:function(m){try{console.info('[Musique ML]',m)}catch(e){}}
  };
