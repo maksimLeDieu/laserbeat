@@ -626,6 +626,37 @@ test('Premier lancement après une mise à jour : écran « Mise à jour install
   await close(again.app);
 });
 
+test('Quoi de neuf : nouveautés montrées une fois après la mise à jour, historique dans Paramètres', async () => {
+  // notes.js doit décrire la version publiée, en tête de liste
+  const g = {}; new Function('window', fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'notes.js'), 'utf8'))(g);
+  const pkgV = require(path.join(ROOT, 'package.json')).version;
+  assert(Array.isArray(g.NOTES) && g.NOTES.length && g.NOTES[0].v === pkgV, 'src/renderer/notes.js : ajouter en tête les nouveautés de la version ' + pkgV);
+  assert(g.NOTES.every(n => /^\d+\.\d+\.\d+$/.test(n.v) && n.items.length && n.items.every(t => typeof t === 'string' && t.length > 10)), 'notes.js : entrée mal formée');
+  const prevV = g.NOTES[1].v;
+  const dir = newDataDir('nouveautes');
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ lb_lastVersion: prevV, lb_v2: true }));
+  const { app, w, errors } = await launch(dir);
+  assert(await waitFor(async () => (await w.isVisible('#about')) && (await w.textContent('#aboutBox')).includes('Quoi de neuf'), 9000), 'fenêtre « Quoi de neuf » absente après la mise à jour');
+  const box = await w.textContent('#aboutBox');
+  assert(box.includes('Version ' + pkgV) && box.includes(g.NOTES[0].items[0]), 'nouveautés de la version ' + pkgV + ' absentes');
+  assert(!box.includes('Version ' + prevV), 'les nouveautés déjà vues (' + prevV + ') ne doivent pas réapparaître');
+  await w.click('#aboutBox >> text=C\'est noté');
+  assert(!(await w.isVisible('#about')), 'le bouton « C\'est noté » ne ferme pas');
+  // historique complet depuis Paramètres
+  await w.click('#bBrand');
+  await w.click('[data-act="notes"]');
+  const all = await w.textContent('#aboutBox');
+  for (const n of g.NOTES) assert(all.includes('Version ' + n.v), 'historique incomplet : ' + n.v);
+  await w.keyboard.press('Escape');
+  assert(!(await w.isVisible('#about')), 'Échap ne ferme pas l\'historique');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+  const again = await launch(dir);
+  await sleep(1000);
+  assert(!(await again.w.isVisible('#about')), 'nouveautés réaffichées à un lancement normal');
+  await close(again.app);
+});
+
 test('Sortie audio modifiée : le morceau repart au même endroit', async () => {
   const dir = newDataDir('sortie');
   const { app, w } = await launch(dir);

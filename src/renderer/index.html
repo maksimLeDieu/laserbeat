@@ -424,6 +424,19 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
 .mbox h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ac2);margin:18px 0 6px}
 .mbox p{color:var(--tx2);line-height:1.6;font-size:14px}
 .mbox .foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
+/* ---- « Quoi de neuf » ---- */
+.nk{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ac2);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.nk svg{width:14px;height:14px}
+.nv{margin-top:16px;padding:16px 18px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.nv.cur{background:linear-gradient(135deg,rgba(139,92,246,.16),rgba(139,92,246,.04));border-color:rgba(139,92,246,.35)}
+.nvh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.nvh b{font-size:15px;font-weight:800}
+.nvh span{color:var(--mut);font-size:12px}
+.nl{list-style:none;display:flex;flex-direction:column;gap:8px}
+.nl li{position:relative;padding-left:18px;color:var(--tx2);font-size:14px;line-height:1.55}
+.nl li::before{content:'';position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--ac2)}
+.nfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;flex-wrap:wrap}
+.linkb.nall{color:var(--mut);font-size:13px}
 .status{margin-left:auto}
 @media (max-width:1150px){.search kbd{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}.eq i,.eqs i{animation:none}}
@@ -499,6 +512,7 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
  </div>
 </div>
 <script src="legal.js"></script>
+<script src="notes.js"></script>
 <audio id="audio" preload="auto"></audio>
 <audio id="audio2" preload="auto"></audio>
 
@@ -535,6 +549,7 @@ const IC={
  chev:['','<polyline points="9 6 15 12 9 18"/>'],
  plus:['','<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'],
  x:['','<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'],
+ spark:['','<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>'],
  bolt:['','<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'],
  note:['','<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'],
  coffee:['','<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'],
@@ -959,6 +974,7 @@ function vSettings(el){
   ${setRow('lib','Bibliothèque réduite','N\'affiche que les pochettes des playlists dans la colonne de gauche.',sw('mini',app.classList.contains('mini'),'Bibliothèque réduite'))}
  </div></section>
  <section class="set-sec"><h3>À propos</h3><div class="set-card">
+  ${setRow('spark','Nouveautés','Ce qui a changé à chaque mise à jour de Musique ML.',`<button class="pill" data-act="notes">Voir</button>`)}
   ${setRow('info','Musique ML','Propriété, légalité et autorisation d\'utilisation.',`<button class="pill" data-act="about">Voir</button>`)}
  </div></section>
  <section class="set-sec"><h3>Informations légales</h3><div class="set-card">
@@ -1079,6 +1095,7 @@ function act(n,d){
    break;
   }
   case 'about':about(true);break;
+  case 'notes':showNotes(null);break;
   case 'legal':about(false);go('legal',d.id);break;
   case 'acct-login':if(ACC)loginSheet();break;
   case 'acct-new':if(ACC)createSheet();break;
@@ -1131,6 +1148,22 @@ function about(show){
  m.hidden=false;$('#aboutBox [data-close]').focus();
 }
 function sheet(html){$('#aboutBox').innerHTML=`<button class="ibtn x" data-close title="Fermer">${ic('x')}</button>`+html;$('#about').hidden=false;$('#aboutBox [data-close]').focus()}
+/* ---------- « Quoi de neuf » : nouveautés de chaque version (notes.js) ---------- */
+const vcmp=(a,b)=>{const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<3;i++){const d=(x[i]||0)-(y[i]||0);if(d)return d<0?-1:1}return 0};
+const NOTES_ALL=(window.NOTES||[]).filter(n=>n&&/^\d+\.\d+\.\d+$/.test(n.v)&&Array.isArray(n.items)).sort((a,b)=>vcmp(b.v,a.v));
+/* since = version d'avant la mise à jour : on montre ce qui est arrivé depuis. Sans « since » : tout l'historique. */
+function showNotes(since){
+ const cur=LB&&LB.version||(NOTES_ALL[0]&&NOTES_ALL[0].v)||'';
+ let list=NOTES_ALL.filter(n=>vcmp(n.v,cur)<=0&&(!since||vcmp(n.v,since)>0));
+ if(!list.length)return false;
+ const more=since&&list.length>3;if(more)list=list.slice(0,3);
+ const hist=!since||NOTES_ALL.some(n=>vcmp(n.v,cur)<=0&&!list.includes(n));
+ sheet(`<div class="mh"><img class="mark" src="img/logo.svg" alt="" style="width:48px;height:48px;border-radius:11px"><div><div class="nk">${ic('spark')}${since?'Mise à jour installée':'Historique'}</div><h3 id="aboutT">Quoi de neuf</h3><small>Musique ML ${esc(cur)}</small></div></div>`
+  +list.map((n,i)=>`<section class="nv${i===0&&vcmp(n.v,cur)===0?' cur':''}"><div class="nvh"><b>Version ${esc(n.v)}</b>${n.date?`<span>${esc(n.date)}</span>`:''}</div><ul class="nl">${n.items.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></section>`).join('')
+  +`<div class="nfoot">${since&&hist?'<button class="linkb nall" type="button" data-act="notes">Voir tout l\'historique</button>':'<span></span>'}<button class="pill pri" type="button" data-close>${since?'C\'est noté':'Fermer'}</button></div>`);
+ const ok=$('#aboutBox .nfoot .pill');if(ok)ok.focus();
+ return true;
+}
 /* ---------- comptes des salles ---------- */
 function applyProfile(){
  favs=new Set((pget('favs',[])||[]).filter(id=>known.has(id)));
@@ -1374,7 +1407,8 @@ const migrateV2=!store.get('v2',false);if(migrateV2)store.set('v2',true);
  store.set('lastVersion',v);
  // ancienne version sans ce repère : on la reconnaît à son état de lecture déjà enregistré
  const updated=prev?prev!==v:hadResume;
- if(updated)updateScreen('Mise à jour installée','Musique ML '+v,'Finalisation de la mise à jour…',3000).then(hideUpdateScreen);
+ // puis, une seule fois, la fenêtre « Quoi de neuf » avec ce qui a changé depuis la version d'avant
+ if(updated)updateScreen('Mise à jour installée','Musique ML '+v,'Finalisation de la mise à jour…',3000).then(()=>{hideUpdateScreen();setTimeout(()=>showNotes(prev&&/^\d+\.\d+\.\d+$/.test(prev)?prev:((NOTES_ALL.find(n=>vcmp(n.v,v)<0)||{}).v||'0.0.0')),450)});
 })();
 /* Lancement : s'il y a une mise à jour prête, elle s'installe AVANT de démarrer la musique.
    Sécurité : après 2 tentatives ratées pour une même version, on arrête de réessayer au lancement. */

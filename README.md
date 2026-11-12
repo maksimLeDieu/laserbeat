@@ -96,7 +96,11 @@ GitHub (`maksimLeDieu/laserbeat`, onglet Releases).
 - Sécurité : après 2 tentatives ratées pour une même version, LaserBeat ne réessaie plus au lancement.
 - Réglages, favoris, morceaux ajoutés et lancement au démarrage sont conservés.
 
-Publier une nouvelle version : augmenter `version` dans `package.json` et pousser sur `main`.
+- **Quoi de neuf** : juste après l'écran « Mise à jour installée », une fenêtre présente une seule fois les
+  nouveautés arrivées depuis la version d'avant. L'historique complet reste dans Paramètres › À propos › Nouveautés.
+
+Publier une nouvelle version : augmenter `version` dans `package.json`, ajouter **en tête** de
+`src/renderer/notes.js` les nouveautés de cette version (les tests le vérifient), et pousser sur `main`.
 Le workflow GitHub Actions `.github/workflows/publier.yml` compile alors l'installateur sur Windows
 et crée la Release `v<version>` (`LaserBeat-Setup.exe`, `.blockmap`, `latest.yml`).
 On peut aussi le lancer à la main : onglet Actions › Publier une version › Run workflow.

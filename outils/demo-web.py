@@ -72,6 +72,8 @@ PONT_DEMO = '''<div class="demo-badge">Démo web</div>
  var P='mlweb_',mem={};
  function get(k){try{var v=localStorage.getItem(P+k);return v===null?(k in mem?mem[k]:undefined):JSON.parse(v)}catch(e){return mem[k]}}
  function set(k,v){mem[k]=v;try{localStorage.setItem(P+k,JSON.stringify(v))}catch(e){}}
+ // première visite : on fait comme si l'on venait de mettre à jour, pour montrer « Quoi de neuf »
+ if(get('lb_lastVersion')===undefined&&%(precedente)s)set('lb_lastVersion',%(precedente)s);
  window.laserbeat={
   version:%(version)s,
   store:{get:get,set:set},
@@ -100,7 +102,11 @@ def main():
     for f in os.listdir(os.path.join(RACINE, 'src', 'renderer', 'fonts')):
         if f.startswith('dm-sans-') and f.endswith('.woff2'):
             shutil.copy(os.path.join(RACINE, 'src', 'renderer', 'fonts', f), os.path.join(SORTIE, 'fonts', f))
-    shutil.copy(os.path.join(RACINE, 'src', 'renderer', 'legal.js'), os.path.join(SORTIE, 'legal.js'))
+    # textes en ASCII (accents en \uXXXX) : justes quel que soit l'encodage annoncé par le serveur
+    for f in ('legal.js', 'notes.js'):
+        texte = lire(os.path.join('src', 'renderer', f))
+        with open(os.path.join(SORTIE, f), 'w', encoding='ascii') as out:
+            out.write(''.join(c if ord(c) < 128 else '\\u%04x' % ord(c) for c in texte))
     for f in os.listdir(os.path.join(RACINE, 'src', 'renderer', 'img')):
         shutil.copy(os.path.join(RACINE, 'src', 'renderer', 'img', f), os.path.join(SORTIE, 'img', f))
 
@@ -134,7 +140,10 @@ def main():
     s = remplacer(s, "img:typeof t.img==='string'&&/^file:/.test(t.img)?t.img:''",
                   "img:typeof t.img==='string'&&/^(file:|musiques\\/)/.test(t.img)?t.img:''", 'photos des morceaux')
     s = remplacer(s, '@media (prefers-reduced-motion:reduce)', CSS_DEMO + '@media (prefers-reduced-motion:reduce)', 'styles')
-    pont = PONT_DEMO % {'version': json.dumps(version() + ' · démo web'), 'tracks': json.dumps(tracks, ensure_ascii=False)}
+    versions = re.findall(r"\bv:\s*'(\d+\.\d+\.\d+)'", lire(os.path.join('src', 'renderer', 'notes.js')))
+    precedente = next((x for x in versions if x != version()), None)
+    pont = PONT_DEMO % {'version': json.dumps(version() + ' · démo web'), 'tracks': json.dumps(tracks, ensure_ascii=False),
+                        'precedente': json.dumps(precedente)}
     s = remplacer(s, '<script>\n(function(){\n"use strict";', pont + '<script>\n(function(){\n"use strict";', 'script principal')
     if not s.lstrip().startswith('<title>'):
         sys.exit('demo-web : le document doit commencer par <title>.')
