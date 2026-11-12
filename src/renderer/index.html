@@ -203,6 +203,7 @@ body.playing .eqs i{animation-play-state:running}
 .form input:focus{outline:2px solid var(--ac2);outline-offset:1px;border-color:transparent}
 .form .chk{flex-direction:row;align-items:center;gap:10px;color:var(--tx2);font-weight:500}
 .form .chk input{width:18px;height:18px;accent-color:var(--ac)}
+.fhint{margin:0;color:var(--mut);font-size:12.5px;line-height:1.5}
 .ferr{color:var(--red);font-size:13px;min-height:1.3em;margin:0}
 .frow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .linkb{color:var(--ac2);font-weight:700;font-size:13px}
@@ -1151,7 +1152,7 @@ function loginSheet(){
 }
 function createSheet(){
  formSheet('Créer un compte','Un compte par salle : chacun garde ses favoris et l\'ordre de ses playlists. Les comptes restent sur ce PC, protégés.',
-  field('fName','Nom du compte','text','placeholder="Brest" maxlength="40"')+field('fLogin','Identifiant (lettres, chiffres, point ou tiret)','text','autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" placeholder="lge.b"')+field('fPw','Mot de passe (8 caractères minimum)','password','autocomplete="new-password" maxlength="200"')+field('fPw2','Confirmer le mot de passe','password','autocomplete="new-password" maxlength="200"')
+  field('fName','Nom du compte','text','placeholder="Brest" maxlength="40"')+field('fLogin','Identifiant (lettres, chiffres, point ou tiret)','text','autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" placeholder="lge.b"')+field('fPw','Mot de passe ou code (4 caractères minimum)','password','autocomplete="new-password" maxlength="200"')+field('fPw2','Confirmer le mot de passe','password','autocomplete="new-password" maxlength="200"')
   +'<label class="chk" for="fKeep"><input id="fKeep" type="checkbox" checked>Reprendre les favoris et l\'ordre des playlists actuels</label>','Créer le compte');
  onSubmit=async()=>{
   if($('#fPw').value!==$('#fPw2').value)return 'Les deux mots de passe ne sont pas identiques.';
@@ -1159,7 +1160,7 @@ function createSheet(){
   const r=await ACC.create($('#fName').value,$('#fLogin').value,$('#fPw').value,init);if(!r.ok)return r.error;setAccount(r);about(false)};
 }
 function pwSheet(){
- formSheet('Changer le mot de passe','',field('fOld','Mot de passe actuel','password','autocomplete="current-password" maxlength="200"')+field('fPw','Nouveau mot de passe (8 caractères minimum)','password','autocomplete="new-password" maxlength="200"')+field('fPw2','Confirmer le nouveau mot de passe','password','autocomplete="new-password" maxlength="200"'),'Enregistrer');
+ formSheet('Changer le mot de passe','',field('fOld','Mot de passe actuel','password','autocomplete="current-password" maxlength="200"')+field('fPw','Nouveau mot de passe ou code (4 caractères minimum)','password','autocomplete="new-password" maxlength="200"')+field('fPw2','Confirmer le nouveau mot de passe','password','autocomplete="new-password" maxlength="200"'),'Enregistrer');
  onSubmit=async()=>{if($('#fPw').value!==$('#fPw2').value)return 'Les deux mots de passe ne sont pas identiques.';const r=await ACC.changePassword($('#fOld').value,$('#fPw').value);if(!r.ok)return r.error;about(false)};
 }
 function delSheet(){

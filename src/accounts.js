@@ -6,7 +6,6 @@
  * - le mot de passe n'est jamais enregistré : seule une empreinte scrypt salée l'est (impossible à inverser) ;
  * - le fichier des comptes (comptes.dat) est chiffré par Windows pour l'utilisateur de la session
  *   (safeStorage / DPAPI) : copié sur un autre PC ou une autre session, il est illisible ;
- * - après 5 mots de passe faux, il faut attendre (30 s, puis de plus en plus longtemps) ;
  * - la page n'a accès qu'aux données du compte connecté, jamais à celles des autres comptes.
  * Rien n'est envoyé sur Internet.
  */
@@ -28,7 +27,6 @@ class Accounts {
     this.file = path.join(dir, 'comptes.dat');
     this.safe = safeStorage && safeStorage.isEncryptionAvailable() ? safeStorage : null;
     this.log = log || (() => {});
-    this.fails = new Map();     // identifiant -> { n, until }
     this.data = this.load();
     if (!this.safe) this.log('comptes : chiffrement Windows indisponible, fichier protégé par empreintes seulement');
   }
@@ -41,7 +39,7 @@ class Accounts {
         const raw = fs.readFileSync(f);
         const text = raw.subarray(0, 4).toString() === 'MLC1' ? this.decrypt(raw.subarray(4)) : raw.toString('utf8');
         const d = JSON.parse(text);
-        if (d && Array.isArray(d.accounts)) return Object.assign(empty, d);
+        if (d && Array.isArray(d.accounts)) { const r = Object.assign(empty, d); delete r.fails; return r; }
       } catch (e) { if (e.code !== 'ENOENT') this.log('comptes illisibles', f, e.message); }
     }
     return empty;
@@ -92,7 +90,7 @@ class Accounts {
     login = String(login || '').trim().toLowerCase();
     if (!name) return { error: 'Indiquez le nom du compte (par exemple Brest).' };
     if (!LOGIN_RE.test(login)) return { error: 'Identifiant invalide : 2 à 32 caractères, lettres, chiffres, point, tiret ou tiret bas (par exemple lge.b).' };
-    if (typeof password !== 'string' || password.length < 8) return { error: 'Le mot de passe doit faire au moins 8 caractères.' };
+    if (typeof password !== 'string' || password.length < 4) return { error: 'Le mot de passe doit faire au moins 4 caractères (par exemple un code de 4 chiffres).' };
     if (password.length > 200) return { error: 'Mot de passe trop long.' };
     return { name, login };
   }
@@ -113,10 +111,6 @@ class Accounts {
     this.log('compte créé', c.name);
     return { ok: true, account: this.current(), profile: this.profile() };
   }
-  wait(login) {
-    const f = this.fails.get(login);
-    return f && f.until > Date.now() ? Math.ceil((f.until - Date.now()) / 1000) : 0;
-  }
   async verify(a, password) {
     if (!a || typeof password !== 'string') { await scrypt('x', Buffer.alloc(16)); return false; } // même durée, compte connu ou non
     const key = await scrypt(password, Buffer.from(a.salt, 'base64'));
@@ -125,17 +119,11 @@ class Accounts {
   }
   async login(login, password) {
     login = String(login || '').trim().toLowerCase();
-    const w = this.wait(login);
-    if (w) return { ok: false, error: `Trop d'essais. Réessayez dans ${w} s.` };
     const a = this.data.accounts.find(x => x.login === login);
     if (!(await this.verify(a, password))) {
-      const f = this.fails.get(login) || { n: 0, until: 0 };
-      f.n++; if (f.n >= 5) f.until = Date.now() + Math.min(15 * 60, 30 * 2 ** (f.n - 5)) * 1000;
-      this.fails.set(login, f);
       this.log('connexion refusée');
       return { ok: false, error: 'Identifiant ou mot de passe incorrect.' };
     }
-    this.fails.delete(login);
     this.data.session = a.id; a.last = new Date().toISOString();
     this.save();
     this.log('connexion', a.name);
@@ -146,7 +134,7 @@ class Accounts {
     const a = this.data.accounts.find(x => x.id === this.data.session);
     if (!a) return { ok: false, error: 'Aucun compte connecté.' };
     if (!(await this.verify(a, oldPw))) return { ok: false, error: 'Mot de passe actuel incorrect.' };
-    if (typeof newPw !== 'string' || newPw.length < 8 || newPw.length > 200) return { ok: false, error: 'Le nouveau mot de passe doit faire au moins 8 caractères.' };
+    if (typeof newPw !== 'string' || newPw.length < 4 || newPw.length > 200) return { ok: false, error: 'Le nouveau mot de passe doit faire au moins 4 caractères.' };
     const salt = crypto.randomBytes(16);
     a.salt = salt.toString('base64'); a.hash = (await scrypt(newPw, salt)).toString('base64');
     this.save();

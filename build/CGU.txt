@@ -140,9 +140,6 @@ est illisible. Elles ne quittent jamais l'ordinateur et ne sont transmises à pe
 compris à l'éditeur. Elles sont conservées tant que le compte existe : « Supprimer le compte
 » (Paramètres) les efface aussitôt.
 
-Après plusieurs mots de passe faux, le Logiciel impose un délai avant un nouvel essai, pour
-empêcher de deviner un mot de passe.
-
 Ce qui reste sur l'ordinateur
 
 Ces informations sont enregistrées uniquement sur l'ordinateur où le Logiciel est installé,

@@ -83,7 +83,6 @@
         ['h', 'Les comptes des salles (bientôt disponibles)'],
         ['p', "Les comptes ne sont pas encore activés : aucune de ces informations n'est enregistrée pour le moment. Une fois activés, créer un compte sera facultatif. Il sert à garder les favoris et l'ordre des playlists propres à une salle. Pour chaque compte, le Logiciel enregistre sur l'ordinateur : le nom du compte, l'identifiant de connexion (par exemple lge.b), la date de création et de dernière connexion, et une empreinte du mot de passe. Le mot de passe lui-même n'est jamais enregistré : son empreinte (scrypt, avec un sel aléatoire) ne permet pas de le retrouver."],
         ['p', "Ces informations sont rangées dans un fichier chiffré par Windows pour la session de l'utilisateur (comptes.dat, dans %APPDATA%\\LaserBeat) : copié sur un autre ordinateur, il est illisible. Elles ne quittent jamais l'ordinateur et ne sont transmises à personne, y compris à l'éditeur. Elles sont conservées tant que le compte existe : « Supprimer le compte » (Paramètres) les efface aussitôt."],
-        ['p', "Après plusieurs mots de passe faux, le Logiciel impose un délai avant un nouvel essai, pour empêcher de deviner un mot de passe."],
         ['h', 'Ce qui reste sur l\'ordinateur'],
         ['p', "Ces informations sont enregistrées uniquement sur l'ordinateur où le Logiciel est installé, dans le dossier %APPDATA%\\LaserBeat :"],
         ['l', [

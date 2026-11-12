@@ -301,8 +301,8 @@ test('Comptes des salles (activés pour ce test) : création, favoris séparés,
   // création du compte Brest (sans reprendre les favoris) : mot de passe trop court puis correct
   await w.click('#bBrand'); await w.click('[data-act="acct-new"]');
   await w.uncheck('#fKeep');
-  await fill({ fName: 'Brest', fLogin: 'lge.b', fPw: 'court', fPw2: 'court' });
-  assert((await err()).includes('8 caractères'), 'mot de passe trop court accepté');
+  await fill({ fName: 'Brest', fLogin: 'lge.b', fPw: '123', fPw2: '123' });
+  assert((await err()).includes('4 caractères'), 'mot de passe trop court accepté');
   await fill({ fPw: 'MotDePasse-Brest1', fPw2: 'MotDePasse-Brest1' });
   assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'compte non créé : ' + await err());
   assert((await w.textContent('#bAcct')).includes('Brest'), 'compte connecté non affiché');
@@ -334,11 +334,25 @@ test('Comptes des salles (activés pour ce test) : création, favoris séparés,
   await w.click('.pli >> text=Morceaux préférés'); await w.waitForTimeout(200);
   names = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
   assert(names.join('|') === 'Mandelao', 'favoris du compte incorrects : ' + names.join(', '));
-  // suppression (mot de passe exigé)
-  await w.click('#bBrand'); await w.click('[data-act="acct-del"]');
+  // code de 4 chiffres : changement du mot de passe, déconnexion, connexion avec le code
+  await w.click('#bBrand'); await w.click('[data-act="acct-pw"]');
+  await fill({ fOld: 'MotDePasse-Brest1', fPw: '4827', fPw2: '4827' });
+  assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'code de 4 chiffres refusé : ' + await err());
+  await w.click('[data-act="acct-logout"]'); await w.waitForTimeout(300);
+  await w.click('[data-act="acct-login"]');
+  await fill({ fLogin: 'lge.b', fPw: '4827' });
+  assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'connexion avec le code refusée : ' + await err());
+  // pas de blocage : plusieurs codes faux, puis le bon code passe tout de suite
+  await w.click('[data-act="acct-logout"]'); await w.waitForTimeout(300);
+  await w.click('[data-act="acct-login"]');
+  for (let k = 0; k < 6; k++) { await fill({ fLogin: 'lge.b', fPw: '000' + k }); await waitFor(async () => (await err()).includes('incorrect'), 8000); }
+  await fill({ fPw: '4827' });
+  assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'connexion bloquée après des codes faux : ' + await err());
+  await w.click('#bBrand');
+  await w.click('[data-act="acct-del"]');
   await fill({ fPw: 'faux' });
   assert(await waitFor(async () => (await err()).includes('incorrect'), 8000), 'suppression sans le bon mot de passe');
-  await fill({ fPw: 'MotDePasse-Brest1' });
+  await fill({ fPw: '4827' });
   assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'compte non supprimé');
   assert(await w.isHidden('#bAcct'), 'toujours connecté après suppression');
   assert(!errors.length, 'erreurs : ' + errors.join(' | '));
