@@ -1,6 +1,9 @@
 'use strict';
 /*
- * Comptes des salles (Brest, Quimper, Trégueux…), enregistrés uniquement sur ce PC.
+ * Comptes des salles (Quimper, Brest, Saint-Brieuc), enregistrés uniquement sur ce PC.
+ *
+ * Les salles et leurs identifiants sont fixés ci-dessous (SALLES). Le code de chaque salle, lui, n'est écrit
+ * nulle part dans le logiciel : il est choisi sur le PC à la première connexion.
  *
  * Protection :
  * - le mot de passe n'est jamais enregistré : seule une empreinte scrypt salée l'est (impossible à inverser) ;
@@ -16,6 +19,11 @@ const crypto = require('crypto');
 const SCRYPT = { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 const KEYLEN = 32;
 const PROFILE_KEYS = ['favs', 'order', 'recent'];   // ce qui est propre à chaque compte
+const SALLES = [
+  { name: 'Quimper', login: 'lge.q' },
+  { name: 'Brest', login: 'lge.b' },
+  { name: 'Saint-Brieuc', login: 'lge.sb' }
+];
 const LOGIN_RE = /^[a-z0-9][a-z0-9._-]{1,31}$/;   // identifiant : ex. lge.b (2 à 32 caractères)
 
 function scrypt(password, salt) {
@@ -95,7 +103,9 @@ class Accounts {
     return { name, login };
   }
   async create(name, login, password, initial) {
-    const c = this.check(name, login, password);
+    const salle = SALLES.find(s => s.login === String(login || '').trim().toLowerCase());
+    if (!salle) return { ok: false, error: 'Salle inconnue.' };
+    const c = this.check(salle.name, salle.login, password);
     if (c.error) return { ok: false, error: c.error };
     if (this.data.accounts.length >= 50) return { ok: false, error: 'Nombre maximal de comptes atteint.' };
     if (this.data.accounts.some(a => a.login === c.login)) return { ok: false, error: 'Cet identifiant est déjà utilisé.' };
@@ -153,4 +163,4 @@ class Accounts {
   }
 }
 
-module.exports = { Accounts, PROFILE_KEYS };
+module.exports = { Accounts, PROFILE_KEYS, SALLES };

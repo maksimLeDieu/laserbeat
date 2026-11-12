@@ -12,14 +12,13 @@ const path = require('path');
 const fs = require('fs');
 const { Config } = require('./config');
 const library = require('./library');
-const { Accounts } = require('./accounts');
+const { Accounts, SALLES } = require('./accounts');
 const { setupUpdater } = require('./updater');
 const raccourcis = require('./raccourcis');
 
 const APP_ID = 'fr.laserbeat.app';
-/* Comptes des salles : système prêt mais PAS ENCORE ACTIVÉ. Passer à true pour l'ouvrir aux salles.
-   (Les tests automatiques l'activent pour eux seuls avec LASERBEAT_TEST + LASERBEAT_ACCOUNTS=1.) */
-const ACCOUNTS_ENABLED = false;
+/* Comptes des salles : activés depuis la 2.12.0 (passer à false pour les couper). */
+const ACCOUNTS_ENABLED = true;
 const accountsOn = () => ACCOUNTS_ENABLED || (!!process.env.LASERBEAT_TEST && process.env.LASERBEAT_ACCOUNTS === '1');
 const INDEX = path.join(__dirname, 'renderer', 'index.html');
 const INDEX_URL = pathToFileURL(INDEX).href;
@@ -140,7 +139,7 @@ function start() {
   let accounts = null;
   const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
   const OFF = { ok: false, error: 'Les comptes ne sont pas encore disponibles.' };
-  on('acct:state', e => { e.returnValue = accounts ? { enabled: true, account: accounts.current(), profile: accounts.profile(), count: accounts.list().length } : { enabled: false }; });
+  on('acct:state', e => { e.returnValue = accounts ? { enabled: true, account: accounts.current(), profile: accounts.profile(), count: accounts.list().length, salles: SALLES } : { enabled: false }; });
   handle('acct:list', () => (accounts ? accounts.list() : []));
   handle('acct:create', (e, name, login, pw, initial) => !accounts ? OFF : accounts.create(str(name, 80), str(login, 64), str(pw, 300), initial && typeof initial === 'object' ? initial : null));
   handle('acct:login', (e, login, pw) => !accounts ? OFF : accounts.login(str(login, 64), str(pw, 300)));

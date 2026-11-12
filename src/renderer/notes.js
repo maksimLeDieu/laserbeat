@@ -8,6 +8,14 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.12.0', date: '12 novembre 2026',
+      items: [
+        "Comptes des salles : dans Paramètres (logo ML), « Se connecter », choisissez Quimper, Brest ou Saint-Brieuc.",
+        "À la première connexion sur un PC, vous choisissez le code de la salle. Le PC reste ensuite connecté, même après fermeture.",
+        "Chaque salle garde ses propres favoris et l'ordre de ses playlists."
+      ]
+    },
+    {
       v: '2.11.0', date: '12 novembre 2026',
       items: [
         "Pause et reprise en douceur : le son baisse puis remonte progressivement, au lieu de couper net."

@@ -267,10 +267,9 @@ test('Paramètres (clic sur le logo) : fondu et volume égal désactivables, mé
   assert((await sw('xfade')) === 'true' && (await sw('norm')) === 'true', 'réglages par défaut incorrects');
   await w.click('.sw[data-k="norm"]'); await w.click('.sw[data-k="xfade"]');
   assert((await sw('norm')) === 'false' && (await sw('xfade')) === 'false', 'interrupteurs sans effet');
-  // comptes pas encore activés : « Bientôt », sans bouton de connexion ni de création
-  assert(await w.isVisible('text=Bientôt'), 'mention « Bientôt » absente');
-  assert((await w.$$('[data-act="acct-login"],[data-act="acct-new"]')).length === 0, 'connexion possible alors que les comptes sont désactivés');
-  assert(!fs.existsSync(path.join(dir, 'comptes.dat')), 'fichier des comptes créé alors qu\'ils sont désactivés');
+  // comptes : bouton « Se connecter », pas de création libre, rien d'enregistré tant qu'on ne se connecte pas
+  assert((await w.$$('[data-act="acct-login"]')).length === 1 && (await w.$$('[data-act="acct-new"]')).length === 0, 'bouton de connexion');
+  assert(!fs.existsSync(path.join(dir, 'comptes.dat')), 'fichier des comptes créé sans connexion');
   await close(app);
   ({ app, w, errors } = await launch(dir));
   await w.click('#bBrand');
@@ -329,7 +328,7 @@ test('Sécurité : pas de caméra/micro, pas d\'accès Internet depuis la page, 
   await close(app);
 });
 
-test('Comptes des salles (activés pour ce test) : création, favoris séparés, mauvais mot de passe, relance, suppression', async () => {
+test('Comptes des salles : choix de la salle, code choisi à la première connexion, favoris séparés, relance, suppression', async () => {
   const dir = newDataDir('comptes');
   const ON = { LASERBEAT_ACCOUNTS: '1' };
   let { app, w, errors } = await launch(dir, ON);
@@ -338,10 +337,14 @@ test('Comptes des salles (activés pour ce test) : création, favoris séparés,
   // favori « du PC » avant tout compte
   await w.click('.pli >> text=Laser Arena'); await w.waitForTimeout(200);
   await w.hover('#view .trow:not(.thead) >> nth=0'); await w.click('#view .trow:not(.thead) >> nth=0 >> .star');
-  // création du compte Brest (sans reprendre les favoris) : mot de passe trop court puis correct
-  await w.click('#bBrand'); await w.click('[data-act="acct-new"]');
+  // les trois salles sont proposées
+  await w.click('#bBrand'); await w.click('[data-act="acct-login"]');
+  const salles = await w.$$eval('#aboutBox .salle', r => r.map(x => x.querySelector('b').textContent + ':' + x.dataset.login));
+  assert(salles.join('|') === 'Quimper:lge.q|Brest:lge.b|Saint-Brieuc:lge.sb', 'salles proposées : ' + salles.join('|'));
+  // première connexion de Brest sur ce PC (sans reprendre les favoris) : code trop court, puis correct
+  await w.click('.salle[data-login="lge.b"]'); await w.waitForSelector('#fPw2');
   await w.uncheck('#fKeep');
-  await fill({ fName: 'Brest', fLogin: 'lge.b', fPw: '123', fPw2: '123' });
+  await fill({ fPw: '123', fPw2: '123' });
   assert((await err()).includes('4 caractères'), 'mot de passe trop court accepté');
   await fill({ fPw: 'MotDePasse-Brest1', fPw2: 'MotDePasse-Brest1' });
   assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'compte non créé : ' + await err());
@@ -363,7 +366,9 @@ test('Comptes des salles (activés pour ce test) : création, favoris séparés,
   assert(names.join('|') === 'Phonk Laser Game', 'favoris du PC incorrects : ' + names.join(', '));
   // mauvais mot de passe, puis le bon
   await w.click('#bBrand'); await w.click('[data-act="acct-login"]');
-  await fill({ fLogin: 'lge.b', fPw: 'faux-mot-de-passe' });
+  await w.click('.salle[data-login="lge.b"]'); await w.waitForSelector('#fPw');
+  assert(!(await w.$('#fPw2')), 'le code est redemandé deux fois alors que le compte existe');
+  await fill({ fPw: 'faux-mot-de-passe' });
   assert(await waitFor(async () => (await err()).includes('incorrect'), 8000), 'mauvais mot de passe accepté');
   await fill({ fPw: 'MotDePasse-Brest1' });
   assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'connexion refusée : ' + await err());
@@ -379,13 +384,13 @@ test('Comptes des salles (activés pour ce test) : création, favoris séparés,
   await fill({ fOld: 'MotDePasse-Brest1', fPw: '4827', fPw2: '4827' });
   assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'code de 4 chiffres refusé : ' + await err());
   await w.click('[data-act="acct-logout"]'); await w.waitForTimeout(300);
-  await w.click('[data-act="acct-login"]');
-  await fill({ fLogin: 'lge.b', fPw: '4827' });
+  await w.click('[data-act="acct-login"]'); await w.click('.salle[data-login="lge.b"]'); await w.waitForSelector('#fPw');
+  await fill({ fPw: '4827' });
   assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'connexion avec le code refusée : ' + await err());
   // pas de blocage : plusieurs codes faux, puis le bon code passe tout de suite
   await w.click('[data-act="acct-logout"]'); await w.waitForTimeout(300);
-  await w.click('[data-act="acct-login"]');
-  for (let k = 0; k < 6; k++) { await fill({ fLogin: 'lge.b', fPw: '000' + k }); await waitFor(async () => (await err()).includes('incorrect'), 8000); }
+  await w.click('[data-act="acct-login"]'); await w.click('.salle[data-login="lge.b"]'); await w.waitForSelector('#fPw');
+  for (let k = 0; k < 6; k++) { await fill({ fPw: '000' + k }); await waitFor(async () => (await err()).includes('incorrect'), 8000); }
   await fill({ fPw: '4827' });
   assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'connexion bloquée après des codes faux : ' + await err());
   await w.click('#bBrand');

@@ -97,9 +97,9 @@ cesse toute utilisation du Logiciel et de ses musiques et le supprime de ses ord
 10. Données personnelles
 
 Le Logiciel ne collecte aucune donnée personnelle pour le compte de l'éditeur. Les comptes
-des salles (nom, identifiant, mot de passe), dès qu'ils seront activés, resteront
-enregistrés sur l'ordinateur où ils seront créés et ne seront transmis à personne. Les
-détails figurent dans la page « Données personnelles ».
+des salles (nom, identifiant, mot de passe) restent enregistrés sur l'ordinateur où ils sont
+créés et ne sont transmis à personne. Les détails figurent dans la page « Données
+personnelles ».
 
 L'Utilisateur choisit des mots de passe personnels et ne les communique qu'aux personnes
 autorisées à utiliser le compte. Il prévient l'éditeur s'il pense qu'un compte a été utilisé
@@ -124,11 +124,10 @@ Musique ML est conçu pour fonctionner hors ligne, sans compte en ligne. Il ne c
 transmet et ne vend aucune donnée personnelle pour le compte de l'éditeur. Il ne contient ni
 publicité, ni mesure d'audience, ni traceur.
 
-Les comptes des salles (bientôt disponibles)
+Les comptes des salles
 
-Les comptes ne sont pas encore activés : aucune de ces informations n'est enregistrée pour
-le moment. Une fois activés, créer un compte sera facultatif. Il sert à garder les favoris
-et l'ordre des playlists propres à une salle. Pour chaque compte, le Logiciel enregistre sur
+Se connecter au compte de sa salle est facultatif. Le compte sert à garder les favoris et
+l'ordre des playlists propres à une salle. Pour chaque compte, le Logiciel enregistre sur
 l'ordinateur : le nom du compte, l'identifiant de connexion (par exemple lge.b), la date de
 création et de dernière connexion, et une empreinte du mot de passe. Le mot de passe
 lui-même n'est jamais enregistré : son empreinte (scrypt, avec un sel aléatoire) ne permet
