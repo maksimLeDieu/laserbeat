@@ -76,6 +76,28 @@ PONT_DEMO = '''<div class="demo-badge">Démo web</div>
  if(get('lb_lastVersion')===undefined&&%(precedente)s)set('lb_lastVersion',%(precedente)s);
  window.laserbeat={
   version:%(version)s,
+  accounts:(function(){
+   // comptes simulés pour l'aperçu : gardés dans ce navigateur uniquement (le vrai logiciel les chiffre sur le PC)
+   var K='demo_comptes',d=get(K)||{a:[],p:{},s:null};
+   function sv(){set(K,d)}
+   function cur(){for(var i=0;i<d.a.length;i++)if(d.a[i].login===d.s)return d.a[i];return null}
+   function pub(a){return a?{id:a.login,name:a.name,login:a.login}:null}
+   function res(){return{ok:true,account:pub(cur()),profile:d.p[d.s]||{}}}
+   var salles=%(salles)s,bad={ok:false,error:'Identifiant ou mot de passe incorrect.'};
+   return{
+    state:{enabled:true,account:pub(cur()),profile:d.s?d.p[d.s]||{}:null,count:d.a.length,salles:salles},
+    list:function(){return Promise.resolve(d.a.map(pub))},
+    create:function(n,l,pw,init){
+     var s=salles.filter(function(x){return x.login===l})[0];
+     if(!s)return Promise.resolve({ok:false,error:'Salle inconnue.'});
+     if(String(pw).length<4)return Promise.resolve({ok:false,error:'Le mot de passe doit faire au moins 4 caractères (par exemple un code de 4 chiffres).'});
+     d.a.push({name:s.name,login:s.login,pw:String(pw)});d.p[s.login]=init||{};d.s=s.login;sv();return Promise.resolve(res())},
+    login:function(l,pw){var a=d.a.filter(function(x){return x.login===l})[0];if(!a||a.pw!==String(pw))return Promise.resolve(bad);d.s=l;sv();return Promise.resolve(res())},
+    logout:function(){d.s=null;sv();return Promise.resolve({ok:true})},
+    changePassword:function(o,n){var a=cur();if(!a||a.pw!==String(o))return Promise.resolve({ok:false,error:'Mot de passe actuel incorrect.'});if(String(n).length<4)return Promise.resolve({ok:false,error:'Le nouveau mot de passe doit faire au moins 4 caractères.'});a.pw=String(n);sv();return Promise.resolve({ok:true})},
+    remove:function(pw){var a=cur();if(!a||a.pw!==String(pw))return Promise.resolve({ok:false,error:'Mot de passe incorrect.'});d.a=d.a.filter(function(x){return x!==a});delete d.p[a.login];d.s=null;sv();return Promise.resolve({ok:true})},
+    setProfile:function(k,v){if(d.s){(d.p[d.s]=d.p[d.s]||{})[k]=v;sv()}}
+   }})(),
   store:{get:get,set:set},
   tracks:%(tracks)s,
   saveDuration:function(){},
@@ -90,6 +112,12 @@ PONT_DEMO = '''<div class="demo-badge">Démo web</div>
 })();
 </script>
 '''
+
+
+def salles():
+    # liste des salles lue dans src/accounts.js (noms et identifiants, jamais de code)
+    bloc = re.search(r"const SALLES = \[(.*?)\];", lire(os.path.join('src', 'accounts.js')), re.S).group(1)
+    return [{'name': n, 'login': l} for n, l in re.findall(r"name: '([^']+)', login: '([^']+)'", bloc)]
 
 
 def main():
@@ -143,7 +171,7 @@ def main():
     versions = re.findall(r"\bv:\s*'(\d+\.\d+\.\d+)'", lire(os.path.join('src', 'renderer', 'notes.js')))
     precedente = next((x for x in versions if x != version()), None)
     pont = PONT_DEMO % {'version': json.dumps(version() + ' · démo web'), 'tracks': json.dumps(tracks, ensure_ascii=False),
-                        'precedente': json.dumps(precedente)}
+                        'precedente': json.dumps(precedente), 'salles': json.dumps(salles(), ensure_ascii=False)}
     s = remplacer(s, '<script>\n(function(){\n"use strict";', pont + '<script>\n(function(){\n"use strict";', 'script principal')
     if not s.lstrip().startswith('<title>'):
         sys.exit('demo-web : le document doit commencer par <title>.')

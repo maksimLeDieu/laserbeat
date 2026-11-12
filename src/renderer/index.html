@@ -203,6 +203,12 @@ body.playing .eqs i{animation-play-state:running}
 .form input:focus{outline:2px solid var(--ac2);outline-offset:1px;border-color:transparent}
 .form .chk{flex-direction:row;align-items:center;gap:10px;color:var(--tx2);font-weight:500}
 .form .chk input{width:18px;height:18px;accent-color:var(--ac)}
+.salles{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.salle{display:flex;align-items:center;gap:12px;height:56px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:#fff;font-size:15px;text-align:left;transition:border-color .12s,background .12s}
+.salle:hover,.salle:focus-visible{border-color:var(--ac2);background:rgba(139,92,246,.12);outline:none}
+.salle svg{width:20px;height:20px;color:var(--ac2);flex:none}
+.salle b{font-weight:700;flex:1}
+.salle small{color:var(--mut);font-size:13px}
 .fhint{margin:0;color:var(--mut);font-size:12.5px;line-height:1.5}
 .ferr{color:var(--red);font-size:13px;min-height:1.3em;margin:0}
 .frow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -985,7 +991,7 @@ function vSettings(el){
   ${ACCOUNT?setRow('user','Connecté : '+esc(ACCOUNT.name),'Identifiant '+esc(ACCOUNT.login)+' · favoris et ordre des playlists propres à ce compte.',`<button class="pill" data-act="acct-logout">Se déconnecter</button>`)
    +setRow('lock','Mot de passe','Changer le mot de passe de ce compte.',`<button class="pill" data-act="acct-pw">Changer</button>`)
    +setRow('trash','Supprimer le compte','Efface ce compte et ses favoris de ce PC. La musique n\'est pas touchée.',`<button class="pill danger" data-act="acct-del">Supprimer</button>`)
-   :ACC?setRow('user','Connexion','Connectez-vous au compte de votre salle (Brest, Quimper, Trégueux…) pour retrouver ses favoris et l\'ordre de ses playlists.',`<div class="frow"><button class="pill" data-act="acct-login">Se connecter</button><button class="pill" data-act="acct-new">Créer un compte</button></div>`)
+   :ACC?setRow('user','Connexion','Connectez-vous au compte de votre salle pour retrouver ses favoris et l\'ordre de ses playlists. Ce PC reste ensuite connecté.',`<button class="pill" data-act="acct-login">Se connecter</button>`)
    :setRow('user','Connexion<span class="soon">Bientôt</span>','Chaque salle pourra se connecter à son compte (par exemple lge.b) et retrouver ses favoris et l\'ordre de ses playlists.','')}
  </div></section>
  <section class="set-sec"><h3>Lecture</h3><div class="set-card">
@@ -1121,7 +1127,7 @@ function act(n,d){
   case 'notes':showNotes(null);break;
   case 'legal':about(false);go('legal',d.id);break;
   case 'acct-login':if(ACC)loginSheet();break;
-  case 'acct-new':if(ACC)createSheet();break;
+  case 'acct-salle':if(ACC)salleSheet(d.login);break;
   case 'acct-pw':pwSheet();break;
   case 'acct-del':delSheet();break;
   case 'acct-logout':if(ACC)ACC.logout().then(()=>setAccount(null));break;
@@ -1202,18 +1208,29 @@ function formSheet(title,intro,fields,submit,extra){
  const first=$('#acctForm input');if(first)first.focus();
 }
 let onSubmit=null;
+/* Connexion : on choisit sa salle (liste fixe), puis on entre le code.
+   Première fois sur ce PC : on choisit le code (il n'est écrit nulle part ailleurs). Ensuite le PC reste connecté. */
+const SALLES=ACC&&ACC.state&&Array.isArray(ACC.state.salles)?ACC.state.salles:[];
 function loginSheet(){
- formSheet('Se connecter','Connectez-vous au compte de votre salle.',field('fLogin','Identifiant','text','autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" placeholder="lge.b"')+field('fPw','Mot de passe','password','autocomplete="current-password" maxlength="200"'),'Se connecter','<button class="linkb" type="button" data-act="acct-new">Créer un compte</button>');
- onSubmit=async()=>{const r=await ACC.login($('#fLogin').value,$('#fPw').value);if(!r.ok)return r.error;setAccount(r);about(false)};
+ sheet(`<h3>Connexion</h3><p style="margin-top:8px">Choisissez votre salle.</p><div class="salles">${SALLES.map(s=>`<button class="salle" type="button" data-act="acct-salle" data-login="${esc(s.login)}">${ic('user')}<b>${esc(s.name)}</b><small>${esc(s.login)}</small></button>`).join('')}</div>`);
+ const b=$('#aboutBox .salle');if(b)b.focus();
 }
-function createSheet(){
- formSheet('Créer un compte','Un compte par salle : chacun garde ses favoris et l\'ordre de ses playlists. Les comptes restent sur ce PC, protégés.',
-  field('fName','Nom du compte','text','placeholder="Brest" maxlength="40"')+field('fLogin','Identifiant (lettres, chiffres, point ou tiret)','text','autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" placeholder="lge.b"')+field('fPw','Mot de passe ou code (4 caractères minimum)','password','autocomplete="new-password" maxlength="200"')+field('fPw2','Confirmer le mot de passe','password','autocomplete="new-password" maxlength="200"')
-  +'<label class="chk" for="fKeep"><input id="fKeep" type="checkbox" checked>Reprendre les favoris et l\'ordre des playlists actuels</label>','Créer le compte');
- onSubmit=async()=>{
-  if($('#fPw').value!==$('#fPw2').value)return 'Les deux mots de passe ne sont pas identiques.';
-  const init=$('#fKeep').checked?{favs:[...favs],order:ORDER,recent}:null;
-  const r=await ACC.create($('#fName').value,$('#fLogin').value,$('#fPw').value,init);if(!r.ok)return r.error;setAccount(r);about(false)};
+async function salleSheet(login){
+ const s=SALLES.find(x=>x.login===login);if(!s)return;
+ let known=[];try{known=await ACC.list()}catch(e){}
+ const back='<button class="linkb" type="button" data-act="acct-login">Autre salle</button>';
+ if(known.some(a=>a.login===s.login)){
+  formSheet(esc(s.name),'Identifiant '+esc(s.login)+'. Entrez le code de la salle.',field('fPw','Code','password','autocomplete="current-password" maxlength="200"'),'Se connecter',back);
+  onSubmit=async()=>{const r=await ACC.login(s.login,$('#fPw').value);if(!r.ok)return r.error;setAccount(r);about(false)};
+ }else{
+  formSheet(esc(s.name),'Identifiant '+esc(s.login)+'. Première connexion sur ce PC : choisissez le code de la salle. Il sera demandé seulement si l\'on se déconnecte.',
+   field('fPw','Code (4 chiffres ou plus)','password','autocomplete="new-password" maxlength="200"')+field('fPw2','Confirmer le code','password','autocomplete="new-password" maxlength="200"')
+   +'<label class="chk" for="fKeep"><input id="fKeep" type="checkbox" checked>Reprendre les favoris et l\'ordre des playlists actuels</label>','Enregistrer',back);
+  onSubmit=async()=>{
+   if($('#fPw').value!==$('#fPw2').value)return 'Les deux codes ne sont pas identiques.';
+   const init=$('#fKeep').checked?{favs:[...favs],order:ORDER,recent}:null;
+   const r=await ACC.create(s.name,s.login,$('#fPw').value,init);if(!r.ok)return r.error;setAccount(r);about(false)};
+ }
 }
 function pwSheet(){
  formSheet('Changer le mot de passe','',field('fOld','Mot de passe actuel','password','autocomplete="current-password" maxlength="200"')+field('fPw','Nouveau mot de passe ou code (4 caractères minimum)','password','autocomplete="new-password" maxlength="200"')+field('fPw2','Confirmer le nouveau mot de passe','password','autocomplete="new-password" maxlength="200"'),'Enregistrer');
