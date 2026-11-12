@@ -94,6 +94,46 @@ test('Lecture : « Jouer la musique » lance le son', async () => {
   await close(app);
 });
 
+test('Pause et reprise en douceur : le son descend puis s\'arrête, remonte à la reprise', async () => {
+  const { app, w, errors } = await launch(newDataDir('pause-douce'));
+  await w.click('text=Jouer la musique');
+  assert(await waitFor(() => playing(w), 10000), 'la musique ne démarre pas');
+  await w.waitForTimeout(600);
+  const st = () => w.evaluate(() => { const a = [...document.querySelectorAll('audio')].find(x => x.dataset.tid && x.getAttribute('src')); return { paused: a.paused, v: a.volume, icon: document.querySelector('#bPlay').innerHTML }; });
+  const full = (await st()).v;
+  assert(full > 0.1, 'volume de départ : ' + full);
+  const iconPlaying = (await st()).icon;
+  // pause : le son baisse progressivement (pas de coupure nette), le bouton change tout de suite
+  const samples = await w.evaluate(() => new Promise(res => {
+    const a = [...document.querySelectorAll('audio')].find(x => !x.paused), out = [];
+    document.querySelector('#bPlay').click();
+    const t0 = performance.now();
+    const iv = setInterval(() => { out.push({ t: Math.round(performance.now() - t0), v: a.volume, paused: a.paused }); if (performance.now() - t0 > 700) { clearInterval(iv); res(out); } }, 40);
+  }));
+  const mid = samples.filter(x => !x.paused && x.v > 0.02 && x.v < full * 0.95);
+  assert(mid.length >= 2, 'pas de descente progressive : ' + JSON.stringify(samples.slice(0, 8)));
+  const end = await st();
+  assert(end.paused, 'la musique n\'est pas en pause après le fondu');
+  assert(Math.abs(end.v - full) < 0.001, 'volume non rétabli après la pause : ' + end.v);
+  assert(end.icon !== iconPlaying, 'le bouton n\'indique pas la pause');
+  // reprise : le son repart de zéro et remonte au volume normal
+  const up = await w.evaluate(() => new Promise(res => {
+    const a = [...document.querySelectorAll('audio')].find(x => x.dataset.tid && x.getAttribute('src')), out = [];
+    document.querySelector('#bPlay').click();
+    const t0 = performance.now();
+    const iv = setInterval(() => { out.push(a.volume); if (performance.now() - t0 > 600) { clearInterval(iv); res(out); } }, 40);
+  }));
+  assert(up[0] < full * 0.6 && Math.abs(up[up.length - 1] - full) < 0.001, 'pas de remontée progressive : ' + JSON.stringify(up.slice(0, 8)));
+  assert(await playing(w), 'la musique ne reprend pas');
+  // deux appuis rapprochés : pause annulée pendant la descente, la musique continue au bon volume
+  await w.evaluate(() => { const b = document.querySelector('#bPlay'); b.click(); setTimeout(() => b.click(), 120); });
+  await w.waitForTimeout(800);
+  const again = await st();
+  assert(!again.paused && Math.abs(again.v - full) < 0.001, 'reprise pendant la descente : ' + JSON.stringify({ paused: again.paused, v: again.v }));
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
 test('Interface : panneau « En cours de lecture », bouton lecture/pause de la playlist, bibliothèque réduite', async () => {
   const { app, w, errors } = await launch(newDataDir('interface'));
   await w.click('.pli >> text=LaserBeats'); await w.click('#view .bigplay');

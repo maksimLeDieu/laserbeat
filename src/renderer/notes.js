@@ -8,6 +8,12 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.11.0', date: '12 novembre 2026',
+      items: [
+        "Pause et reprise en douceur : le son baisse puis remonte progressivement, au lieu de couper net."
+      ]
+    },
+    {
       v: '2.10.0', date: '12 novembre 2026',
       items: [
         "Après chaque mise à jour, cette fenêtre présente les nouveautés de la nouvelle version.",

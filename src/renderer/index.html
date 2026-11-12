@@ -645,7 +645,7 @@ const TARGET_LUFS=-7.5;
 let normOn=store.get('norm',true)!==false; // réglage « Volume égal »
 const gainOf=t=>normOn&&t&&typeof t.lufs==='number'&&t.lufs>TARGET_LUFS?Math.max(.25,Math.pow(10,(TARGET_LUFS-t.lufs)/20)):1;
 const vg=el=>vol*(+el.dataset.g||1);
-function setVol(v){vol=v;A.volume=vg(A);if(!fade)B.volume=vg(B);store.set('vol',v);$('#vol').style.setProperty('--v',v*100+'%')}
+function setVol(v){vol=v;if(!pz)A.volume=vg(A);if(!fade)B.volume=vg(B);store.set('vol',v);$('#vol').style.setProperty('--v',v*100+'%')}
 /* Fondu enchaîné : FADE secondes avant la fin, le morceau suivant démarre dans l'autre lecteur
    et monte pendant que le premier descend (courbe à puissance constante : pas de creux de volume). */
 const FADE=3;
@@ -683,6 +683,7 @@ function playQueue(list,start,plId,at){
 }
 function load(i,at){
  const t=P.queue[i];if(!t)return;
+ stopRamp();
  const xf=xfMode&&!A.paused;
  if(!xf)cancelFade();
  P.i=i;want=true;loadN++;
@@ -715,9 +716,31 @@ function preloadNext(){
  if(B.dataset.tid===t.id&&B.getAttribute('src')===trackUrl(t)&&!B.error)return;
  B.dataset.tid=t.id;B.dataset.g=gainOf(t);B.volume=vg(B);B.src=trackUrl(t);
 }
+/* Pause et reprise en douceur : le son descend (ou remonte) en une fraction de seconde au lieu de couper net. */
+const PAUSE_MS=350,RESUME_MS=250;
+let pz=null; // fondu de pause/reprise en cours ; pz.out : on est en train de descendre vers la pause
+const isOn=()=>!A.paused&&!(pz&&pz.out); // la musique joue (et n'est pas en train de s'arrêter)
+function stopRamp(){if(pz){clearInterval(pz.t);pz=null}}
+function ramp(to,ms,done){
+ stopRamp();
+ const el=A,full=vg(el),k0=full>0?Math.min(1,el.volume/full):to,t0=performance.now();
+ pz={out:to===0,t:setInterval(()=>{
+  const p=Math.min(1,(performance.now()-t0)/ms);
+  el.volume=Math.max(0,Math.min(1,vg(el)*(k0+(to-k0)*p)));
+  if(p>=1){stopRamp();if(done)done()}
+ },20)};
+}
 function toggle(){
  if(P.i<0){playQueue(tracksOf('arena'),0,'arena');return}
- if(A.paused){want=true;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}else{want=false;cancelFade();A.pause()}
+ if(!isOn()){
+  want=true;
+  if(A.paused){A.volume=0;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}
+  ramp(1,RESUME_MS);
+ }else{
+  want=false;cancelFade();
+  const el=A;ramp(0,PAUSE_MS,()=>{el.pause();el.volume=vg(el);ui()});
+ }
+ setTimeout(ui,0); // après le clic en cours (le bouton est redessiné)
  saveState();
 }
 function next(fromEnd){
@@ -850,7 +873,7 @@ async function delTrack(id){
  if(cur&&cur.id===id){
   const rest=P.queue.filter(x=>x.id!==id);
   if(rest.length&&want){P.queue=rest;P.nx=null;load(Math.min(P.i,rest.length-1))}
-  else{want=false;A.pause();A.removeAttribute('src');A.dataset.tid='';A.load();P.queue=rest;P.i=-1}
+  else{want=false;stopRamp();A.pause();A.removeAttribute('src');A.dataset.tid='';A.load();P.queue=rest;P.i=-1}
  }
  if(B.dataset.tid===id){B.removeAttribute('src');B.dataset.tid='';B.load()}
  let done=false;try{done=await LB.deleteTrack(id)}catch(e){logErr('Suppression : '+e)}
@@ -874,8 +897,8 @@ async function importTracks(playlist){
  probe(added);setTimeout(measureAll,1500);
 }
 if('mediaSession' in navigator){try{
- navigator.mediaSession.setActionHandler('play',()=>{if(A.paused)toggle()});
- navigator.mediaSession.setActionHandler('pause',()=>{if(!A.paused)toggle()});
+ navigator.mediaSession.setActionHandler('play',()=>{if(!isOn())toggle()});
+ navigator.mediaSession.setActionHandler('pause',()=>{if(isOn())toggle()});
  navigator.mediaSession.setActionHandler('nexttrack',()=>next(false));
  navigator.mediaSession.setActionHandler('previoustrack',prev);
 }catch(e){}}
@@ -883,7 +906,7 @@ if('mediaSession' in navigator){try{
 let lastPlaying=null;
 /* Barre du haut : état de la lecture. */
 function topStatus(){
- const on=!A.paused&&P.i>=0;
+ const on=isOn()&&P.i>=0;
  $('#stat').classList.toggle('live',on);
  $('#statT').textContent=on?'En lecture · '+getPl(P.plId).name:'En pause';
 }
@@ -894,7 +917,7 @@ const nTxt=n=>n+' morceau'+(n>1?'x':'');
 const durTxt=s=>{s=Math.round(s);if(!s)return'';const m=Math.floor(s/60);return m>=60?Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min':m+' min '+String(s%60).padStart(2,'0')+' s'};
 const plDesc=p=>p.id==='fav'?'Vos morceaux préférés':p.id==='accueil'?'Musiques de l\'accueil, à part du laser game':p.id==='arena'?'La musique des parties de laser game':p.id==='beats'?'Toute la musique':p.tags.join(', ');
 function ui(){
- const t=P.queue[P.i],p=t?getPl(t.pl):null,playing=!A.paused&&t;
+ const t=P.queue[P.i],p=t?getPl(t.pl):null,playing=isOn()&&t;
  $('#npT').textContent=t?t.title:'Rien en lecture';
  $('#npS').textContent=t?p.name:'Choisissez une playlist';
  $('#npArt').style.cssText=t?tArt(t):'';
@@ -1350,7 +1373,7 @@ if(LB&&LB.onMediaKey)LB.onMediaKey(a=>{
  if(a==='playpause')toggle();
  else if(a==='next')next(false);
  else if(a==='prev')prev();
- else if(a==='stop'&&!A.paused)toggle();
+ else if(a==='stop'&&isOn())toggle();
 });
 
 /* ---------- init ---------- */
