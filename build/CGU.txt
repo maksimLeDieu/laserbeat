@@ -1,6 +1,6 @@
 ﻿MUSIQUE ML - CONTRAT DE LICENCE ET CONDITIONS D'UTILISATION
 
-CONDITIONS GÉNÉRALES D'UTILISATION (mise à jour : 10 novembre 2026)
+CONDITIONS GÉNÉRALES D'UTILISATION (mise à jour : 12 novembre 2026)
 
 Les présentes conditions générales d'utilisation (« CGU ») encadrent l'utilisation du
 logiciel Musique ML (anciennement LaserBeat), de ses musiques, de ses images et de ses mises
@@ -96,8 +96,14 @@ cesse toute utilisation du Logiciel et de ses musiques et le supprime de ses ord
 
 10. Données personnelles
 
-Le Logiciel ne collecte aucune donnée personnelle pour le compte de l'éditeur. Les détails
-figurent dans la page « Données personnelles ».
+Le Logiciel ne collecte aucune donnée personnelle pour le compte de l'éditeur. Les comptes
+des salles (nom, identifiant, mot de passe), dès qu'ils seront activés, resteront
+enregistrés sur l'ordinateur où ils seront créés et ne seront transmis à personne. Les
+détails figurent dans la page « Données personnelles ».
+
+L'Utilisateur choisit des mots de passe personnels et ne les communique qu'aux personnes
+autorisées à utiliser le compte. Il prévient l'éditeur s'il pense qu'un compte a été utilisé
+sans autorisation.
 
 11. Modification des CGU
 
@@ -112,11 +118,30 @@ recherchent d'abord une solution amiable. À défaut, le litige est porté devan
 compétents selon les règles de droit commun.
 
 
-DONNÉES PERSONNELLES (mise à jour : 10 novembre 2026)
+DONNÉES PERSONNELLES (mise à jour : 12 novembre 2026)
 
-Musique ML est conçu pour fonctionner hors ligne et sans compte. Il ne collecte, ne transmet
-et ne vend aucune donnée personnelle pour le compte de l'éditeur. Il ne contient ni
+Musique ML est conçu pour fonctionner hors ligne, sans compte en ligne. Il ne collecte, ne
+transmet et ne vend aucune donnée personnelle pour le compte de l'éditeur. Il ne contient ni
 publicité, ni mesure d'audience, ni traceur.
+
+Les comptes des salles (bientôt disponibles)
+
+Les comptes ne sont pas encore activés : aucune de ces informations n'est enregistrée pour
+le moment. Une fois activés, créer un compte sera facultatif. Il sert à garder les favoris
+et l'ordre des playlists propres à une salle. Pour chaque compte, le Logiciel enregistre sur
+l'ordinateur : le nom du compte, l'identifiant de connexion (par exemple lge.b), la date de
+création et de dernière connexion, et une empreinte du mot de passe. Le mot de passe
+lui-même n'est jamais enregistré : son empreinte (scrypt, avec un sel aléatoire) ne permet
+pas de le retrouver.
+
+Ces informations sont rangées dans un fichier chiffré par Windows pour la session de
+l'utilisateur (comptes.dat, dans %APPDATA%\LaserBeat) : copié sur un autre ordinateur, il
+est illisible. Elles ne quittent jamais l'ordinateur et ne sont transmises à personne, y
+compris à l'éditeur. Elles sont conservées tant que le compte existe : « Supprimer le compte
+» (Paramètres) les efface aussitôt.
+
+Après plusieurs mots de passe faux, le Logiciel impose un délai avant un nouvel essai, pour
+empêcher de deviner un mot de passe.
 
 Ce qui reste sur l'ordinateur
 
@@ -125,6 +150,7 @@ dans le dossier %APPDATA%\LaserBeat :
 
   - les réglages : volume, favoris, ordre des morceaux, dernière musique écoutée pour la
     reprise, préférences d'affichage et de lecture ;
+  - les comptes des salles, s'il y en a (voir ci-dessus) ;
   - les morceaux ajoutés et leur liste (morceaux.json) ;
   - un journal technique (laserbeat.log) qui aide à comprendre un éventuel problème : il
     contient des événements du logiciel (démarrage, erreurs de lecture, mises à jour) et

@@ -7,7 +7,7 @@
   'use strict';
   const EDITEUR = 'Maxime Loret';
   const LICENCIE = 'Didier Floret';
-  const MAJ = '10 novembre 2026';
+  const MAJ = '12 novembre 2026';
 
   g.LEGAL = [
     {
@@ -47,7 +47,8 @@
         ['h', '9. Durée et fin de la licence'],
         ['p', "La licence prend effet à l'installation du Logiciel. L'éditeur peut la retirer en cas de manquement aux présentes CGU, après en avoir informé l'Utilisateur. L'Utilisateur peut y mettre fin à tout moment en désinstallant le Logiciel. À la fin de la licence, l'Utilisateur cesse toute utilisation du Logiciel et de ses musiques et le supprime de ses ordinateurs."],
         ['h', '10. Données personnelles'],
-        ['p', "Le Logiciel ne collecte aucune donnée personnelle pour le compte de l'éditeur. Les détails figurent dans la page « Données personnelles »."],
+        ['p', "Le Logiciel ne collecte aucune donnée personnelle pour le compte de l'éditeur. Les comptes des salles (nom, identifiant, mot de passe), dès qu'ils seront activés, resteront enregistrés sur l'ordinateur où ils seront créés et ne seront transmis à personne. Les détails figurent dans la page « Données personnelles »."],
+        ['p', "L'Utilisateur choisit des mots de passe personnels et ne les communique qu'aux personnes autorisées à utiliser le compte. Il prévient l'éditeur s'il pense qu'un compte a été utilisé sans autorisation."],
         ['h', '11. Modification des CGU'],
         ['p', "L'éditeur peut modifier les présentes CGU, notamment à l'occasion d'une mise à jour. La version en vigueur est toujours consultable dans le Logiciel (Paramètres, rubrique « Informations légales »), avec sa date de mise à jour."],
         ['h', '12. Droit applicable et litiges'],
@@ -78,11 +79,16 @@
       titre: 'Données personnelles',
       maj: MAJ,
       blocs: [
-        ['p', "Musique ML est conçu pour fonctionner hors ligne et sans compte. Il ne collecte, ne transmet et ne vend aucune donnée personnelle pour le compte de l'éditeur. Il ne contient ni publicité, ni mesure d'audience, ni traceur."],
+        ['p', "Musique ML est conçu pour fonctionner hors ligne, sans compte en ligne. Il ne collecte, ne transmet et ne vend aucune donnée personnelle pour le compte de l'éditeur. Il ne contient ni publicité, ni mesure d'audience, ni traceur."],
+        ['h', 'Les comptes des salles (bientôt disponibles)'],
+        ['p', "Les comptes ne sont pas encore activés : aucune de ces informations n'est enregistrée pour le moment. Une fois activés, créer un compte sera facultatif. Il sert à garder les favoris et l'ordre des playlists propres à une salle. Pour chaque compte, le Logiciel enregistre sur l'ordinateur : le nom du compte, l'identifiant de connexion (par exemple lge.b), la date de création et de dernière connexion, et une empreinte du mot de passe. Le mot de passe lui-même n'est jamais enregistré : son empreinte (scrypt, avec un sel aléatoire) ne permet pas de le retrouver."],
+        ['p', "Ces informations sont rangées dans un fichier chiffré par Windows pour la session de l'utilisateur (comptes.dat, dans %APPDATA%\\LaserBeat) : copié sur un autre ordinateur, il est illisible. Elles ne quittent jamais l'ordinateur et ne sont transmises à personne, y compris à l'éditeur. Elles sont conservées tant que le compte existe : « Supprimer le compte » (Paramètres) les efface aussitôt."],
+        ['p', "Après plusieurs mots de passe faux, le Logiciel impose un délai avant un nouvel essai, pour empêcher de deviner un mot de passe."],
         ['h', 'Ce qui reste sur l\'ordinateur'],
         ['p', "Ces informations sont enregistrées uniquement sur l'ordinateur où le Logiciel est installé, dans le dossier %APPDATA%\\LaserBeat :"],
         ['l', [
           'les réglages : volume, favoris, ordre des morceaux, dernière musique écoutée pour la reprise, préférences d\'affichage et de lecture ;',
+          'les comptes des salles, s\'il y en a (voir ci-dessus) ;',
           'les morceaux ajoutés et leur liste (morceaux.json) ;',
           "un journal technique (laserbeat.log) qui aide à comprendre un éventuel problème : il contient des événements du logiciel (démarrage, erreurs de lecture, mises à jour) et aucune donnée personnelle."
         ]],

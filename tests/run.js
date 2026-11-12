@@ -227,8 +227,10 @@ test('Paramètres (clic sur le logo) : fondu et volume égal désactivables, mé
   assert((await sw('xfade')) === 'true' && (await sw('norm')) === 'true', 'réglages par défaut incorrects');
   await w.click('.sw[data-k="norm"]'); await w.click('.sw[data-k="xfade"]');
   assert((await sw('norm')) === 'false' && (await sw('xfade')) === 'false', 'interrupteurs sans effet');
-  await w.click('[data-act="login"]');
-  assert(await w.isVisible('#about'), 'fenêtre Connexion absente'); await w.keyboard.press('Escape');
+  // comptes pas encore activés : « Bientôt », sans bouton de connexion ni de création
+  assert(await w.isVisible('text=Bientôt'), 'mention « Bientôt » absente');
+  assert((await w.$$('[data-act="acct-login"],[data-act="acct-new"]')).length === 0, 'connexion possible alors que les comptes sont désactivés');
+  assert(!fs.existsSync(path.join(dir, 'comptes.dat')), 'fichier des comptes créé alors qu\'ils sont désactivés');
   await close(app);
   ({ app, w, errors } = await launch(dir));
   await w.click('#bBrand');
@@ -284,6 +286,62 @@ test('Sécurité : pas de caméra/micro, pas d\'accès Internet depuis la page, 
   assert(r.node === 'undefined', 'accès à Node.js depuis la page');
   const bridge = await w.evaluate(() => Object.keys(window.laserbeat).sort().join(','));
   assert(!/require|ipcRenderer|process|fs/.test(bridge), 'pont trop large : ' + bridge);
+  await close(app);
+});
+
+test('Comptes des salles (activés pour ce test) : création, favoris séparés, mauvais mot de passe, relance, suppression', async () => {
+  const dir = newDataDir('comptes');
+  const ON = { LASERBEAT_ACCOUNTS: '1' };
+  let { app, w, errors } = await launch(dir, ON);
+  const fill = async (vals) => { for (const [id, v] of Object.entries(vals)) await w.fill('#' + id, v); await w.click('#acctForm button[type=submit]'); };
+  const err = () => w.textContent('#fErr');
+  // favori « du PC » avant tout compte
+  await w.click('.pli >> text=Laser Arena'); await w.waitForTimeout(200);
+  await w.hover('#view .trow:not(.thead) >> nth=0'); await w.click('#view .trow:not(.thead) >> nth=0 >> .star');
+  // création du compte Brest (sans reprendre les favoris) : mot de passe trop court puis correct
+  await w.click('#bBrand'); await w.click('[data-act="acct-new"]');
+  await w.uncheck('#fKeep');
+  await fill({ fName: 'Brest', fLogin: 'lge.b', fPw: 'court', fPw2: 'court' });
+  assert((await err()).includes('8 caractères'), 'mot de passe trop court accepté');
+  await fill({ fPw: 'MotDePasse-Brest1', fPw2: 'MotDePasse-Brest1' });
+  assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'compte non créé : ' + await err());
+  assert((await w.textContent('#bAcct')).includes('Brest'), 'compte connecté non affiché');
+  await w.click('.pli >> text=Morceaux préférés'); await w.waitForTimeout(200);
+  assert((await w.$$('#view .trow:not(.thead)')).length === 0, 'le compte Brest voit les favoris du PC');
+  await w.click('.pli >> text=Laser Arena'); await w.waitForTimeout(200);
+  await w.hover('#view .trow:not(.thead) >> nth=2'); await w.click('#view .trow:not(.thead) >> nth=2 >> .star');   // Mandelao
+  // le mot de passe n'est jamais enregistré en clair
+  await w.waitForTimeout(800);
+  const raw = fs.readFileSync(path.join(dir, 'comptes.dat'));
+  assert(!raw.includes('MotDePasse-Brest1'), 'mot de passe enregistré en clair');
+  if (process.platform === 'win32') assert(!raw.includes('Brest') && !raw.includes('lge.b'), 'fichier des comptes non chiffré');
+  // déconnexion : on retrouve les favoris du PC
+  await w.click('#bBrand'); await w.click('[data-act="acct-logout"]'); await w.waitForTimeout(300);
+  assert(await w.isHidden('#bAcct'), 'toujours connecté');
+  await w.click('.pli >> text=Morceaux préférés'); await w.waitForTimeout(200);
+  let names = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
+  assert(names.join('|') === 'Phonk Laser Game', 'favoris du PC incorrects : ' + names.join(', '));
+  // mauvais mot de passe, puis le bon
+  await w.click('#bBrand'); await w.click('[data-act="acct-login"]');
+  await fill({ fLogin: 'lge.b', fPw: 'faux-mot-de-passe' });
+  assert(await waitFor(async () => (await err()).includes('incorrect'), 8000), 'mauvais mot de passe accepté');
+  await fill({ fPw: 'MotDePasse-Brest1' });
+  assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'connexion refusée : ' + await err());
+  await close(app);
+  // relance : toujours connecté, favoris du compte
+  ({ app, w, errors } = await launch(dir, ON));
+  assert((await w.textContent('#bAcct')).includes('Brest'), 'session perdue après relance');
+  await w.click('.pli >> text=Morceaux préférés'); await w.waitForTimeout(200);
+  names = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
+  assert(names.join('|') === 'Mandelao', 'favoris du compte incorrects : ' + names.join(', '));
+  // suppression (mot de passe exigé)
+  await w.click('#bBrand'); await w.click('[data-act="acct-del"]');
+  await fill({ fPw: 'faux' });
+  assert(await waitFor(async () => (await err()).includes('incorrect'), 8000), 'suppression sans le bon mot de passe');
+  await fill({ fPw: 'MotDePasse-Brest1' });
+  assert(await waitFor(async () => !(await w.isVisible('#about')), 8000), 'compte non supprimé');
+  assert(await w.isHidden('#bAcct'), 'toujours connecté après suppression');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
 });
 

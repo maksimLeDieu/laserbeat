@@ -13,7 +13,20 @@ let updateReady = null;
 try { updateReady = ipcRenderer.sendSync('update:get') || null; } catch (e) { updateReady = null; }
 try { version = ipcRenderer.sendSync('app:version') || ''; } catch (e) { version = ''; }
 
+let acct = null;
+try { acct = ipcRenderer.sendSync('acct:state') || null; } catch (e) { acct = null; }
+
 contextBridge.exposeInMainWorld('laserbeat', {
+  accounts: {
+    state: acct,
+    list: () => ipcRenderer.invoke('acct:list'),
+    create: (name, login, pw, initial) => ipcRenderer.invoke('acct:create', String(name || ''), String(login || ''), String(pw || ''), initial || null),
+    login: (login, pw) => ipcRenderer.invoke('acct:login', String(login || ''), String(pw || '')),
+    logout: () => ipcRenderer.invoke('acct:logout'),
+    changePassword: (oldPw, newPw) => ipcRenderer.invoke('acct:password', String(oldPw || ''), String(newPw || '')),
+    remove: pw => ipcRenderer.invoke('acct:remove', String(pw || '')),
+    setProfile: (key, value) => ipcRenderer.send('prof:set', String(key), value)
+  },
   version,
   store: {
     get: key => (Object.prototype.hasOwnProperty.call(cfg, key) ? cfg[key] : undefined),

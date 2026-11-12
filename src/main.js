@@ -6,15 +6,20 @@
  * - Son maintenu fenêtre réduite, pas de mise en veille pendant la lecture.
  * - Réglages dans %APPDATA%\LaserBeat\config.json, morceaux ajoutés dans %APPDATA%\LaserBeat\musiques.
  */
-const { app, BrowserWindow, Menu, ipcMain, powerSaveBlocker, dialog, globalShortcut, session } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, powerSaveBlocker, dialog, globalShortcut, session, safeStorage } = require('electron');
 const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs');
 const { Config } = require('./config');
 const library = require('./library');
+const { Accounts } = require('./accounts');
 const { setupUpdater } = require('./updater');
 
 const APP_ID = 'fr.laserbeat.app';
+/* Comptes des salles : système prêt mais PAS ENCORE ACTIVÉ. Passer à true pour l'ouvrir aux salles.
+   (Les tests automatiques l'activent pour eux seuls avec LASERBEAT_TEST + LASERBEAT_ACCOUNTS=1.) */
+const ACCOUNTS_ENABLED = false;
+const accountsOn = () => ACCOUNTS_ENABLED || (!!process.env.LASERBEAT_TEST && process.env.LASERBEAT_ACCOUNTS === '1');
 const INDEX = path.join(__dirname, 'renderer', 'index.html');
 const INDEX_URL = pathToFileURL(INDEX).href;
 
@@ -130,6 +135,18 @@ function start() {
   handle('lib:read', async (e, id) => {
     try { return await library.readAudio(musicDirs, id); } catch (err) { log('lib:read', err); return null; }
   });
+  /* ----- IPC : comptes des salles (enregistrés et protégés sur ce PC, voir accounts.js) ----- */
+  let accounts = null;
+  const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+  const OFF = { ok: false, error: 'Les comptes ne sont pas encore disponibles.' };
+  on('acct:state', e => { e.returnValue = accounts ? { enabled: true, account: accounts.current(), profile: accounts.profile(), count: accounts.list().length } : { enabled: false }; });
+  handle('acct:list', () => (accounts ? accounts.list() : []));
+  handle('acct:create', (e, name, login, pw, initial) => !accounts ? OFF : accounts.create(str(name, 80), str(login, 64), str(pw, 300), initial && typeof initial === 'object' ? initial : null));
+  handle('acct:login', (e, login, pw) => !accounts ? OFF : accounts.login(str(login, 64), str(pw, 300)));
+  handle('acct:logout', () => (!accounts ? OFF : accounts.logout()));
+  handle('acct:password', (e, oldPw, newPw) => !accounts ? OFF : accounts.changePassword(str(oldPw, 300), str(newPw, 300)));
+  handle('acct:remove', (e, pw) => !accounts ? OFF : accounts.remove(str(pw, 300)));
+  on('prof:set', (e, key, value) => { if (accounts) accounts.setProfile(String(key), value); });
   on('lib:duration', (e, id, dur) => {
     try { library.saveDuration(musicDirs.user, id, dur); } catch (err) { log('lib:duration', err); }
   });
@@ -142,6 +159,7 @@ function start() {
 
   app.whenReady().then(() => {
     config = new Config(path.join(app.getPath('userData'), 'config.json'), log);
+    if (accountsOn()) accounts = new Accounts(app.getPath('userData'), { safeStorage, log });
     musicDirs = {
       builtin: app.isPackaged ? path.join(process.resourcesPath, 'musiques') : path.join(__dirname, '..', 'musiques'),
       user: path.join(app.getPath('userData'), 'musiques')
@@ -192,7 +210,7 @@ function start() {
 
   app.on('window-all-closed', () => app.quit());
   // Fermeture voulue (Quitter, mise à jour, redémarrage de nuit, arrêt de Windows) : la fenêtre se ferme sans question.
-  app.on('before-quit', () => { quitting = true; setPlaying(false); if (config) config.flush(); });
+  app.on('before-quit', () => { quitting = true; setPlaying(false); if (config) config.flush(); if (accounts) accounts.flush(); });
 
   // Aucune fenêtre ou vue supplémentaire : tout reste dans la fenêtre LaserBeat.
   app.on('web-contents-created', (e, wc) => {

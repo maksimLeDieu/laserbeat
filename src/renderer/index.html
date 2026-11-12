@@ -190,6 +190,25 @@ body.playing .eqs i{animation-play-state:running}
  .ph{gap:18px}
 }
 
+/* compte */
+.acct[hidden]{display:none}
+.acct{display:flex;align-items:center;gap:8px;height:32px;padding:0 14px 0 10px;border-radius:16px;background:var(--panel2);font-size:13px;font-weight:700;color:#fff;margin-left:auto;flex:none;max-width:180px}
+.acct svg{width:16px;height:16px;color:var(--ac2)}
+.acct span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acct:hover{background:var(--panel3)}
+.acct:not([hidden])~.status{margin-left:0}
+.form{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+.form label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--mut);font-weight:600}
+.form input[type=text],.form input[type=password]{height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:#fff;padding:0 12px;font-size:15px;user-select:text}
+.form input:focus{outline:2px solid var(--ac2);outline-offset:1px;border-color:transparent}
+.form .chk{flex-direction:row;align-items:center;gap:10px;color:var(--tx2);font-weight:500}
+.form .chk input{width:18px;height:18px;accent-color:var(--ac)}
+.ferr{color:var(--red);font-size:13px;min-height:1.3em;margin:0}
+.frow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.linkb{color:var(--ac2);font-weight:700;font-size:13px}
+.linkb:hover{text-decoration:underline}
+.pill.danger{border-color:rgba(255,107,143,.5);color:var(--red)}
+
 /* paramètres */
 .set{padding:24px 24px 40px;max-width:820px;display:flex;flex-direction:column;gap:28px;background:linear-gradient(180deg,hsl(262 40% 20%) 0,var(--panel) 260px);min-height:100%}
 .set-head{display:flex;align-items:center;gap:16px;margin-top:20px}
@@ -415,6 +434,7 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
   <button class="brand" id="bBrand" data-act="go" data-v="settings" title="Paramètres"><img class="mark" src="img/logo.svg" alt=""><span>Musique ML</span></button>
   <button class="hbtn" data-act="go" data-v="home" id="n-home" title="Accueil"></button>
   <label class="search"><span id="sIc"></span><input id="q" placeholder="Que souhaitez-vous écouter ?" autocomplete="off"><kbd>Ctrl K</kbd></label>
+  <button class="acct" id="bAcct" data-act="go" data-v="settings" title="Compte connecté" hidden></button>
   <div class="status" id="stat"><i></i><span id="statT"></span></div>
   <button class="ibtn" id="bInfo" title="À propos de Musique ML" aria-haspopup="dialog"></button>
  </header>
@@ -573,9 +593,15 @@ const getPl=id=>PL.find(p=>p.id===id)||PL[1];
 const allTracks=()=>TRACKS;
 /* Favoris et écoutes récentes : on oublie les morceaux qui n'existent plus. */
 const known=new Set(TRACKS.map(t=>t.id));
-let favs=new Set((store.get('favs',[])||[]).filter(id=>known.has(id)));
+/* Compte connecté : ses favoris, l'ordre de ses playlists et ses écoutes récentes lui sont propres
+   (gardés par le processus principal, qui ne donne que ceux du compte connecté). Sans compte : ceux du PC. */
+const ACC=LB&&LB.accounts&&LB.accounts.state&&LB.accounts.state.enabled?LB.accounts:null; // null = comptes pas encore activés
+let ACCOUNT=ACC&&ACC.state?ACC.state.account:null,PROF=ACC&&ACC.state&&ACC.state.profile?ACC.state.profile:null;
+const pget=(k,d)=>{if(ACCOUNT){const v=PROF&&PROF[k];return v===undefined||v===null?d:v}return store.get(k,d)};
+const pset=(k,v)=>{if(ACCOUNT){PROF=PROF||{};PROF[k]=v;try{ACC.setProfile(k,v)}catch(e){}}else store.set(k,v)};
+let favs=new Set((pget('favs',[])||[]).filter(id=>known.has(id)));
 /* Ordre des morceaux choisi par glisser-déposer (par playlist) ; les morceaux non classés gardent l'ordre d'origine, à la fin. */
-let ORDER=store.get('order',{});if(!ORDER||typeof ORDER!=='object')ORDER={};
+let ORDER=pget('order',{});if(!ORDER||typeof ORDER!=='object')ORDER={};
 function ordered(id,l){const o=ORDER[id];if(!Array.isArray(o)||!o.length)return l;const pos=new Map(o.map((x,i)=>[x,i]));const r=(t,i)=>pos.has(t.id)?pos.get(t.id):1e6+i;return l.map((t,i)=>[t,r(t,i)]).sort((a,b)=>a[1]-b[1]).map(x=>x[0])}
 const tracksOf=id=>ordered(id,id==='fav'?TRACKS.filter(t=>favs.has(t.id)):(getPl(id).tracks||[]));
 const trackById=id=>TRACKS.find(t=>t.id===id);
@@ -633,7 +659,7 @@ function maybeCrossfade(){
  xfMode=true;try{next(true)}finally{xfMode=false}
 }
 A.volume=vol;B.volume=vol;
-let recent=(store.get('recent',[])||[]).filter(id=>known.has(id));
+let recent=(pget('recent',[])||[]).filter(id=>known.has(id));
 let preT=null,errs=0;
 function playQueue(list,start,plId,at){
  if(!list.length)return;
@@ -657,7 +683,7 @@ function load(i,at){
  A.dataset.tid=t.id;A.dataset.g=gainOf(t);if(!fade)A.volume=vg(A);
  if(at>0)A.currentTime=at;
  const pr=A.play();if(pr&&pr.catch)pr.catch(()=>ui());
- recent=[t.id].concat(recent.filter(x=>x!==t.id)).slice(0,12);store.set('recent',recent);
+ recent=[t.id].concat(recent.filter(x=>x!==t.id)).slice(0,12);pset('recent',recent);
  ui();saveState();
  clearTimeout(preT);if(!fade)preT=setTimeout(preloadNext,1500);
 }
@@ -697,7 +723,7 @@ function prev(){
 }
 function toggleFav(id){
  favs.has(id)?favs.delete(id):favs.add(id);
- store.set('favs',[...favs]);ui();
+ pset('favs',[...favs]);ui();
  if(V.name==='pl'&&V.arg==='fav')render();
  sideList();
 }
@@ -814,8 +840,8 @@ async function delTrack(id){
  let done=false;try{done=await LB.deleteTrack(id)}catch(e){logErr('Suppression : '+e)}
  if(!done)return;
  const k=TRACKS.findIndex(x=>x.id===id);if(k>=0)TRACKS.splice(k,1);
- if(favs.delete(id))store.set('favs',[...favs]);
- recent=recent.filter(x=>x!==id);store.set('recent',recent);
+ if(favs.delete(id))pset('favs',[...favs]);
+ recent=recent.filter(x=>x!==id);pset('recent',recent);
  const now=P.queue[P.i];P.queue=P.queue.filter(x=>x.id!==id);P.i=now?P.queue.indexOf(now):-1;P.nx=null;
  refreshPl();
  render();saveState();clearTimeout(preT);preT=setTimeout(preloadNext,500);
@@ -917,7 +943,11 @@ function vSettings(el){
  el.innerHTML=`<div class="set">
  <div class="set-head"><img class="mark" src="img/logo.svg" alt=""><div><h1>Paramètres</h1><small>Musique ML · version ${esc(LB&&LB.version?LB.version:'')}</small></div></div>
  <section class="set-sec"><h3>Compte</h3><div class="set-card">
-  ${setRow('user','Connexion<span class="soon">Bientôt</span>','Se connecter à son compte Musique ML.',`<button class="pill" data-act="login">Se connecter</button>`)}
+  ${ACCOUNT?setRow('user','Connecté : '+esc(ACCOUNT.name),'Identifiant '+esc(ACCOUNT.login)+' · favoris et ordre des playlists propres à ce compte.',`<button class="pill" data-act="acct-logout">Se déconnecter</button>`)
+   +setRow('lock','Mot de passe','Changer le mot de passe de ce compte.',`<button class="pill" data-act="acct-pw">Changer</button>`)
+   +setRow('trash','Supprimer le compte','Efface ce compte et ses favoris de ce PC. La musique n\'est pas touchée.',`<button class="pill danger" data-act="acct-del">Supprimer</button>`)
+   :ACC?setRow('user','Connexion','Connectez-vous au compte de votre salle (Brest, Quimper, Trégueux…) pour retrouver ses favoris et l\'ordre de ses playlists.',`<div class="frow"><button class="pill" data-act="acct-login">Se connecter</button><button class="pill" data-act="acct-new">Créer un compte</button></div>`)
+   :setRow('user','Connexion<span class="soon">Bientôt</span>','Chaque salle pourra se connecter à son compte (par exemple lge.b) et retrouver ses favoris et l\'ordre de ses playlists.','')}
  </div></section>
  <section class="set-sec"><h3>Lecture</h3><div class="set-card">
   ${setRow('shuf','Fondu enchaîné','Les morceaux s\'enchaînent en se mélangeant pendant 3 secondes, sans blanc.',sw('xfade',xfadeOn,'Fondu enchaîné'))}
@@ -1049,8 +1079,12 @@ function act(n,d){
   }
   case 'about':about(true);break;
   case 'legal':about(false);go('legal',d.id);break;
-  case 'login':sheet(`<h3>Connexion</h3><p style="margin-top:10px">La connexion arrive dans une prochaine version de Musique ML.</p>`);break;
-  case 'reset-order':delete ORDER[d.id];store.set('order',ORDER);syncQueue(d.id);render();break;
+  case 'acct-login':if(ACC)loginSheet();break;
+  case 'acct-new':if(ACC)createSheet();break;
+  case 'acct-pw':pwSheet();break;
+  case 'acct-del':delSheet();break;
+  case 'acct-logout':if(ACC)ACC.logout().then(()=>setAccount(null));break;
+  case 'reset-order':delete ORDER[d.id];pset('order',ORDER);syncQueue(d.id);render();break;
  }
 }
 document.addEventListener('click',e=>{
@@ -1076,7 +1110,7 @@ $('#view').addEventListener('drop',e=>{
  const before=r.classList.contains('drop-before'),pid=r.dataset.pl,ids=tracksOf(pid).map(t=>t.id);clearDrop();
  if(r.dataset.id===dragId||!ids.includes(dragId))return;
  ids.splice(ids.indexOf(dragId),1);ids.splice(ids.indexOf(r.dataset.id)+(before?0:1),0,dragId);
- ORDER[pid]=ids;store.set('order',ORDER);syncQueue(pid);render();
+ ORDER[pid]=ids;pset('order',ORDER);syncQueue(pid);render();
 });
 $('#view').addEventListener('dragend',()=>{dragId=null;clearDrop();document.querySelectorAll('.dragging').forEach(r=>r.classList.remove('dragging'))});
 /* Accueil : la couleur du haut suit la tuile survolée. */
@@ -1096,6 +1130,48 @@ function about(show){
  m.hidden=false;$('#aboutBox [data-close]').focus();
 }
 function sheet(html){$('#aboutBox').innerHTML=`<button class="ibtn x" data-close title="Fermer">${ic('x')}</button>`+html;$('#about').hidden=false;$('#aboutBox [data-close]').focus()}
+/* ---------- comptes des salles ---------- */
+function applyProfile(){
+ favs=new Set((pget('favs',[])||[]).filter(id=>known.has(id)));
+ ORDER=pget('order',{});if(!ORDER||typeof ORDER!=='object')ORDER={};
+ recent=(pget('recent',[])||[]).filter(id=>known.has(id));
+ acctChip();render();
+}
+function setAccount(r){ACCOUNT=r&&r.account||null;PROF=r&&r.profile||null;applyProfile()}
+function acctChip(){const b=$('#bAcct');b.hidden=!ACCOUNT;b.innerHTML=ACCOUNT?ic('user')+'<span>'+esc(ACCOUNT.name)+'</span>':''}
+const field=(id,label,type,extra)=>`<label for="${id}">${label}<input id="${id}" type="${type}" ${extra||''}></label>`;
+function formSheet(title,intro,fields,submit,extra){
+ sheet(`<h3>${title}</h3>${intro?`<p style="margin-top:8px">${intro}</p>`:''}<form class="form" id="acctForm" novalidate>${fields}<p class="ferr" id="fErr" role="alert"></p><div class="frow"><button class="pill pri" type="submit">${submit}</button>${extra||''}</div></form>`);
+ const first=$('#acctForm input');if(first)first.focus();
+}
+let onSubmit=null;
+function loginSheet(){
+ formSheet('Se connecter','Connectez-vous au compte de votre salle.',field('fLogin','Identifiant','text','autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" placeholder="lge.b"')+field('fPw','Mot de passe','password','autocomplete="current-password" maxlength="200"'),'Se connecter','<button class="linkb" type="button" data-act="acct-new">Créer un compte</button>');
+ onSubmit=async()=>{const r=await ACC.login($('#fLogin').value,$('#fPw').value);if(!r.ok)return r.error;setAccount(r);about(false)};
+}
+function createSheet(){
+ formSheet('Créer un compte','Un compte par salle : chacun garde ses favoris et l\'ordre de ses playlists. Les comptes restent sur ce PC, protégés.',
+  field('fName','Nom du compte','text','placeholder="Brest" maxlength="40"')+field('fLogin','Identifiant (lettres, chiffres, point ou tiret)','text','autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" placeholder="lge.b"')+field('fPw','Mot de passe (8 caractères minimum)','password','autocomplete="new-password" maxlength="200"')+field('fPw2','Confirmer le mot de passe','password','autocomplete="new-password" maxlength="200"')
+  +'<label class="chk" for="fKeep"><input id="fKeep" type="checkbox" checked>Reprendre les favoris et l\'ordre des playlists actuels</label>','Créer le compte');
+ onSubmit=async()=>{
+  if($('#fPw').value!==$('#fPw2').value)return 'Les deux mots de passe ne sont pas identiques.';
+  const init=$('#fKeep').checked?{favs:[...favs],order:ORDER,recent}:null;
+  const r=await ACC.create($('#fName').value,$('#fLogin').value,$('#fPw').value,init);if(!r.ok)return r.error;setAccount(r);about(false)};
+}
+function pwSheet(){
+ formSheet('Changer le mot de passe','',field('fOld','Mot de passe actuel','password','autocomplete="current-password" maxlength="200"')+field('fPw','Nouveau mot de passe (8 caractères minimum)','password','autocomplete="new-password" maxlength="200"')+field('fPw2','Confirmer le nouveau mot de passe','password','autocomplete="new-password" maxlength="200"'),'Enregistrer');
+ onSubmit=async()=>{if($('#fPw').value!==$('#fPw2').value)return 'Les deux mots de passe ne sont pas identiques.';const r=await ACC.changePassword($('#fOld').value,$('#fPw').value);if(!r.ok)return r.error;about(false)};
+}
+function delSheet(){
+ formSheet('Supprimer le compte',`Le compte « ${esc(ACCOUNT?ACCOUNT.name:'')} », ses favoris et l'ordre de ses playlists seront effacés de ce PC. Pour confirmer, entrez son mot de passe.`,field('fPw','Mot de passe','password','autocomplete="current-password" maxlength="200"'),'Supprimer définitivement');
+ onSubmit=async()=>{const r=await ACC.remove($('#fPw').value);if(!r.ok)return r.error;setAccount(null);about(false)};
+}
+$('#aboutBox').addEventListener('submit',async e=>{
+ if(e.target.id!=='acctForm'||!onSubmit)return;e.preventDefault();
+ const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;$('#fErr').textContent='';
+ try{const err=await onSubmit();if(err&&$('#fErr'))$('#fErr').textContent=err}catch(x){if($('#fErr'))$('#fErr').textContent='Une erreur est survenue. Réessayez.';logErr('Compte : '+x)}
+ finally{if(btn.isConnected)btn.disabled=false}
+});
 $('#bInfo').onclick=()=>about(true);
 $('#about').addEventListener('click',e=>{if(e.target.id==='about'||e.target.closest('[data-close]'))about(false)});
 $('#bPlay').onclick=toggle;$('#fPlay').onclick=toggle;
@@ -1252,6 +1328,7 @@ $('#bFav').innerHTML=ic('star');$('#bInfo').innerHTML=ic('info');$('#bQ').innerH
 $('#fPrev').innerHTML=ic('prev');$('#fNext').innerHTML=ic('next');
 $('#vol').value=vol;$('#vol').style.setProperty('--v',vol*100+'%');
 setMini(!!store.get('mini',false));
+acctChip();
 document.querySelectorAll('button[title]:not([aria-label])').forEach(b=>b.setAttribute('aria-label',b.title));
 setRp(rpW&&store.get('rp',true));
 if(LB&&LB.version)$('#ver').textContent='v'+LB.version;
