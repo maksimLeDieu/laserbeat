@@ -66,6 +66,7 @@ function makeTrack(origin, dir, file, e) {
     url: pathToFileURL(path.join(dir, file)).href,
     img: photoUrl(dir, e.photo || e.image),
     lufs: isFinite(Number(e.lufs)) && Number(e.lufs) < 0 ? Number(e.lufs) : null,
+    end: num(e.fin) > 0 ? num(e.fin) : null,   // fin réelle de la musique (avant le silence final), en secondes
     user: origin === 'u'
   };
 }

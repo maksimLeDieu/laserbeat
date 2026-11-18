@@ -155,7 +155,7 @@ def main():
             img = f'musiques/morceau-{i}{iext}'
         tracks.append({'id': 'b:' + e['fichier'].lower(), 'title': e['titre'], 'playlist': e.get('playlist', ''),
                        'bpm': e.get('bpm', 0), 'dur': e.get('duree', 0), 'url': f'musiques/morceau-{i}{ext}',
-                       'img': img, 'lufs': e.get('lufs'), 'user': False})
+                       'img': img, 'lufs': e.get('lufs'), 'end': e.get('fin'), 'user': False})
 
     s = lire('src/renderer/index.html')
     # le service de pages ajoute lui-même doctype, <html>, <head> et <body>

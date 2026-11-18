@@ -8,6 +8,13 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.14.1', date: '18 novembre 2026',
+      items: [
+        "Fondu enchaîné corrigé : les deux morceaux se mélangent vraiment pendant 3 secondes. Avant, le fondu se faisait pendant le silence à la fin des fichiers, d'où un blanc entre deux morceaux.",
+        "Le silence à la fin des morceaux est maintenant sauté, même quand le fondu est désactivé."
+      ]
+    },
+    {
       v: '2.14.0', date: '12 novembre 2026',
       items: [
         "Lire ensuite : clic droit sur un morceau, puis « Lire ensuite ». Il passe juste après celui en cours, puis la lecture reprend normalement.",

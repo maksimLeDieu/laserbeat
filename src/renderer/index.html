@@ -603,7 +603,8 @@ function plFor(name){
 }
 /* Volume mesuré de chaque morceau (LUFS) : fourni par morceaux.json, sinon mesuré une fois puis mémorisé. */
 let LUFS=store.get('lufs',{});if(!LUFS||typeof LUFS!=='object')LUFS={};
-const mkTrack=t=>({lufs:typeof t.lufs==='number'?t.lufs:(typeof LUFS[t.id]==='number'?LUFS[t.id]:null),id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'Musique ML',bpm:t.bpm||0,dur:t.dur||0,url:t.url,img:typeof t.img==='string'&&/^file:/.test(t.img)?t.img:'',user:!!t.user});
+let ENDS=store.get('ends',{});if(!ENDS||typeof ENDS!=='object')ENDS={}; // fin réelle de la musique des morceaux ajoutés (0 = pas de silence final)
+const mkTrack=t=>({end:typeof t.end==='number'&&t.end>0?t.end:(typeof ENDS[t.id]==='number'?ENDS[t.id]:undefined),lufs:typeof t.lufs==='number'?t.lufs:(typeof LUFS[t.id]==='number'?LUFS[t.id]:null),id:t.id,pl:plFor(t.playlist).id,title:t.title,artist:t.user?'Importé':'Musique ML',bpm:t.bpm||0,dur:t.dur||0,url:t.url,img:typeof t.img==='string'&&/^file:/.test(t.img)?t.img:'',user:!!t.user});
 const TRACKS=TR.map(mkTrack);
 /* Recalcule le contenu des playlists. LaserBeats liste les playlists qu'elle réunit vraiment. */
 function refreshPl(){
@@ -664,6 +665,13 @@ function setVol(v){vol=v;if(!pz)A.volume=vg(A);if(!fade)B.volume=vg(B);store.set
 /* Fondu enchaîné : FADE secondes avant la fin, le morceau suivant démarre dans l'autre lecteur
    et monte pendant que le premier descend (courbe à puissance constante : pas de creux de volume). */
 const FADE=3;
+/* Fin réelle de la musique : beaucoup de fichiers finissent par 2 à 3 s de silence. Le fondu part de la fin
+   de la MUSIQUE (et non du fichier), pour que les deux morceaux se mélangent vraiment pendant FADE secondes. */
+function endOf(el){
+ const d=el.duration;if(!d||!isFinite(d))return d;
+ const t=trackById(el.dataset.tid),e=t&&t.end;
+ return e>0&&e<d?Math.max(1,e):d;
+}
 let fade=null,xfMode=false,xfTried=-1,loadN=0;
 function cancelFade(){
  if(!fade)return;
@@ -685,7 +693,7 @@ let xfadeOn=store.get('xfade',true)!==false; // réglage « Fondu enchaîné »
 function maybeCrossfade(){
  if(!xfadeOn)return;
  if(fade||!want||P.repeat===2||!A.duration||!isFinite(A.duration)||A.duration<FADE*3)return;
- if(A.duration-A.currentTime>FADE||xfTried===loadN)return;
+ if(endOf(A)-A.currentTime>FADE||xfTried===loadN)return;
  xfTried=loadN;       // une seule tentative par morceau lancé
  xfMode=true;try{next(true)}finally{xfMode=false}
 }
@@ -843,13 +851,15 @@ window.addEventListener('unhandledrejection',e=>logErr('Promesse rejetée : '+(e
  });
  el.addEventListener('timeupdate',e=>{
   if(e.target!==A)return;
-  const d=A.duration,c=A.currentTime,r=d?c/d*100:0;
+  const d=endOf(A),c=Math.min(A.currentTime,d||0),r=d?c/d*100:0;
   $('#barF').style.width=r+'%';$('#fsF').style.width=r+'%';$('#fsC').textContent=fmt(c);$('#fsD').textContent=fmt(d);
   $('#tmC').textContent=fmt(c);$('#tm').textContent=fmt(d);
   maybeCrossfade();
+  // pas de fondu possible (désactivé, morceau en boucle, morceau très court) : on saute quand même le silence final
+  if(!fade&&want&&d&&d<A.duration-.2&&A.currentTime>=d)next(true);
  });
 });
-function seek(e){const el=e.currentTarget,r=el.getBoundingClientRect();if(A.duration)A.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*A.duration}
+function seek(e){const el=e.currentTarget,r=el.getBoundingClientRect();const d=endOf(A);if(d)A.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*d}
 $('#bar').addEventListener('click',seek);$('#fsBar').addEventListener('click',seek);
 
 /* Surveillance : si la musique devrait jouer mais n'avance plus, on relance (puis on passe au suivant). */
@@ -1444,6 +1454,14 @@ async function measure(t){
  const ab=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
  const ctx=new OfflineAudioContext(2,1,48000);
  const buf=await ctx.decodeAudioData(ab);
+ // fin réelle de la musique : dernier instant au-dessus de -45 dB (0 = pas de silence final notable)
+ if(t.user&&typeof t.end!=='number'){
+  let last=0;const th=Math.pow(10,-45/20);
+  for(let c=0;c<buf.numberOfChannels;c++){const x=buf.getChannelData(c);let i=x.length-1;while(i>last&&Math.abs(x[i])<th)i--;if(i>last)last=i}
+  const e=last/buf.sampleRate+.1;
+  t.end=buf.duration-e>.4?Math.round(e*10)/10:0;ENDS[t.id]=t.end;store.set('ends',ENDS);
+ }
+ if(typeof t.lufs==='number')return;
  const v=lufsOf(buf);if(v===null)return;
  t.lufs=v;LUFS[t.id]=v;store.set('lufs',LUFS);
  // morceau déjà chargé : sa correction s'applique tout de suite
@@ -1453,7 +1471,7 @@ async function measure(t){
 let measuring=false;
 async function measureAll(){
  if(measuring)return;measuring=true;
- try{for(const t of TRACKS.filter(x=>typeof x.lufs!=='number')){
+ try{for(const t of TRACKS.filter(x=>typeof x.lufs!=='number'||(x.user&&typeof x.end!=='number'))){
   try{await measure(t)}catch(e){logErr('Mesure du volume impossible : '+t.title+' ('+e+')');t.lufs=undefined}
   await new Promise(r=>setTimeout(r,800));
  }}finally{measuring=false}

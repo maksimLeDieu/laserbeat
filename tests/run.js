@@ -60,7 +60,13 @@ async function waitFor(fn, ms, step = 500) {
 }
 const playing = w => w.evaluate(() => [...document.querySelectorAll('audio')].some(a => !a.paused && a.currentTime > 0));
 const title = w => w.textContent('#npT');
-const seekNearEnd = (w, s = 1) => w.evaluate(s => { const a = [...document.querySelectorAll('audio')].find(x => !x.paused); a.currentTime = a.duration - s; }, s);
+// « fin » = fin réelle de la musique (avant le silence final du fichier), comme pour le fondu enchaîné
+const seekNearEnd = (w, s = 1) => w.evaluate(s => {
+  const a = [...document.querySelectorAll('audio')].find(x => !x.paused);
+  const t = (window.laserbeat.tracks || []).find(x => x.id === a.dataset.tid);
+  const end = t && t.end > 0 && t.end < a.duration ? t.end : a.duration;
+  a.currentTime = end - s;
+}, s);
 const logOf = dir => { try { return fs.readFileSync(path.join(dir, 'laserbeat.log'), 'utf8'); } catch (e) { return ''; } };
 
 const tests = [];
@@ -433,6 +439,56 @@ test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais
   // volume final = volume réglé x correction « volume égal » du morceau (Phonk : -2,9 dB)
   const corr = { 'Phonk Laser Game': -1.4, 'Phonk': -2.9 }[last.title] || 0;
   assert(Math.abs(ons[0].v - Number(vol) * Math.pow(10, corr / 20)) < 0.02, 'volume final incorrect : ' + ons[0].v);
+  await close(app);
+});
+
+test('Fondu réel : les deux morceaux se mélangent pendant 3 s de vraie musique, pas pendant le silence final', async () => {
+  const { app, w, errors } = await launch(newDataDir('fondu-reel'));
+  // 1) chaque morceau fourni a une « fin » de musique mesurée, et il y a bien du son juste avant, du silence après
+  const mesures = await w.evaluate(async () => {
+    const out = [];
+    const db = (x, a, b) => { let sum = 0, n = 0; for (let i = Math.max(0, Math.floor(a)); i < Math.min(x.length, Math.floor(b)); i++) { sum += x[i] * x[i]; n++; } return n ? 10 * Math.log10(sum / n + 1e-12) : -120; };
+    for (const t of window.laserbeat.tracks.filter(x => !x.user)) {
+      const bytes = await window.laserbeat.readAudio(t.id);
+      const buf = await new OfflineAudioContext(2, 1, 48000).decodeAudioData(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+      const x = buf.getChannelData(0), sr = buf.sampleRate, end = t.end || 0;
+      out.push({ title: t.title, end, dur: buf.duration, avant: db(x, (end - 3) * sr, (end - 1) * sr), apres: buf.duration - end > 0.6 ? db(x, (end + 0.3) * sr, x.length) : null });
+    }
+    return out;
+  });
+  assert(mesures.length === 13, 'morceaux mesurés : ' + mesures.length);
+  for (const m of mesures) {
+    assert(m.end > 10 && m.end <= m.dur + 0.2, m.title + ' : « fin » absente ou fausse dans morceaux.json (relancer outils/fin-morceaux.py) : ' + m.end);
+    assert(m.avant > -30, m.title + ' : pas de musique dans les 3 s avant la « fin » (' + m.avant.toFixed(0) + ' dB)');
+    if (m.apres !== null) assert(m.apres < -40, m.title + ' : il reste du son après la « fin » (' + m.apres.toFixed(0) + ' dB)');
+  }
+  // 2) en lecture : le fondu démarre 3 s avant la fin de la MUSIQUE et se termine quand elle s'arrête
+  await w.click('.pli >> text=Laser Arena');
+  await w.click('#view .trow:not(.thead):has(.tn:text-is("Mandelao"))');          // 3,2 s de silence à la fin du fichier
+  assert(await waitFor(async () => (await title(w)) === 'Mandelao' && await playing(w), 10000), 'pas de lecture');
+  const end = mesures.find(m => m.title === 'Mandelao').end;
+  await w.evaluate(e => { const a = [...document.querySelectorAll('audio')].find(x => !x.paused); a.currentTime = e - 5; }, end);
+  const obs = await w.evaluate(end => new Promise(res => {
+    const els = [...document.querySelectorAll('audio')], out = { start: null, both: 0, endOut: null, maxOutAtEnd: null };
+    const old = els.find(x => !x.paused);
+    const t0 = performance.now();
+    const iv = setInterval(() => {
+      const live = els.filter(x => !x.paused);
+      if (live.length === 2) { if (out.start === null) out.start = old.currentTime; out.both++; out.endOut = old.currentTime; }
+      if ((out.start !== null && live.length === 1) || performance.now() - t0 > 12000) { clearInterval(iv); res(out); }
+    }, 50);
+  }), end);
+  assert(obs.start !== null, 'aucun fondu observé');
+  assert(Math.abs(obs.start - (end - 3)) < 0.5, 'le fondu ne démarre pas 3 s avant la fin de la musique : ' + obs.start.toFixed(1) + ' s (fin de la musique ' + end + ' s)');
+  assert(obs.both * 0.05 > 2.4, 'mélange trop court : ' + (obs.both * 0.05).toFixed(1) + ' s');
+  assert(obs.endOut <= end + 0.4, 'le fondu se prolonge dans le silence final : ' + obs.endOut.toFixed(1) + ' s');
+  assert((await title(w)) === 'Drift Hardbass', 'morceau suivant : ' + await title(w));
+  // 3) fondu désactivé : le silence final est quand même sauté
+  await w.click('#bBrand'); await w.click('.sw[data-k="xfade"]');
+  const cur = await title(w), endCur = mesures.find(m => m.title === cur).end;
+  await w.evaluate(e => { const a = [...document.querySelectorAll('audio')].find(x => !x.paused); a.currentTime = e - 1; }, endCur);
+  assert(await waitFor(async () => (await title(w)) !== cur, 2500, 100), 'silence final non sauté quand le fondu est désactivé');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
 });
 
