@@ -67,7 +67,7 @@ const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
 /* ------------------------------------------------------------------ */
-test('Démarrage : fenêtre Musique ML, sans menu, fichiers locaux, 13 morceaux', async () => {
+test('Démarrage : fenêtre Musique ML, sans menu, fichiers locaux, 15 morceaux', async () => {
   const { app, w, errors } = await launch(newDataDir('demarrage'));
   const info = await app.evaluate(({ BrowserWindow, Menu }) => {
     const b = BrowserWindow.getAllWindows()[0];
@@ -80,7 +80,7 @@ test('Démarrage : fenêtre Musique ML, sans menu, fichiers locaux, 13 morceaux'
   assert(info.url.startsWith('file:'), 'interface non locale : ' + info.url);
   assert(info.throttle === false, 'ralentissement en arrière-plan actif');
   const n = await w.evaluate(() => window.laserbeat.tracks.length);
-  assert(n === 13, 'morceaux fournis : ' + n);
+  assert(n === 15, 'morceaux fournis : ' + n);
   assert(/^v\d+\.\d+\.\d+/.test(await w.textContent('#ver')), 'version non affichée');
   assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
@@ -571,7 +571,7 @@ test('Fin de playlist : la musique continue (répétition de la playlist par dé
   assert(await w.evaluate(() => document.querySelector('#bRep').classList.contains('on')), 'répétition non active par défaut');
   const rows = await w.$$('#view .trow:not(.thead)');
   await rows[rows.length - 1].click();                               // dernier morceau de la playlist
-  assert(await waitFor(async () => (await title(w)) === 'Night Raid' && await playing(w), 10000), 'dernier morceau non lancé');
+  assert(await waitFor(async () => (await title(w)) === 'Ambiance Pop II' && await playing(w), 10000), 'dernier morceau non lancé');
   await w.waitForTimeout(2500); await seekNearEnd(w, 1);
   assert(await waitFor(async () => (await title(w)) === 'Phonk Laser Game' && await playing(w), 10000), 'la musique s\'arrête en fin de playlist');
   await close(app);
@@ -596,17 +596,18 @@ test('Page « Ambiance accueil » : ajout de morceaux séparés du laser game', 
   await app.evaluate(({ dialog }, src) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [src] }); }, src);
   await w.click('#n-accueil');
   assert((await w.textContent('#ttl')) === 'Ambiance accueil', 'page non ouverte');
-  assert(await w.isVisible('#view .empty'), 'message de page vide absent');
+  const fournis = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
+  assert(fournis.join('|') === 'Ambiance Pop|Ambiance Pop II', 'musiques d\'accueil fournies : ' + fournis.join(', '));
   await w.click('text=Ajouter des morceaux');
   assert(await waitFor(async () => (await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent))).includes('Ambiance douce'), 5000), 'morceau non ajouté à l\'accueil');
   const json = JSON.parse(fs.readFileSync(path.join(dir, 'musiques', 'morceaux.json'), 'utf8'));
   assert(json.some(e => e.fichier === 'Ambiance douce.mp3' && e.playlist === 'Ambiance accueil'), 'mauvaise playlist enregistrée');
   await w.click('.pli >> text=Laser Arena'); await w.waitForTimeout(300);
   const arena = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
-  assert(!arena.includes('Ambiance douce'), 'musique d\'accueil mélangée à Laser Arena');
+  assert(!arena.includes('Ambiance douce') && !arena.includes('Ambiance Pop') && !arena.includes('Ambiance Pop II') && arena.length === 13, 'musique d\'accueil mélangée à Laser Arena');
   await w.click('.pli >> text=LaserBeats'); await w.waitForTimeout(300);
   const all = await w.$$eval('#view .trow:not(.thead) .tn', r => r.map(x => x.textContent));
-  assert(all.includes('Ambiance douce') && all.includes('Mandelao') && all.includes('Night Raid') && all.length === 14, 'LaserBeats ne réunit pas toute la musique : ' + all.join(', '));
+  assert(all.includes('Ambiance douce') && all.includes('Mandelao') && all.includes('Night Raid') && all.length === 16, 'LaserBeats ne réunit pas toute la musique : ' + all.join(', '));
   assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
 });

@@ -11,5 +11,7 @@
   { "titre": "Ghost Lap", "fichier": "LaserBeat 11 - Ghost Lap.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 70.5, "lufs": -5.8 },
   { "titre": "Redline", "fichier": "LaserBeat 12 - Redline.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 73.6, "lufs": -5.5 },
   { "titre": "Overtake", "fichier": "LaserBeat 13 - Overtake.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 71.8, "lufs": -3.8 },
-  { "titre": "Night Raid", "fichier": "LaserBeat 15 - Night Raid.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 72.4, "lufs": -6.4 }
+  { "titre": "Night Raid", "fichier": "LaserBeat 15 - Night Raid.mp3", "playlist": "Laser Arena", "bpm": 0, "duree": 72.4, "lufs": -6.4 },
+  { "titre": "Ambiance Pop", "fichier": "LaserBeat 7 - Ambiance Pop.mp3", "playlist": "Ambiance accueil", "bpm": 0, "duree": 107.0, "lufs": -18.4 },
+  { "titre": "Ambiance Pop II", "fichier": "LaserBeat 8 - Ambiance Pop II.mp3", "playlist": "Ambiance accueil", "bpm": 0, "duree": 118.9, "lufs": -16.7 }
 ]

@@ -8,6 +8,13 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.15.0', date: '18 novembre 2026',
+      items: [
+        "Ambiance accueil : 2 musiques fournies, Ambiance Pop et Ambiance Pop II. Une pop douce pour l'accueil, à part de la musique des parties.",
+        "Elles sont dans la page « Ambiance accueil » et ne se mélangent pas à Laser Arena."
+      ]
+    },
+    {
       v: '2.14.0', date: '12 novembre 2026',
       items: [
         "Lire ensuite : clic droit sur un morceau, puis « Lire ensuite ». Il passe juste après celui en cours, puis la lecture reprend normalement.",
