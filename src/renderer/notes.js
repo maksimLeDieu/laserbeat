@@ -8,6 +8,13 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.18.0', date: '19 novembre 2026',
+      items: [
+        "Musique ML existe aussi pour Mac : il se télécharge sur le site, à côté de la version Windows.",
+        "Sur Mac, l'appli prévient quand une nouvelle version existe : le bouton « Télécharger » ouvre le site."
+      ]
+    },
+    {
       v: '2.17.0', date: '19 novembre 2026',
       items: [
         "Multi-écoute : le bouton « Multi-écoute », en haut, ajoute une deuxième écoute, l'Accueil, en plus de l'Arène. Les deux jouent en même temps.",

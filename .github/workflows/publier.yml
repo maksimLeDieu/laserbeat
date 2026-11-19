@@ -1,10 +1,11 @@
-# Vérifie puis publie LaserBeat.
+# Vérifie puis publie LaserBeat (Windows, puis Mac).
 # À chaque envoi sur main (ou à la main depuis l'onglet Actions) :
 #   1. compilation de l'installateur sur Windows ;
 #   2. tests automatiques sur le logiciel compilé (lecture, enchaînement, Agenda, réglages,
 #      import/suppression, plantage, mise à jour, sortie audio, redémarrage de nuit…) ;
 #   3. si TOUS les tests passent et que le numéro de version de package.json n'est pas encore publié,
 #      création de la Release GitHub « vX.Y.Z » : les PC équipés de LaserBeat l'installent tout seuls.
+#   4. version Mac : compilée et testée sur un Mac, puis ajoutée à la même Release (Musique-ML-Mac.dmg).
 # Un seul test en échec = rien n'est publié.
 name: Vérifier et publier
 
@@ -68,4 +69,47 @@ jobs:
             gh release create "$v" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --title "LaserBeat ${v#v}" --notes "Mise à jour de LaserBeat ${v#v}. Les PC équipés la récupèrent et l'installent automatiquement." \
               $files
+          fi
+
+  # Version Mac : compilée et testée sur un Mac de GitHub, une fois la version Windows publiée,
+  # puis ajoutée à la même Release (fichier Musique-ML-Mac.dmg, proposé par le site de téléchargement).
+  mac:
+    needs: windows
+    runs-on: macos-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Version Mac déjà publiée ?
+        id: deja
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v="v$(node -p "require('./package.json').version")"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "$v" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx Musique-ML-Mac.dmg; then
+            echo "mode=skip" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=upload" >> "$GITHUB_OUTPUT"
+          fi
+      - run: npm ci
+      - name: Compiler le .dmg
+        run: npx electron-builder --mac dmg --universal --publish never -c.productName="Musique ML"
+      - name: Tests automatiques sur le logiciel compilé
+        run: npm test
+        env:
+          LASERBEAT_EXE: dist/mac-universal/Musique ML.app/Contents/MacOS/Musique ML
+      - name: Ajouter le .dmg à la Release
+        if: steps.deja.outputs.mode == 'upload'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v="${{ steps.deja.outputs.version }}"
+          if gh release view "$v" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$v" dist/Musique-ML-Mac.dmg --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            echo "Pas de Release $v (version Windows non publiée) : rien à ajouter."
           fi
