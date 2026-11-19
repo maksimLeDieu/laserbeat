@@ -12,6 +12,8 @@ let version = '';
 let updateReady = null;
 try { updateReady = ipcRenderer.sendSync('update:get') || null; } catch (e) { updateReady = null; }
 try { version = ipcRenderer.sendSync('app:version') || ''; } catch (e) { version = ''; }
+let updateAvailable = null;
+try { updateAvailable = ipcRenderer.sendSync('update:avail-get') || null; } catch (e) { updateAvailable = null; }
 
 let acct = null;
 try { acct = ipcRenderer.sendSync('acct:state') || null; } catch (e) { acct = null; }
@@ -28,6 +30,7 @@ contextBridge.exposeInMainWorld('laserbeat', {
     setProfile: (key, value) => ipcRenderer.send('prof:set', String(key), value)
   },
   version,
+  platform: process.platform,
   store: {
     get: key => (Object.prototype.hasOwnProperty.call(cfg, key) ? cfg[key] : undefined),
     set: (key, value) => { cfg[key] = value; ipcRenderer.send('cfg:set', key, value); }
@@ -44,6 +47,10 @@ contextBridge.exposeInMainWorld('laserbeat', {
   installUpdate: () => ipcRenderer.send('update:install'),
   launchUpdateCheck: () => ipcRenderer.invoke('update:launch-check'),
   checkUpdate: () => ipcRenderer.invoke('update:check'),
+  // Mac : la nouvelle version se télécharge sur le site
+  updateAvailable,
+  onUpdateAvailable: cb => ipcRenderer.on('update:available', (e, v) => cb(String(v))),
+  openSite: () => ipcRenderer.send('update:site'),
   setPlaying: playing => ipcRenderer.send('player:state', !!playing),
   log: msg => ipcRenderer.send('log', String(msg))
 });

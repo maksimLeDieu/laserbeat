@@ -1288,6 +1288,7 @@ function act(n,d){
   case 'play-zone':ctxClose();if(MULTI)Z.start(d.pl,d.id);break;
   case 'upd-check':updCheck();break;
   case 'upd-install':installUpd('paramètres');break;
+  case 'upd-site':if(LB&&LB.openSite)LB.openSite();break;
   case 'notes':showNotes(null);break;
   case 'legal':about(false);go('legal',d.id);break;
   case 'acct-login':if(ACC)loginSheet();break;
@@ -1775,11 +1776,15 @@ function updReady(v){if(!v)return;updV=v;updPaint();const el=$('#upd');el.hidden
 /* La mise à jour téléchargée ne s'installe que sur décision : bouton, ou fermeture volontaire de Musique ML. */
 let updV=null,updDone=false;
 /* Mise à jour à la demande (Paramètres > Mise à jour) : recherche, téléchargement, puis « Installer maintenant ». */
-let updState='idle',updNew=null; // idle | checking | none | downloading | error
+let updState='idle',updNew=null; // idle | checking | none | downloading | available | error
+const MAC=!!(LB&&LB.platform==='darwin');
+/* Mac : la nouvelle version se télécharge sur le site (macOS ne laisse pas l'appli se remplacer toute seule). */
+function updAvail(v){if(!v||updV)return;updState='available';updNew=v;updPaint();const el=$('#upd');el.hidden=false;el.innerHTML=`<button class="pill pri" id="updBtn" title="Télécharger la version ${esc(v)}">${ic('bolt')}<span>Nouvelle version ${esc(v)}</span></button><div class="sub">Téléchargez-la sur le site, puis remplacez Musique ML dans le dossier Applications. Réglages et favoris sont gardés.</div>`;$('#updBtn').onclick=()=>{if(LB.openSite)LB.openSite()}}
 function updRow(){
  const v=LB&&LB.version?LB.version:'';
+ if(updState==='available')return setRow('bolt','Version '+esc(updNew||'')+' disponible','Vous avez la version '+esc(v)+'. Téléchargez la nouvelle sur le site, ouvrez-la, puis glissez Musique ML dans Applications pour remplacer l\'ancienne. Réglages et favoris sont gardés.',`<button class="pill pri" data-act="upd-site">Télécharger</button>`);
  if(updV)return setRow('bolt','Version '+esc(updV)+' prête','Vous avez la version '+esc(v)+'. L\'installation prend quelques secondes : Musique ML redémarre et la musique reprend.',`<button class="pill pri" data-act="upd-install">Installer maintenant</button>`);
- const txt={idle:'Musique ML se met aussi à jour tout seul à chaque lancement.',checking:'Recherche d\'une nouvelle version…',none:'Musique ML est à jour.',
+ const txt={idle:MAC?'Musique ML vérifie à chaque lancement s\'il existe une nouvelle version.':'Musique ML se met aussi à jour tout seul à chaque lancement.',checking:'Recherche d\'une nouvelle version…',none:'Musique ML est à jour.',
   downloading:'Version '+esc(updNew||'')+' trouvée : téléchargement en cours, sans couper la musique…',error:'Recherche impossible. Vérifiez la connexion Internet, puis réessayez.'}[updState];
  const busy=updState==='checking'||updState==='downloading';
  return setRow('bolt','Musique ML '+esc(v),`<span id="updTxt" role="status">${txt}</span>`,`<button class="pill" data-act="upd-check"${busy?' disabled':''}>${busy?'Patientez…':'Rechercher une mise à jour'}</button>`);
@@ -1790,6 +1795,7 @@ async function updCheck(){
  updState='checking';updPaint();
  let r=null;try{r=await LB.checkUpdate()}catch(e){r=null}
  if(r&&r.status==='ready'){updReady(r.version);return}
+ if(r&&r.status==='available'){updAvail(r.version);return}
  if(r&&r.status==='downloading'){updState='downloading';updNew=r.version||null}
  else updState=r&&r.status==='none'?'none':'error';
  updPaint();
@@ -1820,6 +1826,7 @@ async function installUpd(why){
  LB.installUpdate();
 }
 if(LB&&LB.onUpdate){updReady(LB.updateReady);LB.onUpdate(updReady)}
+if(LB&&LB.onUpdateAvailable){updAvail(LB.updateAvailable);LB.onUpdateAvailable(updAvail)}
 const h0=(location.hash||'').slice(1);
 V={name:['home','all','lib'].includes(h0)?h0:'home',arg:null};
 render();

@@ -95,7 +95,32 @@
         "from": "THIRD-PARTY-NOTICES.txt",
         "to": "THIRD-PARTY-NOTICES.txt"
       }
-    ]
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "assets/laserbeat.png",
+      "category": "public.app-category.music",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "notarize": false,
+      "artifactName": "Musique-ML-Mac.${ext}",
+      "extendInfo": {
+        "CFBundleDisplayName": "Musique ML",
+        "CFBundleName": "Musique ML",
+        "LSApplicationCategoryType": "public.app-category.music"
+      }
+    },
+    "dmg": {
+      "title": "Musique ML",
+      "artifactName": "Musique-ML-Mac.${ext}"
+    }
   },
   "dependencies": {
     "electron-updater": "6.8.11"

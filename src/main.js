@@ -165,7 +165,17 @@ function start() {
       user: path.join(app.getPath('userData'), 'musiques')
     };
     try { fs.mkdirSync(musicDirs.user, { recursive: true }); } catch (err) { log('mkdir', err); }
-    Menu.setApplicationMenu(null);
+    // Mac : la barre de menus du haut existe toujours ; on y garde le strict nécessaire (Quitter, Copier/Coller, Fenêtre).
+    Menu.setApplicationMenu(process.platform === 'darwin' ? Menu.buildFromTemplate([
+      { label: 'Musique ML', submenu: [
+        { role: 'hide', label: 'Masquer Musique ML' }, { role: 'hideOthers', label: 'Masquer les autres' }, { role: 'unhide', label: 'Tout afficher' },
+        { type: 'separator' }, { role: 'quit', label: 'Quitter Musique ML' }] },
+      { label: 'Édition', submenu: [
+        { role: 'undo', label: 'Annuler' }, { role: 'redo', label: 'Rétablir' }, { type: 'separator' },
+        { role: 'cut', label: 'Couper' }, { role: 'copy', label: 'Copier' }, { role: 'paste', label: 'Coller' }, { role: 'selectAll', label: 'Tout sélectionner' }] },
+      { label: 'Fenêtre', submenu: [
+        { role: 'minimize', label: 'Placer dans le Dock' }, { role: 'zoom', label: 'Agrandir' }, { role: 'togglefullscreen', label: 'Plein écran' }] }
+    ]) : null);
     lockDown();
     log('démarrage', app.getVersion(), musicDirs);
     createWindow();
@@ -311,7 +321,7 @@ function start() {
         noLink: true,
         title: 'Musique ML',
         message: 'Fermer Musique ML ?',
-        detail: 'Réduire : la musique continue, Musique ML reste dans la barre des tâches.\nQuitter : la musique s\'arrête.'
+        detail: 'Réduire : la musique continue, Musique ML reste dans ' + (process.platform === 'darwin' ? 'le Dock' : 'la barre des tâches') + '.\nQuitter : la musique s\'arrête.'
       }).then(r => {
         asking = false;
         if (!win || win.isDestroyed()) return;

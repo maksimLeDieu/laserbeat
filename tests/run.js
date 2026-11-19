@@ -622,6 +622,25 @@ test('Mise à jour à la demande : Paramètres > Mise à jour, recherche puis «
   await close(app);
 });
 
+test('Mac : nouvelle version annoncée, à télécharger sur le site, sans couper la musique', async () => {
+  const dir = newDataDir('maj-mac');
+  const { app, w, errors } = await launch(dir, { LASERBEAT_TEST_SITE_UPDATE: '9.9.9' });
+  await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  await w.click('#bBrand');
+  await w.click('[data-act="upd-check"]');
+  assert(await waitFor(async () => (await w.textContent('#setUpd')).includes('9.9.9 disponible'), 3000, 50), 'nouvelle version non annoncée');
+  assert(await w.isVisible('#updBtn'), 'bouton « Nouvelle version » absent de la colonne de gauche');
+  await w.click('[data-act="upd-site"]');
+  await w.waitForTimeout(500);
+  const logTxt = fs.readFileSync(path.join(dir, 'laserbeat.log'), 'utf8');
+  assert(logTxt.includes('ouverture du site de téléchargement'), 'le site n\'est pas ouvert');
+  assert(await playing(w), 'l\'annonce a coupé la musique');
+  assert(!(await w.isVisible('#boot')), 'écran de mise à jour affiché alors que rien ne s\'installe');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
 test('Fin de playlist : la musique continue (répétition de la playlist par défaut)', async () => {
   const { app, w } = await launch(newDataDir('fin-playlist'));
   await w.click('.pli >> text=LaserBeats');
