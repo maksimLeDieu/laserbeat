@@ -77,12 +77,14 @@ test('Démarrage : fenêtre Musique ML, sans menu, fichiers locaux, 15 morceaux'
   const { app, w, errors } = await launch(newDataDir('demarrage'));
   const info = await app.evaluate(({ BrowserWindow, Menu }) => {
     const b = BrowserWindow.getAllWindows()[0];
-    return { n: BrowserWindow.getAllWindows().length, title: b.getTitle(), size: b.getSize(), min: b.getMinimumSize(), menu: Menu.getApplicationMenu(), url: b.webContents.getURL(), throttle: b.webContents.getBackgroundThrottling() };
+    return { n: BrowserWindow.getAllWindows().length, title: b.getTitle(), size: b.getSize(), min: b.getMinimumSize(), menu: Menu.getApplicationMenu() && Menu.getApplicationMenu().items.map(i => i.label), url: b.webContents.getURL(), throttle: b.webContents.getBackgroundThrottling() };
   });
   assert(info.n === 1, 'une seule fenêtre attendue');
   assert(info.title === 'Musique ML', 'titre : ' + info.title);
   assert(info.min[0] === 1000 && info.min[1] === 640, 'taille minimale');
-  assert(info.menu === null, 'menu par défaut présent');
+  // Mac : la barre de menus du haut existe toujours, réduite à « Musique ML », « Édition », « Fenêtre »
+  if (process.platform === 'darwin') assert(JSON.stringify(info.menu) === JSON.stringify(['Musique ML', 'Édition', 'Fenêtre']), 'menu Mac : ' + JSON.stringify(info.menu));
+  else assert(info.menu === null, 'menu par défaut présent');
   assert(info.url.startsWith('file:'), 'interface non locale : ' + info.url);
   assert(info.throttle === false, 'ralentissement en arrière-plan actif');
   const n = await w.evaluate(() => window.laserbeat.tracks.length);
