@@ -1007,6 +1007,16 @@ test('Multi-écoute : Arène et Accueil en même temps, chacune sa playlist, son
   await w.$eval('#zVol', el => { el.value = '0.2'; el.dispatchEvent(new Event('input')); });
   await w.waitForTimeout(300);
   assert((await zone(w))[0].v < 0.21 && Math.abs((await arena(w))[0].v - av) < 0.001, 'les volumes ne sont pas séparés');
+  // barre de progression de l'accueil : un clic au milieu avance le morceau, l'arène ne bouge pas
+  const at0 = await w.evaluate(() => document.querySelector('audio:not(.zone2):not([paused])') && [...document.querySelectorAll('audio:not(.zone2)')].find(x => !x.paused).currentTime);
+  const zb = await w.$('#zBar'); const box = await zb.boundingBox();
+  await w.mouse.click(box.x + box.width * 0.5, box.y + box.height / 2);
+  await w.waitForTimeout(400);
+  const zp = await w.evaluate(() => { const a = [...document.querySelectorAll('audio.zone2')].find(x => !x.paused); const t = window.laserbeat.tracks.find(x => x.id === a.dataset.tid); return a.currentTime / (t.end || a.duration); });
+  assert(zp > 0.4 && zp < 0.6, 'clic sur la barre de l\'accueil sans effet : ' + zp.toFixed(2));
+  const at1 = await w.evaluate(() => [...document.querySelectorAll('audio:not(.zone2)')].find(x => !x.paused).currentTime);
+  assert(Math.abs(at1 - at0) < 3, 'le clic sur la barre de l\'accueil a déplacé l\'arène');
+  assert((await w.textContent('#zTmC')) !== '0:00', 'temps de l\'accueil non affiché');
   // morceau suivant de l'accueil : l'arène ne bouge pas
   const arenaTitle = await title(w);
   await w.click('#zNext');

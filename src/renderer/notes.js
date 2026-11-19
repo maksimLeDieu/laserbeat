@@ -8,6 +8,13 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.18.1', date: '19 novembre 2026',
+      items: [
+        "Multi-écoute : la barre de progression de l'Accueil se clique, comme celle de l'Arène, pour avancer ou reculer dans le morceau.",
+        "Le temps écoulé et la durée du morceau de l'Accueil s'affichent de chaque côté de sa barre."
+      ]
+    },
+    {
       v: '2.18.0', date: '19 novembre 2026',
       items: [
         "Musique ML existe aussi pour Mac : il se télécharge sur le site, à côté de la version Windows.",

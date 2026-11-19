@@ -443,7 +443,10 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
 .zmeta{display:flex;flex-direction:column;min-width:0;flex:1}
 .zmeta b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .zmeta span{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.zprog{width:clamp(80px,14vw,220px);display:flex}
+.zprog{width:clamp(150px,20vw,300px);display:flex;align-items:center;gap:8px}
+.zprog .tm{font-size:11px;min-width:30px}
+#zTmC{text-align:right}
+.zprog .bar{cursor:pointer}
 .zout{font-size:12px;color:var(--mut);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;flex:none}
 .zout:hover{color:#fff}.zout.lost{color:#ffb4b4}
 .ibtn.on{color:var(--ac2)}
@@ -510,7 +513,7 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
   <button class="ibtn" id="zNext" title="Morceau suivant (accueil)"></button>
   <button class="ibtn" id="zShuf" title="Aléatoire (accueil)"></button>
   <div class="zmeta"><b id="zT">Rien en lecture</b><span id="zS"></span></div>
-  <div class="zprog"><div class="bar"><i id="zBarF"></i></div></div>
+  <div class="zprog"><span class="tm" id="zTmC">0:00</span><div class="bar" id="zBar" title="Cliquez pour avancer ou reculer dans le morceau (accueil)"><i id="zBarF"></i></div><span class="tm" id="zTm">0:00</span></div>
   <div class="vol"><button class="ibtn" id="zVolB" title="Volume (accueil)"></button><input type="range" id="zVol" min="0" max="1" step="0.01" aria-label="Volume de l'accueil"></div>
   <span class="zout" id="zOut" title="Sortie son de l'accueil (modifiable dans Paramètres)"></span>
  </section>
@@ -1716,7 +1719,14 @@ Z=(function(){
   const arenaPl=P.i>=0?P.plId:null;
   return PL.filter(p=>tracksOf(p.id).length).map(p=>{const busy=p.id===arenaPl&&p.id!==S.pl;return `<option value="${esc(p.id)}"${p.id===S.pl?' selected':''}${busy?' disabled':''}>${esc(p.name)}${busy?' (Arène)':''}</option>`}).join('');
  }
- function paintProg(){const d=endOf(a),c=Math.min(a.currentTime||0,d||0);$('#zBarF').style.width=(d?c/d*100:0)+'%'}
+ function paintProg(){const d=q[i]?endOf(a):0,c=Math.min(a.currentTime||0,d||0);$('#zBarF').style.width=(d?c/d*100:0)+'%';$('#zTmC').textContent=fmt(d?c:0);$('#zTm').textContent=fmt(d||0)}
+ // clic sur la barre : avance ou recule dans le morceau de l'accueil (comme pour l'arène)
+ function seek(e){
+  if(!q[i])return;const d=endOf(a);if(!d)return;
+  const r=e.currentTarget.getBoundingClientRect();
+  stopFade();a.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*d;
+  lastT=-1;stuck=0;save();paintProg();
+ }
  function paintVol(){$('#zVol').value=S.vol;$('#zVol').style.setProperty('--v',S.vol*100+'%');$('#zVolB').innerHTML=ic(S.vol===0?'mute':'vol')}
  function paint(){
   const opts=plOpts();
@@ -1736,6 +1746,7 @@ Z=(function(){
  }
  $('#zPlay').onclick=toggle;
  $('#zNext').onclick=()=>{if(i<0)start(S.pl);else next(false)};
+ $('#zBar').addEventListener('click',seek);
  $('#zShuf').onclick=()=>{S.shuffle=!S.shuffle;save();paint()};
  $('#zVol').oninput=e=>setVol(+e.target.value);
  $('#zVolB').onclick=()=>setVol(S.vol===0?.6:0);
