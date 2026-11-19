@@ -550,8 +550,10 @@ test('Aléatoire : aucun morceau rejoué avant que toute la playlist soit passé
   // fin de morceau naturelle (avec fondu) : le suivant n'est pas un morceau déjà passé dans le tour
   await w.click('#bNext'); await w.waitForTimeout(400);
   const a = await title(w);
+  assert(await waitFor(() => playing(w), 8000, 200), 'pas de lecture après « suivant »');
+  await w.waitForTimeout(1000); // machine lente (Mac de GitHub) : le morceau doit être bien chargé avant d'aller vers la fin
   await seekNearEnd(w, 4);
-  assert(await waitFor(async () => (await title(w)) !== a, 8000, 200), 'pas d\'enchaînement');
+  assert(await waitFor(async () => (await title(w)) !== a, 12000, 200), 'pas d\'enchaînement');
   // après un redémarrage, le tour continue : pas de répétition
   await w.waitForTimeout(2500);
   const seenBefore = await w.evaluate(() => JSON.parse(JSON.stringify(window.laserbeat.store.get('lb_resume').seen)));
