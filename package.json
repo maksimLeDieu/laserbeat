@@ -58,7 +58,13 @@
       ],
       "icon": "build/icon.ico",
       "executableName": "LaserBeat",
-      "legalTrademarks": "Musique ML"
+      "legalTrademarks": "Musique ML",
+      "extraFiles": [
+        {
+          "from": "THIRD-PARTY-NOTICES.txt",
+          "to": "THIRD-PARTY-NOTICES.txt"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -90,12 +96,6 @@
       "repo": "laserbeat",
       "releaseType": "release"
     },
-    "extraFiles": [
-      {
-        "from": "THIRD-PARTY-NOTICES.txt",
-        "to": "THIRD-PARTY-NOTICES.txt"
-      }
-    ],
     "mac": {
       "target": [
         {
@@ -115,7 +115,13 @@
         "CFBundleDisplayName": "Musique ML",
         "CFBundleName": "Musique ML",
         "LSApplicationCategoryType": "public.app-category.music"
-      }
+      },
+      "extraResources": [
+        {
+          "from": "THIRD-PARTY-NOTICES.txt",
+          "to": "THIRD-PARTY-NOTICES.txt"
+        }
+      ]
     },
     "dmg": {
       "title": "Musique ML",
