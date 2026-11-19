@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Télécharger Musique ML</title>
-<meta name="description" content="Télécharger Musique ML, le lecteur de musique des salles de laser game, pour Windows 10 et 11.">
+<meta name="description" content="Télécharger Musique ML, le lecteur de musique des salles de laser game, pour Windows et Mac.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='23' fill='%238b5cf6'/%3E%3Cpath d='M17 72 V28 H27 L39 47 L51 28 H61 V72 H52 V45 L39 64 L26 45 V72 Z M66 28 H75.5 V63 H86 V72 H66 Z' fill='%230b0710'/%3E%3C/svg%3E">
 <style>
@@ -18,21 +18,30 @@
   --accent:#8b72ff; --pink:#ff6fa3; color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.55;padding:48px 16px 56px}
-.wrap{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
 header{display:flex;align-items:center;gap:16px}
 header svg{width:60px;height:60px;flex:none;display:block}
 h1{font-size:30px;line-height:1.15;margin:0;letter-spacing:-.01em}
 .sub{color:var(--mut);margin:2px 0 0}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:14px}
-.dl{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;font-size:18px;border-radius:999px;padding:16px 24px}
+.dls{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.dls{grid-template-columns:1fr}}
+.dl{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;border-radius:16px;padding:16px 14px;border:2px solid var(--accent);color:var(--accent);text-align:center}
+.dl b{display:flex;align-items:center;gap:8px;font-size:18px}
+.dl span{font-size:13px;opacity:.85;font-variant-numeric:tabular-nums}
+.dl.pri{background:var(--accent);color:#fff}
 .dl:hover{filter:brightness(1.08)}
 .dl:focus-visible{outline:3px solid var(--pink);outline-offset:3px}
+.dl[hidden]{display:none}
 .meta{color:var(--mut);font-size:14px;text-align:center;margin:0;font-variant-numeric:tabular-nums}
-h2{font-size:19px;margin:0}
-ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+details{border-top:1px solid var(--line);padding-top:12px}
+details:first-of-type{border-top:0;padding-top:0}
+summary{cursor:pointer;font-weight:700;font-size:18px}
+summary:focus-visible{outline:3px solid var(--pink);outline-offset:3px;border-radius:6px}
+ol{margin:12px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
 ol li::marker{color:var(--accent);font-weight:700}
 b.k{font-weight:600;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:14px;white-space:nowrap}
-.note{font-size:14px;color:var(--mut);margin:0}
+.note{font-size:14px;color:var(--mut);margin:10px 0 0}
 footer{font-size:13px;color:var(--mut);text-align:center}
 </style>
 </head>
@@ -52,40 +61,69 @@ footer{font-size:13px;color:var(--mut);text-align:center}
   </header>
 
   <section class="card">
-    <a class="dl" id="dl" href="https://github.com/maksimLeDieu/laserbeat/releases/latest/download/LaserBeat-Setup.exe">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
-      Télécharger pour Windows
-    </a>
-    <p class="meta" id="meta">Dernière version · Windows 10 et 11 (64 bits)</p>
+    <div class="dls">
+      <a class="dl pri" id="dlWin" href="https://github.com/maksimLeDieu/laserbeat/releases/latest/download/LaserBeat-Setup.exe">
+        <b><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Windows</b>
+        <span id="szWin">Windows 10 et 11</span>
+      </a>
+      <a class="dl" id="dlMac" href="https://github.com/maksimLeDieu/laserbeat/releases/latest/download/Musique-ML-Mac.dmg">
+        <b><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Mac</b>
+        <span id="szMac">macOS 11 ou plus récent</span>
+      </a>
+    </div>
+    <p class="meta" id="meta">Dernière version</p>
   </section>
 
   <section class="card">
-    <h2>Installer</h2>
-    <ol>
-      <li>Ouvrez le fichier téléchargé <b>LaserBeat-Setup.exe</b>.</li>
-      <li>Si Windows affiche « Windows a protégé votre ordinateur », cliquez sur <b class="k">Informations complémentaires</b> puis <b class="k">Exécuter quand même</b>.</li>
-      <li>Cliquez sur <b class="k">Suivant</b> puis <b class="k">Installer</b>. Musique ML apparaît sur le Bureau et dans le menu Démarrer.</li>
-    </ol>
-    <p class="note">Ensuite, Musique ML se met à jour tout seul. Déjà installé ? Le nouvel installateur garde les réglages, favoris et morceaux ajoutés.</p>
+    <details id="howWin" open>
+      <summary>Installer sur Windows</summary>
+      <ol>
+        <li>Ouvrez le fichier téléchargé <b>LaserBeat-Setup.exe</b>.</li>
+        <li>Si Windows affiche « Windows a protégé votre ordinateur », cliquez sur <b class="k">Informations complémentaires</b> puis <b class="k">Exécuter quand même</b>.</li>
+        <li>Cliquez sur <b class="k">Suivant</b> puis <b class="k">Installer</b>. Musique ML apparaît sur le Bureau et dans le menu Démarrer.</li>
+      </ol>
+      <p class="note">Ensuite, Musique ML se met à jour tout seul. Déjà installé ? Le nouvel installateur garde les réglages, favoris et morceaux ajoutés.</p>
+    </details>
+    <details id="howMac">
+      <summary>Installer sur Mac</summary>
+      <ol>
+        <li>Ouvrez le fichier téléchargé <b>Musique-ML-Mac.dmg</b>, puis glissez <b>Musique ML</b> sur le dossier <b>Applications</b>.</li>
+        <li>Ouvrez Musique ML depuis le dossier Applications. macOS indique qu'il ne peut pas vérifier l'appli : cliquez sur <b class="k">Terminé</b> (ou <b class="k">OK</b>).</li>
+        <li>Ouvrez <b class="k">Réglages Système</b> › <b class="k">Confidentialité et sécurité</b>, descendez jusqu'à Musique ML et cliquez sur <b class="k">Ouvrir quand même</b>. À faire une seule fois.</li>
+      </ol>
+      <p class="note">Mises à jour : Musique ML vous prévient quand une nouvelle version existe. Téléchargez-la ici et glissez-la dans Applications pour remplacer l'ancienne : réglages et favoris sont gardés.</p>
+    </details>
   </section>
 
   <footer>Usage interne · Quimper, Brest, Saint-Brieuc</footer>
 </div>
 <script>
-fetch("https://api.github.com/repos/maksimLeDieu/laserbeat/releases/latest")
-  .then(function(r){ return r.ok ? r.json() : null; })
-  .then(function(d){
-    if (!d) return;
-    var a = (d.assets || []).find(function(x){ return /\.exe$/.test(x.name); });
-    var v = String(d.tag_name || "").replace(/^v/, "");
-    var date = d.published_at ? new Date(d.published_at).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
-    var parts = ["Version " + v];
-    if (a) parts.push(Math.round(a.size / 1048576) + " Mo");
-    if (date) parts.push(date);
-    parts.push("Windows 10 et 11");
-    document.getElementById("meta").textContent = parts.join(" · ");
-  })
-  .catch(function(){});
+(function(){
+  var mac = /Mac/.test(navigator.platform || navigator.userAgent) && !/iPhone|iPad/.test(navigator.userAgent);
+  var win = document.getElementById("dlWin"), mc = document.getElementById("dlMac");
+  if (mac){
+    win.classList.remove("pri"); mc.classList.add("pri");
+    win.parentNode.insertBefore(mc, win);
+    document.getElementById("howMac").open = true; document.getElementById("howWin").open = false;
+    var c = document.getElementById("howMac"); c.parentNode.insertBefore(c, document.getElementById("howWin"));
+  }
+  fetch("https://api.github.com/repos/maksimLeDieu/laserbeat/releases/latest")
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (!d) return;
+      var as = d.assets || [];
+      var w = as.find(function(x){ return /\.exe$/.test(x.name); });
+      var m = as.find(function(x){ return x.name === "Musique-ML-Mac.dmg"; });
+      var mo = function(a){ return Math.round(a.size / 1048576) + " Mo"; };
+      if (w) document.getElementById("szWin").textContent = "Windows 10 et 11 · " + mo(w);
+      if (m) document.getElementById("szMac").textContent = "macOS 11 ou plus · " + mo(m);
+      else { mc.hidden = true; document.getElementById("howMac").hidden = true; win.classList.add("pri"); document.getElementById("howWin").open = true; }
+      var v = String(d.tag_name || "").replace(/^v/, "");
+      var date = d.published_at ? new Date(d.published_at).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
+      document.getElementById("meta").textContent = "Version " + v + (date ? " · " + date : "");
+    })
+    .catch(function(){});
+})();
 </script>
 </body>
 </html>
