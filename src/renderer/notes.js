@@ -8,8 +8,9 @@
   'use strict';
   g.NOTES = [
     {
-      v: '2.14.1', date: '18 novembre 2026',
+      v: '2.15.0', date: '19 novembre 2026',
       items: [
+        "Ambiance accueil : 2 musiques fournies, Ambiance Pop et Ambiance Pop II. Une pop douce pour l'accueil, à part de la musique des parties.",
         "Fondu enchaîné corrigé : les deux morceaux se mélangent vraiment pendant 3 secondes. Avant, le fondu se faisait pendant le silence à la fin des fichiers, d'où un blanc entre deux morceaux.",
         "Le silence à la fin des morceaux est maintenant sauté, même quand le fondu est désactivé."
       ]

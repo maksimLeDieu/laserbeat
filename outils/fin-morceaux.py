@@ -14,12 +14,17 @@ import subprocess
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOSSIER = os.path.join(RACINE, 'musiques')
-SEUIL_DB = -45      # en dessous : silence
+# Seuil de « fin de la musique » : 20 dB sous le niveau moyen du morceau (lufs), entre -45 et -28 dB.
+# Un morceau doux qui se termine par une longue baisse de volume est ainsi coupé quand il devient inaudible.
+def seuil(lufs):
+    return max(-45.0, min(-28.0, (lufs if isinstance(lufs, (int, float)) else -8.0) - 20.0))
+
+
 MIN_SILENCE = 0.25  # secondes
 
 
-def fin_musique(chemin):
-    out = subprocess.run(['ffmpeg', '-nostats', '-i', chemin, '-af', f'silencedetect=noise={SEUIL_DB}dB:d={MIN_SILENCE}', '-f', 'null', '-'],
+def fin_musique(chemin, lufs=None):
+    out = subprocess.run(['ffmpeg', '-nostats', '-i', chemin, '-af', f'silencedetect=noise={seuil(lufs):.1f}dB:d={MIN_SILENCE}', '-f', 'null', '-'],
                          capture_output=True, text=True).stderr
     duree = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', chemin],
                                  capture_output=True, text=True).stdout.strip())
@@ -35,7 +40,7 @@ def main():
     p = os.path.join(DOSSIER, 'morceaux.json')
     liste = json.load(open(p, encoding='utf-8'))
     for e in liste:
-        fin, duree = fin_musique(os.path.join(DOSSIER, e['fichier']))
+        fin, duree = fin_musique(os.path.join(DOSSIER, e['fichier']), e.get('lufs'))
         e['fin'] = fin
         print(f"{e['titre']:<20} fichier {duree:5.1f} s   musique {fin:5.1f} s   silence final {duree - fin:.1f} s")
     texte = '[\n' + ',\n'.join('  ' + json.dumps(e, ensure_ascii=False).replace('{"', '{ "').replace('}', ' }') for e in liste) + '\n]\n'
