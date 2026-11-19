@@ -421,7 +421,7 @@ test('Fondu enchaîné : le suivant monte pendant que le premier descend, jamais
   const samples = await w.evaluate(() => new Promise(res => {
     const out = [], t0 = performance.now();
     const id = setInterval(() => {
-      const d = [...document.querySelectorAll('audio')].map(a => ({ on: !a.paused && !!a.getAttribute('src'), v: a.volume }));
+      const d = [...document.querySelectorAll('audio:not(.zone2)')].map(a => ({ on: !a.paused && !!a.getAttribute('src'), v: a.volume }));
       out.push({ t: performance.now() - t0, decks: d, title: document.querySelector('#npT').textContent });
       if (performance.now() - t0 > 9000) { clearInterval(id); res(out); }
     }, 100);
@@ -899,7 +899,7 @@ test('Sortie son : choix dans Paramètres, mémorisé, pause si débranchée pui
     HTMLMediaElement.prototype.setSinkId = async function (id) { Object.defineProperty(this, 'sinkId', { value: id, configurable: true }); };
     navigator.mediaDevices.dispatchEvent(new Event('devicechange'));
   });
-  const sinks = w => w.evaluate(() => [...document.querySelectorAll('audio')].map(a => a.sinkId));
+  const sinks = w => w.evaluate(() => [...document.querySelectorAll('audio:not(.zone2)')].map(a => a.sinkId));
   let { app, w, errors } = await launch(dir);
   await fake(w); await w.waitForTimeout(2000);
   await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
@@ -934,6 +934,93 @@ test('Sortie son : choix dans Paramètres, mémorisé, pause si débranchée pui
   await w.click('#bBrand');
   await w.selectOption('select[data-k="sink"]', '');
   assert(await waitFor(async () => (await sinks(w)).every(x => x === ''), 3000, 100), 'retour à la sortie par défaut impossible');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
+test('Multi-écoute : Arène et Accueil en même temps, chacune sa playlist, son volume et sa sortie son', async () => {
+  const dir = newDataDir('multi');
+  const fake = w => w.evaluate(() => {
+    window.__outs = [
+      { kind: 'audiooutput', deviceId: 'default', groupId: 'g0', label: 'Par défaut' },
+      { kind: 'audiooutput', deviceId: 'arene-1', groupId: 'g1', label: 'Ampli arène' },
+      { kind: 'audiooutput', deviceId: 'accueil-2', groupId: 'g2', label: 'Enceintes accueil' }
+    ];
+    navigator.mediaDevices.enumerateDevices = async () => window.__outs;
+    HTMLMediaElement.prototype.setSinkId = async function (id) { Object.defineProperty(this, 'sinkId', { value: id, configurable: true }); };
+    navigator.mediaDevices.dispatchEvent(new Event('devicechange'));
+  });
+  const zone = w => w.evaluate(() => [...document.querySelectorAll('audio.zone2')].filter(a => !a.paused && a.getAttribute('src')).map(a => ({ v: a.volume, sink: a.sinkId, t: a.currentTime })));
+  const arena = w => w.evaluate(() => [...document.querySelectorAll('audio:not(.zone2)')].filter(a => !a.paused && a.getAttribute('src')).map(a => ({ v: a.volume, sink: a.sinkId })));
+  let { app, w, errors } = await launch(dir);
+  await fake(w); await w.waitForTimeout(2000);
+  // désactivée par défaut : rien ne change
+  assert(!(await w.isVisible('#zbar')), 'barre de l\'accueil visible alors que la multi-écoute est désactivée');
+  await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
+  assert(await waitFor(async () => (await arena(w)).length > 0, 10000), 'pas de lecture dans l\'arène');
+  // activation par le bouton du haut
+  await w.click('#bMulti');
+  assert(await w.isVisible('#zbar'), 'barre de l\'accueil absente');
+  assert((await w.getAttribute('#bMulti', 'aria-pressed')) === 'true', 'bouton Multi-écoute non enfoncé');
+  assert((await w.$eval('#zPl', s => s.value)) === 'accueil', 'playlist par défaut de l\'accueil : ' + await w.$eval('#zPl', s => s.value));
+  assert(await w.$eval('#zPl option[value="arena"]', o => o.disabled), 'la playlist de l\'arène est proposée à l\'accueil');
+  assert((await zone(w)).length === 0, 'l\'accueil démarre tout seul à l\'activation');
+  // sorties : une par zone
+  await w.click('#bBrand');
+  await w.selectOption('select[data-k="sink"]', 'arene-1');
+  await w.selectOption('select[data-k="zsink"]', 'accueil-2');
+  await w.waitForTimeout(500);
+  // lecture de l'accueil : les deux zones jouent en même temps, chacune sur sa sortie
+  await w.click('#zPlay');
+  assert(await waitFor(async () => (await zone(w)).length === 1, 8000, 200), 'l\'accueil ne joue pas');
+  const A1 = await arena(w), Z1 = await zone(w);
+  assert(A1.length === 1 && A1[0].sink === 'arene-1', 'arène : ' + JSON.stringify(A1));
+  assert(Z1[0].sink === 'accueil-2', 'accueil : ' + JSON.stringify(Z1));
+  const zt = await w.textContent('#zT');
+  assert(['Ambiance Pop', 'Ambiance Pop II'].includes(zt), 'morceau de l\'accueil : ' + zt);
+  assert(!(await w.textContent('#npT')).startsWith('Ambiance'), 'l\'arène a basculé sur l\'accueil');
+  // volumes séparés
+  const av = (await arena(w))[0].v;
+  await w.$eval('#zVol', el => { el.value = '0.2'; el.dispatchEvent(new Event('input')); });
+  await w.waitForTimeout(300);
+  assert((await zone(w))[0].v < 0.21 && Math.abs((await arena(w))[0].v - av) < 0.001, 'les volumes ne sont pas séparés');
+  // morceau suivant de l'accueil : l'arène ne bouge pas
+  const arenaTitle = await title(w);
+  await w.click('#zNext');
+  assert(await waitFor(async () => (await w.textContent('#zT')) !== zt, 5000, 100), 'suivant de l\'accueil sans effet');
+  assert((await title(w)) === arenaTitle && (await arena(w)).length === 1, 'le suivant de l\'accueil a touché l\'arène');
+  // touches du clavier : elles commandent l'arène seulement
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('media:key', 'playpause'));
+  assert(await waitFor(async () => (await arena(w)).length === 0, 3000, 100), 'la touche lecture/pause ne met pas l\'arène en pause');
+  assert((await zone(w)).length === 1, 'la touche lecture/pause a arrêté l\'accueil');
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('media:key', 'playpause'));
+  assert(await waitFor(async () => (await arena(w)).length === 1, 3000, 100), 'l\'arène ne repart pas');
+  // sortie de l'accueil débranchée : seul l'accueil se met en pause
+  await w.evaluate(() => { window.__outs = window.__outs.filter(o => o.deviceId !== 'accueil-2'); navigator.mediaDevices.dispatchEvent(new Event('devicechange')); });
+  assert(await waitFor(async () => (await zone(w)).length === 0, 6000, 200), 'l\'accueil continue alors que sa sortie est débranchée');
+  assert((await arena(w)).length === 1, 'l\'arène s\'est arrêtée à cause de la sortie de l\'accueil');
+  assert((await w.textContent('#zS')).includes('débranchée'), 'message de sortie débranchée absent de la barre de l\'accueil');
+  await w.evaluate(() => { window.__outs.push({ kind: 'audiooutput', deviceId: 'accueil-2', groupId: 'g2', label: 'Enceintes accueil' }); navigator.mediaDevices.dispatchEvent(new Event('devicechange')); });
+  assert(await waitFor(async () => (await zone(w)).length === 1, 6000, 200), 'l\'accueil ne reprend pas quand sa sortie est rebranchée');
+  assert((await zone(w))[0].sink === 'accueil-2', 'mauvaise sortie pour l\'accueil après rebranchement');
+  // fin de morceau de l'accueil : enchaînement dans l'accueil, l'arène continue
+  const z2 = await w.textContent('#zT');
+  await w.evaluate(() => { const a = [...document.querySelectorAll('audio.zone2')].find(x => !x.paused); const t = window.laserbeat.tracks.find(x => x.id === a.dataset.tid); a.currentTime = (t.end || a.duration) - 4; });
+  assert(await waitFor(async () => (await w.textContent('#zT')) !== z2, 9000, 200), 'pas d\'enchaînement dans l\'accueil');
+  assert((await arena(w)).length >= 1, 'l\'arène s\'est arrêtée pendant l\'enchaînement de l\'accueil');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await w.waitForTimeout(2500);
+  await close(app);
+  // relance : les deux zones reprennent, chacune sur sa sortie
+  ({ app, w, errors } = await launch(dir));
+  await fake(w);
+  assert(await waitFor(async () => (await zone(w)).length === 1 && (await arena(w)).length >= 1, 12000, 300), 'les deux zones ne reprennent pas après relance');
+  assert(await waitFor(async () => (await zone(w))[0].sink === 'accueil-2' && (await arena(w))[0].sink === 'arene-1', 6000, 200), 'sorties perdues après relance');
+  assert(Math.abs((await zone(w))[0].v - 0.2 * 1) < 0.2, 'volume de l\'accueil perdu');
+  // désactivation : l'accueil s'arrête, l'arène continue
+  await w.click('#bMulti');
+  assert(await waitFor(async () => (await zone(w)).length === 0, 3000, 100), 'l\'accueil joue encore après désactivation');
+  assert((await arena(w)).length >= 1 && !(await w.isVisible('#zbar')), 'désactivation incorrecte');
   assert(!errors.length, 'erreurs : ' + errors.join(' | '));
   await close(app);
 });

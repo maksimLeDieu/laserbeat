@@ -433,6 +433,24 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
 .mbox h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ac2);margin:18px 0 6px}
 .mbox p{color:var(--tx2);line-height:1.6;font-size:14px}
 .mbox .foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
+/* ---- multi-écoute : 2e zone « Accueil » ---- */
+.app.multi{grid-template-rows:64px minmax(0,1fr) 56px 80px}
+.zbar{display:none}
+.app.multi .zbar{display:flex;align-items:center;gap:12px;padding:0 14px;border-radius:8px;background:var(--panel);min-width:0}
+.ztag{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ac2);background:rgba(139,92,246,.15);padding:3px 8px;border-radius:999px;flex:none}
+.zarena{display:none}.app.multi .zarena{display:inline-block}
+.zbar .sel{height:32px;max-width:200px}
+.zmeta{display:flex;flex-direction:column;min-width:0;flex:1}
+.zmeta b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zmeta span{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zprog{width:clamp(80px,14vw,220px);display:flex}
+.zout{font-size:12px;color:var(--mut);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;flex:none}
+.zout:hover{color:#fff}.zout.lost{color:#ffb4b4}
+.ibtn.on{color:var(--ac2)}
+.mtog{height:32px;padding:0 14px;border-radius:16px;border:1px solid #6b6b75;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .15s,border-color .15s}
+.mtog:hover{border-color:#fff}
+.mtog[aria-pressed="true"]{background:var(--ac);border-color:var(--ac);color:#000}
+@media (max-width:1100px){.zprog,.zout{display:none}}
 /* ---- menu du clic droit sur un morceau ---- */
 .ctx{position:fixed;z-index:70;min-width:200px;max-width:280px;background:#2a2a33;border:1px solid var(--line);border-radius:8px;padding:6px;box-shadow:0 16px 40px -8px rgba(0,0,0,.8)}
 .ctx[hidden]{display:none}
@@ -467,6 +485,7 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
   <label class="search"><span id="sIc"></span><input id="q" placeholder="Que souhaitez-vous écouter ?" autocomplete="off"><kbd>Ctrl K</kbd></label>
   <button class="acct" id="bAcct" data-act="go" data-v="settings" title="Compte connecté" hidden></button>
   <div class="status" id="stat"><i></i><span id="statT"></span></div>
+  <button class="mtog" id="bMulti" aria-pressed="false" title="Deux écoutes en même temps : Arène et Accueil, chacune sur sa sortie son">Multi-écoute</button>
   <button class="ibtn" id="bInfo" title="À propos de Musique ML" aria-haspopup="dialog"></button>
  </header>
  <div class="body">
@@ -484,8 +503,19 @@ input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-
    <div id="rp"></div>
   </aside>
  </div>
+ <section class="zbar" id="zbar" aria-label="Zone Accueil">
+  <span class="ztag">Accueil</span>
+  <select class="sel" id="zPl" aria-label="Playlist de l'accueil"></select>
+  <button class="pp" id="zPlay" title="Lecture / pause (accueil)"></button>
+  <button class="ibtn" id="zNext" title="Morceau suivant (accueil)"></button>
+  <button class="ibtn" id="zShuf" title="Aléatoire (accueil)"></button>
+  <div class="zmeta"><b id="zT">Rien en lecture</b><span id="zS"></span></div>
+  <div class="zprog"><div class="bar"><i id="zBarF"></i></div></div>
+  <div class="vol"><button class="ibtn" id="zVolB" title="Volume (accueil)"></button><input type="range" id="zVol" min="0" max="1" step="0.01" aria-label="Volume de l'accueil"></div>
+  <span class="zout" id="zOut" title="Sortie son de l'accueil (modifiable dans Paramètres)"></span>
+ </section>
  <footer class="player" id="player">
-  <div class="np"><div class="thumb" id="npArt"></div>
+  <div class="np"><span class="ztag zarena">Arène</span><div class="thumb" id="npArt"></div>
    <div class="meta"><b id="npT">Rien en lecture</b><span id="npS">Choisissez une playlist</span></div>
    <button class="ibtn star" id="bFav" title="Favori"></button></div>
   <div class="pc">
@@ -659,6 +689,8 @@ let A=$('#audio'),B=$('#audio2');
 /* Sortie son choisie (voir « Sortie son » plus bas) */
 let SINK=store.get('sink',null);if(!SINK||typeof SINK!=='object'||typeof SINK.id!=='string'||!SINK.id)SINK=null;
 let OUTS=[],sinkLost=false;
+/* Multi-écoute (2e zone « Accueil ») : voir plus bas */
+let MULTI=store.get('multi',false)===true,Z=null;
 const P={queue:[],i:-1,plId:null,shuffle:false,repeat:1,nx:null,seen:[],after:[],retId:null,done:[]}; // seen : morceaux déjà passés dans le tour aléatoire en cours
 let want=false; // vrai tant que la musique doit jouer (faux après une pause voulue)
 let vol=store.get('vol',.8);if(!(vol>=0&&vol<=1))vol=.8;
@@ -929,7 +961,7 @@ async function setSink(id){
  if(sinkLost&&ok){sinkLost=false;if(P.i>=0){want=true;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}else resume()}
  ui();if(V.name==='settings')render();
 }
-document.addEventListener('change',e=>{const s=e.target.closest&&e.target.closest('select[data-k="sink"]');if(s)setSink(s.value)});
+document.addEventListener('change',e=>{const s=e.target.closest&&e.target.closest('select[data-k="sink"],select[data-k="zsink"]');if(!s)return;if(s.dataset.k==='zsink')Z.setSink(s.value);else setSink(s.value)});
 const sinkReady=listOuts().then(()=>{if(SINK&&sinkNow()===null)sinkLost=true;else return applySink()});
 async function onDevices(){
  const sig=await outputs();
@@ -1032,6 +1064,7 @@ function topStatus(){
  const on=isOn()&&P.i>=0;
  $('#stat').classList.toggle('live',on);
  $('#stat').classList.toggle('lost',sinkLost);
+ $('#bMulti').setAttribute('aria-pressed',String(MULTI));if(Z)Z.paint();
  $('#statT').textContent=sinkLost?'Sortie son débranchée':on?'En lecture · '+getPl(P.plId).name:'En pause';
 }
 setInterval(topStatus,10000);
@@ -1119,7 +1152,9 @@ function vSettings(el){
  <section class="set-sec"><h3>Lecture</h3><div class="set-card">
   ${setRow('shuf','Fondu enchaîné','Les morceaux s\'enchaînent en se mélangeant pendant 3 secondes, sans blanc.',sw('xfade',xfadeOn,'Fondu enchaîné'))}
   ${setRow('vol','Volume égal','Tous les morceaux au même niveau sonore : plus de morceau plus fort que les autres.',sw('norm',normOn,'Volume égal'))}
-  ${setRow('vol','Sortie son',sinkTxt(),sinkSel())}
+  ${setRow('panel','Multi-écoute','Deux écoutes en même temps : l\'Arène (le lecteur habituel) et l\'Accueil, chacune avec sa playlist, son volume et sa sortie son.',sw('multi',MULTI,'Multi-écoute'))}
+  ${setRow('vol',MULTI?'Sortie son · Arène':'Sortie son',sinkTxt(),sinkSel())}
+  ${MULTI&&Z?setRow('vol','Sortie son · Accueil',Z.lost?'La sortie de l\'accueil est débranchée : l\'accueil est en pause et reprendra dès qu\'elle sera rebranchée.':'Où sort la musique de l\'accueil. Choisissez une autre sortie que celle de l\'Arène.',Z.sel()):''}
  </div></section>
  <section class="set-sec"><h3>Affichage</h3><div class="set-card">
   ${setRow('panel','Panneau « En cours de lecture »','Affiche à droite la pochette, la suite de la file et les infos du morceau.',sw('rp',app.classList.contains('rp'),'Panneau En cours de lecture'))}
@@ -1240,6 +1275,7 @@ function act(n,d){
   case 'import':importTracks(d.pl);break;
   case 'set':{
    const k=d.k;
+   if(k==='multi'){Z.enable(!MULTI);break}
    if(k==='xfade'){xfadeOn=!xfadeOn;store.set('xfade',xfadeOn)}
    else if(k==='norm'){normOn=!normOn;store.set('norm',normOn);[A,B].forEach(el=>{const t=trackById(el.dataset.tid);el.dataset.g=gainOf(t);if(!fade)el.volume=vg(el)});nowPanel()}
    else if(k==='rp')setRp(!$('#app').classList.contains('rp'),true);
@@ -1249,6 +1285,7 @@ function act(n,d){
   }
   case 'about':about(true);break;
   case 'play-next':ctxClose();playNext(d.id);break;
+  case 'play-zone':ctxClose();if(MULTI)Z.start(d.pl,d.id);break;
   case 'upd-check':updCheck();break;
   case 'upd-install':installUpd('paramètres');break;
   case 'notes':showNotes(null);break;
@@ -1269,7 +1306,7 @@ document.addEventListener('contextmenu',e=>{
  e.preventDefault();
  const t=trackById(r.dataset.id);if(!t)return;
  const m=$('#ctx'),cur=P.queue[P.i]&&P.queue[P.i].id===t.id;
- m.innerHTML=`<div class="ctx-t">${esc(t.title)}</div><button type="button" data-act="play-next" data-id="${esc(t.id)}"${cur?' disabled':''}>${ic('next')}<span>${P.i<0?'Écouter':'Lire ensuite'}</span></button>`;
+ m.innerHTML=`<div class="ctx-t">${esc(t.title)}</div><button type="button" data-act="play-next" data-id="${esc(t.id)}"${cur?' disabled':''}>${ic('next')}<span>${P.i<0?'Écouter':'Lire ensuite'}</span></button>${MULTI?`<button type="button" data-act="play-zone" data-id="${esc(t.id)}" data-pl="${esc(r.dataset.pl||t.pl)}">${ic('play')}<span>Lire dans l'accueil</span></button>`:''}`;
  m.hidden=false;
  const w=m.offsetWidth,h=m.offsetHeight;
  m.style.left=Math.max(8,Math.min(e.clientX,innerWidth-w-8))+'px';m.style.top=Math.max(8,Math.min(e.clientY,innerHeight-h-8))+'px';
@@ -1538,7 +1575,180 @@ async function measureAll(){
  }}finally{measuring=false}
 }
 
-/* ---------- touches multimédia du clavier ---------- */
+
+/* ---------- Multi-écoute : 2e zone « Accueil » ----------
+   L'écoute principale (toute l'interface, les touches du clavier, le mode écran) est la zone « Arène ».
+   La zone « Accueil » a ses propres lecteurs, sa playlist, son volume et sa sortie son, avec le même fondu,
+   le même volume égal et le même aléatoire sans répétition. Désactivée, l'appli reste exactement comme avant. */
+Z=(function(){
+ const mk=id=>{const el=document.createElement('audio');el.id=id;el.preload='auto';el.className='zone2';document.body.appendChild(el);return el};
+ let a=mk('zAudio'),b=mk('zAudio2');
+ const S=Object.assign({pl:'accueil',id:null,t:0,playing:false,shuffle:true,seen:[],vol:.6,sink:null},store.get('zone2',{})||{});
+ if(!(S.vol>=0&&S.vol<=1))S.vol=.6;
+ if(!Array.isArray(S.seen))S.seen=[];
+ if(S.sink&&(typeof S.sink!=='object'||typeof S.sink.id!=='string'||!S.sink.id))S.sink=null;
+ let q=[],i=-1,want=false,fade=null,ramp=null,lost=false,tried=-1,n=0,lastT=-1,stuck=0,optSig='';
+ const g=el=>S.vol*(+el.dataset.g||1);
+ const on=()=>!a.paused&&!(ramp&&ramp.out);
+ function save(){const t=q[i];S.id=t?t.id:null;S.t=t?Math.floor(a.currentTime||0):0;S.playing=!!t&&(want||lost);S.seen=S.seen.slice(-500);store.set('zone2',S)}
+ /* ----- sortie son ----- */
+ function sinkId(){if(!S.sink)return '';const d=OUTS.find(o=>o.id===S.sink.id)||OUTS.find(o=>o.label&&o.label===S.sink.label);return d?d.id:null}
+ async function applySink(){
+  const id=sinkId();if(id===null)return false;
+  for(const el of [a,b]){if(!el.setSinkId||el.sinkId===id)continue;try{await el.setSinkId(id)}catch(e){logErr('Accueil : sortie son impossible : '+e);return false}}
+  return true;
+ }
+ /* ----- lecture ----- */
+ function stopFade(){if(!fade)return;clearInterval(fade.t);const o=fade.o;fade=null;o.pause();o.removeAttribute('src');o.dataset.tid='';o.load();a.volume=g(a)}
+ function stopRamp(){if(ramp){clearInterval(ramp.iv);ramp=null}}
+ function rampTo(to,ms,done){
+  stopRamp();const el=a,full=g(el),k0=full>0?Math.min(1,el.volume/full):to,t0=performance.now();
+  const r={out:to===0,iv:setInterval(()=>{const p=Math.min(1,(performance.now()-t0)/ms);el.volume=Math.max(0,Math.min(1,g(el)*(k0+(to-k0)*p)));if(p>=1){clearInterval(r.iv);if(ramp===r)ramp=null;if(done)done()}},20)};
+  ramp=r;
+ }
+ function pick(){ // aléatoire sans répétition : chaque morceau une fois par tour
+  if(!q.length)return -1;
+  if(!S.shuffle||q.length<2)return (i+1)%q.length;
+  let rest=q.map((t,k)=>k).filter(k=>k!==i&&!S.seen.includes(q[k].id));
+  if(!rest.length){S.seen=[];rest=q.map((t,k)=>k).filter(k=>k!==i)}
+  return rest[Math.floor(Math.random()*rest.length)];
+ }
+ function load(k,at,xf){
+  const t=q[k];if(!t)return;
+  stopRamp();
+  if(xf&&!a.paused){ // fondu : le suivant monte dans l'autre lecteur pendant que celui-ci descend
+   stopFade();const o=a;a=b;b=o;o.dataset.tid='';
+   a.src=trackUrl(t);a.dataset.tid=t.id;a.dataset.g=gainOf(t);a.volume=0;
+   const t0=performance.now();
+   fade={o,t:setInterval(()=>{const p=Math.min(1,(performance.now()-t0)/(FADE*1000));a.volume=g(a)*Math.sin(p*Math.PI/2);o.volume=g(o)*Math.cos(p*Math.PI/2);if(p>=1)stopFade()},50)};
+  }else{stopFade();a.src=trackUrl(t);a.dataset.tid=t.id;a.dataset.g=gainOf(t);a.volume=g(a)}
+  i=k;want=true;lost=false;n++;stuck=0;lastT=-1;
+  if(at>0)a.currentTime=at;
+  if(!S.seen.includes(t.id))S.seen.push(t.id);
+  const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{});
+  save();paint();
+ }
+ function next(fromEnd){if(!q.length)return;const k=pick();if(k>=0)load(k,0,!!fromEnd&&xfadeOn)}
+ function start(plId,startId){
+  const l=tracksOf(plId);if(!l.length)return false;
+  if(plId!==S.pl)S.seen=[];
+  S.pl=plId;q=l.slice();i=-1;
+  let k=startId?q.findIndex(t=>t.id===startId):-1;
+  if(k<0)k=S.shuffle?pick():0;
+  if(sinkId()===null){lost=true;want=false;save();paint();logErr('Accueil : sortie son débranchée, la musique attend');return true}
+  load(k,0,false);return true;
+ }
+ function toggle(){
+  if(!MULTI)return;
+  if(i<0||!q[i]){start(S.pl);return}
+  if(on()){want=false;stopFade();const el=a;rampTo(0,PAUSE_MS,()=>{el.pause();el.volume=g(el);paint()})}
+  else{
+   if(lost){lost=false;logErr('Accueil : lecture demandée alors que sa sortie est débranchée : sortie par défaut')}
+   want=true;if(a.paused){a.volume=0;const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{})}rampTo(1,RESUME_MS);
+  }
+  save();setTimeout(paint,0);
+ }
+ function setVol(v){S.vol=v;if(!ramp&&!fade)a.volume=g(a);save();paintVol()}
+ for(const el of [a,b]){
+  el.addEventListener('timeupdate',e=>{
+   if(e.target!==a)return;
+   paintProg();
+   if(!want)return;
+   const d=endOf(a);if(!d)return;
+   if(xfadeOn&&!fade&&tried!==n&&a.duration>FADE*3&&d-a.currentTime<=FADE){tried=n;next(true);return}
+   if(!fade&&d<a.duration-.2&&a.currentTime>=d)next(false);
+  });
+  el.addEventListener('ended',e=>{if(e.target===a&&want)next(false)});
+  el.addEventListener('error',e=>{if(e.target===a&&want&&a.getAttribute('src')){logErr('Accueil : lecture impossible, morceau suivant');setTimeout(()=>{if(want)next(false)},800)}});
+  el.addEventListener('play',e=>{if(e.target===a)paint()});
+  el.addEventListener('pause',e=>{if(e.target===a){paint();save()}});
+ }
+ // surveillance : si l'accueil devrait jouer mais n'avance plus, on relance puis on passe au suivant
+ let tick=0;
+ setInterval(()=>{
+  if(!MULTI||!want||i<0)return;
+  if(++tick%2===0)save();
+  const c=a.currentTime;
+  if(!a.paused&&c!==lastT){stuck=0;lastT=c;return}
+  stuck++;
+  if(a.paused){const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{})}
+  if(stuck>=3){stuck=0;logErr('Accueil : lecture bloquée, morceau suivant');next(false)}
+ },2000);
+ /* ----- sorties branchées / débranchées ----- */
+ async function devices(){
+  if(!MULTI)return;
+  await listOuts();
+  if(S.sink&&sinkId()===null){
+   if(!lost&&want&&i>=0){lost=true;want=false;stopFade();stopRamp();a.pause();save();logErr('Accueil : sortie son « '+S.sink.label+' » débranchée : musique en pause')}
+   paint();if(V.name==='settings')render();return;
+  }
+  await applySink();
+  if(lost){lost=false;logErr('Accueil : sortie son « '+(S.sink?S.sink.label:'par défaut')+' » rebranchée : la musique reprend');if(i>=0&&q[i]){want=true;const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{})}else resume()}
+  paint();if(V.name==='settings')render();
+ }
+ async function setSink(id){
+  const o=OUTS.find(x=>x.id===id);
+  S.sink=o?{id:o.id,label:o.label}:null;save();
+  const ok=await applySink();
+  logErr('Accueil : sortie son '+(S.sink?S.sink.label:'par défaut de Windows')+(ok?'':' (impossible)'));
+  if(lost&&ok){lost=false;if(i>=0&&q[i]){want=true;const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{})}else resume()}
+  paint();if(V.name==='settings')render();
+ }
+ /* ----- marche / arrêt de la multi-écoute ----- */
+ async function enable(v){
+  MULTI=!!v;store.set('multi',MULTI);
+  $('#app').classList.toggle('multi',MULTI);
+  if(MULTI){await listOuts();if(S.sink&&sinkId()===null)lost=true;else await applySink();logErr('Multi-écoute activée')}
+  else{want=false;lost=false;stopFade();stopRamp();a.pause();b.pause();save();logErr('Multi-écoute désactivée')}
+  paint();ui();if(V.name==='settings')render();
+ }
+ function resume(){ // au lancement (ou quand la sortie revient) : l'accueil repart où il en était
+  if(!MULTI||!S.playing||!S.id)return;
+  const l=tracksOf(S.pl);if(!l.length)return;
+  q=l.slice();let k=q.findIndex(t=>t.id===S.id);
+  if(sinkId()===null){lost=true;i=k;paint();logErr('Accueil : sortie son « '+S.sink.label+' » absente au lancement : la musique attend');return}
+  if(k<0){i=-1;k=S.shuffle?pick():0;load(k,0,false)}
+  else{const t=q[k];load(k,S.t>0&&(!t.dur||S.t<t.dur-3)?S.t:0,false)}
+ }
+ /* ----- affichage ----- */
+ function plOpts(){
+  const arenaPl=P.i>=0?P.plId:null;
+  return PL.filter(p=>tracksOf(p.id).length).map(p=>{const busy=p.id===arenaPl&&p.id!==S.pl;return `<option value="${esc(p.id)}"${p.id===S.pl?' selected':''}${busy?' disabled':''}>${esc(p.name)}${busy?' (Arène)':''}</option>`}).join('');
+ }
+ function paintProg(){const d=endOf(a),c=Math.min(a.currentTime||0,d||0);$('#zBarF').style.width=(d?c/d*100:0)+'%'}
+ function paintVol(){$('#zVol').value=S.vol;$('#zVol').style.setProperty('--v',S.vol*100+'%');$('#zVolB').innerHTML=ic(S.vol===0?'mute':'vol')}
+ function paint(){
+  const opts=plOpts();
+  if(opts!==optSig){optSig=opts;$('#zPl').innerHTML=opts}
+  const t=q[i],p=getPl(S.pl);
+  $('#zT').textContent=t?t.title:'Rien en lecture';
+  $('#zS').textContent=lost?'Sortie son débranchée : en pause':t?p.name:'Choisissez une playlist, puis lecture';
+  $('#zPlay').innerHTML=ic(on()&&t?'pause':'play');
+  $('#zShuf').classList.toggle('on',!!S.shuffle);
+  const out=S.sink?S.sink.label:'Sortie par défaut';
+  $('#zOut').textContent=out+(lost?' (débranchée)':'');$('#zOut').classList.toggle('lost',lost);
+  paintVol();paintProg();
+ }
+ function sel(){
+  const cur=sinkId();
+  return `<select class="sel" data-k="zsink" aria-label="Sortie son de l'accueil"><option value="">Sortie par défaut de Windows</option>${OUTS.map(o=>`<option value="${esc(o.id)}"${cur===o.id?' selected':''}>${esc(o.label)}</option>`).join('')}${S.sink&&cur===null?`<option value="${esc(S.sink.id)}" selected>${esc(S.sink.label)} (débranchée)</option>`:''}</select>`;
+ }
+ $('#zPlay').onclick=toggle;
+ $('#zNext').onclick=()=>{if(i<0)start(S.pl);else next(false)};
+ $('#zShuf').onclick=()=>{S.shuffle=!S.shuffle;save();paint()};
+ $('#zVol').oninput=e=>setVol(+e.target.value);
+ $('#zVolB').onclick=()=>setVol(S.vol===0?.6:0);
+ $('#zPl').onchange=e=>start(e.target.value);
+ $('#zOut').onclick=()=>go('settings');
+ $('#zNext').innerHTML=ic('next');$('#zShuf').innerHTML=ic('shuf');
+ $('#app').classList.toggle('multi',MULTI);
+ return {enable,start,toggle,resume,devices,setSink,sel,paint,on,
+  ready:()=>listOuts().then(()=>{if(MULTI){if(S.sink&&sinkId()===null)lost=true;else return applySink()}}),
+  get lost(){return lost},get pl(){return S.pl},state:()=>({pl:S.pl,id:q[i]?q[i].id:null,playing:on()&&!!q[i],vol:S.vol,sink:S.sink,lost})};
+})();
+if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>setTimeout(()=>Z.devices(),1600));
+
+/* ---------- touches multimédia du clavier (zone Arène) ---------- */
 if(LB&&LB.onMediaKey)LB.onMediaKey(a=>{
  if(a==='playpause')toggle();
  else if(a==='next')next(false);
@@ -1554,6 +1764,7 @@ $('#bShuf').innerHTML=ic('shuf');$('#bPrev').innerHTML=ic('prev');$('#bNext').in
 $('#bFav').innerHTML=ic('star');$('#bInfo').innerHTML=ic('info');$('#bQ').innerHTML=ic('panel');$('#bFs').innerHTML=ic('exp');
 $('#fPrev').innerHTML=ic('prev');$('#fNext').innerHTML=ic('next');
 $('#vol').value=vol;$('#vol').style.setProperty('--v',vol*100+'%');
+$('#bMulti').onclick=()=>Z.enable(!MULTI);
 setMini(!!store.get('mini',false));
 acctChip();
 document.querySelectorAll('button[title]:not([aria-label])').forEach(b=>b.setAttribute('aria-label',b.title));
@@ -1636,6 +1847,8 @@ function launchTryOk(v){
  if(v&&v!==(LB&&LB.version)&&launchTryOk(v)){updV=v;installUpd('lancement');return}
  try{await sinkReady}catch(e){}
  resume();
+ try{await Z.ready()}catch(e){}
+ Z.resume();Z.paint();
  if(migrateV2){P.repeat=1;ui();saveState()}
 })();
 probe(TRACKS);

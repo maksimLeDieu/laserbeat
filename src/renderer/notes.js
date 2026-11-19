@@ -8,6 +8,14 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.17.0', date: '19 novembre 2026',
+      items: [
+        "Multi-écoute : le bouton « Multi-écoute », en haut, ajoute une deuxième écoute, l'Accueil, en plus de l'Arène. Les deux jouent en même temps.",
+        "Chaque zone a sa playlist, son volume et sa sortie son (Paramètres › Lecture). L'Accueil se pilote depuis sa barre, juste au-dessus du lecteur.",
+        "Clic droit sur un morceau : « Lire dans l'accueil ». Les touches du clavier et le mode écran restent sur l'Arène."
+      ]
+    },
+    {
       v: '2.16.0', date: '19 novembre 2026',
       items: [
         "Sortie son : dans Paramètres (logo ML), rubrique Lecture, choisissez où sort la musique (prise casque, HDMI, enceintes USB…).",
