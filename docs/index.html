@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Télécharger Musique ML</title>
+<meta name="description" content="Télécharger Musique ML, le lecteur de musique des salles de laser game, pour Windows 10 et 11.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='23' fill='%238b5cf6'/%3E%3Cpath d='M17 72 V28 H27 L39 47 L51 28 H61 V72 H52 V45 L39 64 L26 45 V72 Z M66 28 H75.5 V63 H86 V72 H66 Z' fill='%230b0710'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f7f6fb; --surface:#fff; --line:#e6e3f0; --fg:#17151f; --mut:#676379;
+  --accent:#6c4cf1; --pink:#ff4d8d;
+  --font:"Segoe UI",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#110f18; --surface:#1b1825; --line:#2e2a3d; --fg:#f1eff8; --mut:#a7a2bb;
+  --accent:#8b72ff; --pink:#ff6fa3; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.55;padding:48px 16px 56px}
+.wrap{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+header{display:flex;align-items:center;gap:16px}
+header svg{width:60px;height:60px;flex:none;display:block}
+h1{font-size:30px;line-height:1.15;margin:0;letter-spacing:-.01em}
+.sub{color:var(--mut);margin:2px 0 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:14px}
+.dl{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;font-size:18px;border-radius:999px;padding:16px 24px}
+.dl:hover{filter:brightness(1.08)}
+.dl:focus-visible{outline:3px solid var(--pink);outline-offset:3px}
+.meta{color:var(--mut);font-size:14px;text-align:center;margin:0;font-variant-numeric:tabular-nums}
+h2{font-size:19px;margin:0}
+ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+ol li::marker{color:var(--accent);font-weight:700}
+b.k{font-weight:600;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:14px;white-space:nowrap}
+.note{font-size:14px;color:var(--mut);margin:0}
+footer{font-size:13px;color:var(--mut);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset=".5" stop-color="#8b5cf6"/><stop offset="1" stop-color="#5b21b6"/></linearGradient></defs>
+      <rect width="100" height="100" rx="23" fill="url(#g)"/>
+      <path d="M17 72 V28 H27 L39 47 L51 28 H61 V72 H52 V45 L39 64 L26 45 V72 Z M66 28 H75.5 V63 H86 V72 H66 Z" fill="#0b0710"/>
+      <line x1="8" y1="58" x2="92" y2="44" stroke="url(#g)" stroke-width="3.2"/>
+    </svg>
+    <div>
+      <h1>Musique ML</h1>
+      <p class="sub">Le lecteur de musique des salles de laser game</p>
+    </div>
+  </header>
+
+  <section class="card">
+    <a class="dl" id="dl" href="https://github.com/maksimLeDieu/laserbeat/releases/latest/download/LaserBeat-Setup.exe">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+      Télécharger pour Windows
+    </a>
+    <p class="meta" id="meta">Dernière version · Windows 10 et 11 (64 bits)</p>
+  </section>
+
+  <section class="card">
+    <h2>Installer</h2>
+    <ol>
+      <li>Ouvrez le fichier téléchargé <b>LaserBeat-Setup.exe</b>.</li>
+      <li>Si Windows affiche « Windows a protégé votre ordinateur », cliquez sur <b class="k">Informations complémentaires</b> puis <b class="k">Exécuter quand même</b>.</li>
+      <li>Cliquez sur <b class="k">Suivant</b> puis <b class="k">Installer</b>. Musique ML apparaît sur le Bureau et dans le menu Démarrer.</li>
+    </ol>
+    <p class="note">Ensuite, Musique ML se met à jour tout seul. Déjà installé ? Le nouvel installateur garde les réglages, favoris et morceaux ajoutés.</p>
+  </section>
+
+  <footer>Usage interne · Quimper, Brest, Saint-Brieuc</footer>
+</div>
+<script>
+fetch("https://api.github.com/repos/maksimLeDieu/laserbeat/releases/latest")
+  .then(function(r){ return r.ok ? r.json() : null; })
+  .then(function(d){
+    if (!d) return;
+    var a = (d.assets || []).find(function(x){ return /\.exe$/.test(x.name); });
+    var v = String(d.tag_name || "").replace(/^v/, "");
+    var date = d.published_at ? new Date(d.published_at).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
+    var parts = ["Version " + v];
+    if (a) parts.push(Math.round(a.size / 1048576) + " Mo");
+    if (date) parts.push(date);
+    parts.push("Windows 10 et 11");
+    document.getElementById("meta").textContent = parts.join(" · ");
+  })
+  .catch(function(){});
+</script>
+</body>
+</html>
