@@ -42,6 +42,11 @@ ol{margin:12px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
 ol li::marker{color:var(--accent);font-weight:700}
 b.k{font-weight:600;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:14px;white-space:nowrap}
 .note{font-size:14px;color:var(--mut);margin:10px 0 0}
+
+.cmd{display:flex;gap:8px;align-items:center;margin:8px 0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 8px 8px 12px}
+.cmd code{flex:1;font-size:13px;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace}
+.cmd button{font:inherit;font-size:13px;font-weight:700;cursor:pointer;border:0;border-radius:999px;padding:6px 12px;background:var(--accent);color:#fff;flex:none}
+.cmd button:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
 footer{font-size:13px;color:var(--mut);text-align:center}
 </style>
 </head>
@@ -88,10 +93,13 @@ footer{font-size:13px;color:var(--mut);text-align:center}
       <summary>Installer sur Mac</summary>
       <ol>
         <li>Ouvrez le fichier téléchargé <b>Musique-ML-Mac.dmg</b>, puis glissez <b>Musique ML</b> sur le dossier <b>Applications</b>.</li>
-        <li>Ouvrez Musique ML depuis le dossier Applications. macOS indique qu'il ne peut pas vérifier l'appli : cliquez sur <b class="k">Terminé</b> (ou <b class="k">OK</b>).</li>
-        <li>Ouvrez <b class="k">Réglages Système</b> › <b class="k">Confidentialité et sécurité</b>, descendez jusqu'à Musique ML et cliquez sur <b class="k">Ouvrir quand même</b>. À faire une seule fois.</li>
+        <li>Ouvrez l'app <b>Terminal</b> (dans Applications › Utilitaires), collez cette ligne puis appuyez sur <b class="k">Entrée</b> :
+          <div class="cmd"><code id="cmd">xattr -dr com.apple.quarantine "/Applications/Musique ML.app"</code><button type="button" id="copy">Copier</button></div>
+          Elle retire seulement l'étiquette « téléchargé depuis Internet » qui empêche macOS d'ouvrir l'appli.</li>
+        <li>Ouvrez Musique ML depuis le dossier Applications. C'est fait, les fois suivantes aussi.</li>
       </ol>
-      <p class="note">Mises à jour : Musique ML vous prévient quand une nouvelle version existe. Téléchargez-la ici et glissez-la dans Applications pour remplacer l'ancienne : réglages et favoris sont gardés.</p>
+      <p class="note">Autre méthode, sans Terminal : ouvrez Musique ML, cliquez sur <b class="k">Terminé</b>, puis <b class="k">Réglages Système</b> › <b class="k">Confidentialité et sécurité</b> › <b class="k">Ouvrir quand même</b>.</p>
+      <p class="note">Mises à jour : Musique ML vous prévient quand une nouvelle version existe. Téléchargez-la ici, glissez-la dans Applications pour remplacer l'ancienne, puis refaites l'étape 2. Réglages et favoris sont gardés.</p>
     </details>
   </section>
 
@@ -107,6 +115,11 @@ footer{font-size:13px;color:var(--mut);text-align:center}
     document.getElementById("howMac").open = true; document.getElementById("howWin").open = false;
     var c = document.getElementById("howMac"); c.parentNode.insertBefore(c, document.getElementById("howWin"));
   }
+  var cp = document.getElementById("copy");
+  cp.addEventListener("click", function(){
+    var t = document.getElementById("cmd").textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ cp.textContent = "Copié"; setTimeout(function(){ cp.textContent = "Copier"; }, 2000); }, function(){ cp.textContent = "Sélectionnez le texte"; });
+  });
   fetch("https://api.github.com/repos/maksimLeDieu/laserbeat/releases/latest")
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(d){
