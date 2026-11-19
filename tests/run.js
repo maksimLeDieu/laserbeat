@@ -886,6 +886,58 @@ test('Raccourcis Windows : logo ML remis sur nos raccourcis, ceux des autres log
   assert(!written[path.join(dirs[0], 'Navigateur.lnk')] && !written[path.join(desk, 'Jeu.lnk')], 'raccourci d\'un autre logiciel modifié');
 });
 
+test('Sortie son : choix dans Paramètres, mémorisé, pause si débranchée puis reprise', async () => {
+  const dir = newDataDir('sortie-choix');
+  // sorties son simulées (le PC de test n'a pas de carte son) ; setSinkId est noté au lieu d'être appliqué
+  const fake = w => w.evaluate(() => {
+    window.__outs = [
+      { kind: 'audiooutput', deviceId: 'default', groupId: 'g0', label: 'Par défaut' },
+      { kind: 'audiooutput', deviceId: 'casque-1', groupId: 'g1', label: 'Prise casque' },
+      { kind: 'audiooutput', deviceId: 'hdmi-2', groupId: 'g2', label: 'Ampli accueil (HDMI)' }
+    ];
+    navigator.mediaDevices.enumerateDevices = async () => window.__outs;
+    HTMLMediaElement.prototype.setSinkId = async function (id) { Object.defineProperty(this, 'sinkId', { value: id, configurable: true }); };
+    navigator.mediaDevices.dispatchEvent(new Event('devicechange'));
+  });
+  const sinks = w => w.evaluate(() => [...document.querySelectorAll('audio')].map(a => a.sinkId));
+  let { app, w, errors } = await launch(dir);
+  await fake(w); await w.waitForTimeout(2000);
+  await w.click('.pli >> text=Laser Arena'); await w.click('#view .bigplay');
+  assert(await waitFor(() => playing(w), 10000), 'pas de lecture');
+  await w.click('#bBrand');
+  const opts = await w.$$eval('select[data-k="sink"] option', o => o.map(x => x.textContent));
+  assert(opts.join('|') === 'Sortie par défaut de Windows|Prise casque|Ampli accueil (HDMI)', 'sorties proposées : ' + opts.join(', '));
+  await w.selectOption('select[data-k="sink"]', 'hdmi-2');
+  assert(await waitFor(async () => (await sinks(w)).every(x => x === 'hdmi-2'), 3000, 100), 'sortie non appliquée aux lecteurs : ' + (await sinks(w)).join(','));
+  assert(await playing(w), 'le changement de sortie a coupé la musique');
+  // débranchée : pause (pas de bascule sur une autre sortie), message en haut
+  await w.evaluate(() => { window.__outs = window.__outs.filter(o => o.deviceId !== 'hdmi-2'); navigator.mediaDevices.dispatchEvent(new Event('devicechange')); });
+  assert(await waitFor(async () => !(await playing(w)), 5000, 200), 'la musique continue alors que la sortie est débranchée');
+  assert((await w.textContent('#statT')).includes('débranchée'), 'message « sortie débranchée » absent');
+  assert((await w.$eval('select[data-k="sink"]', s => s.selectedOptions[0].textContent)).includes('(débranchée)'), 'Paramètres n\'indique pas la sortie débranchée');
+  await w.waitForTimeout(2500);
+  assert(!(await playing(w)), 'la musique est repartie toute seule sur une autre sortie');
+  // rebranchée : reprise toute seule, sur la bonne sortie
+  await w.evaluate(() => { window.__outs.push({ kind: 'audiooutput', deviceId: 'hdmi-2', groupId: 'g2', label: 'Ampli accueil (HDMI)' }); navigator.mediaDevices.dispatchEvent(new Event('devicechange')); });
+  assert(await waitFor(() => playing(w), 6000, 200), 'la musique ne reprend pas quand la sortie est rebranchée');
+  assert((await sinks(w)).every(x => x === 'hdmi-2'), 'mauvaise sortie après rebranchement');
+  assert(!(await w.textContent('#statT')).includes('débranchée'), 'message resté affiché');
+  assert(/Sortie son « Ampli accueil \(HDMI\) » débranchée/.test(logOf(dir)) && /rebranchée/.test(logOf(dir)), 'journal incomplet');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+  // mémorisée après relance
+  const cfg = JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8'));
+  assert(cfg.lb_sink && cfg.lb_sink.id === 'hdmi-2' && cfg.lb_sink.label === 'Ampli accueil (HDMI)', 'sortie non mémorisée : ' + JSON.stringify(cfg.lb_sink));
+  // retour à la sortie par défaut
+  ({ app, w, errors } = await launch(dir));
+  await fake(w); await w.waitForTimeout(2000);
+  await w.click('#bBrand');
+  await w.selectOption('select[data-k="sink"]', '');
+  assert(await waitFor(async () => (await sinks(w)).every(x => x === ''), 3000, 100), 'retour à la sortie par défaut impossible');
+  assert(!errors.length, 'erreurs : ' + errors.join(' | '));
+  await close(app);
+});
+
 test('Sortie audio modifiée : le morceau repart au même endroit', async () => {
   const dir = newDataDir('sortie');
   const { app, w } = await launch(dir);

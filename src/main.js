@@ -204,7 +204,8 @@ function start() {
   function lockDown() {
     const ses = session.defaultSession;
     ses.setPermissionRequestHandler((wc, permission, cb) => cb(permission === 'fullscreen'));
-    ses.setPermissionCheckHandler((wc, permission) => permission === 'fullscreen' || permission === 'media');
+    // « media » : noms des sorties son ; « speaker-selection » : envoyer la musique sur la sortie choisie (Paramètres)
+    ses.setPermissionCheckHandler((wc, permission) => permission === 'fullscreen' || permission === 'media' || permission === 'speaker-selection');
     ses.setDevicePermissionHandler(() => false);
     ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*', 'ftp://*/*'] }, (d, cb) => {
       const fromPage = typeof d.webContentsId === 'number' && d.webContentsId > 0;

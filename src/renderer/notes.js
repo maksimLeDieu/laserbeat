@@ -8,6 +8,13 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.16.0', date: '19 novembre 2026',
+      items: [
+        "Sortie son : dans Paramètres (logo ML), rubrique Lecture, choisissez où sort la musique (prise casque, HDMI, enceintes USB…).",
+        "Si la sortie choisie est débranchée, la musique se met en pause au lieu de partir sur d'autres enceintes, et reprend toute seule quand elle est rebranchée."
+      ]
+    },
+    {
       v: '2.15.0', date: '19 novembre 2026',
       items: [
         "Ambiance accueil : 2 musiques fournies, Ambiance Pop et Ambiance Pop II. Une pop douce pour l'accueil, à part de la musique des parties.",

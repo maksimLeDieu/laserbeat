@@ -232,6 +232,9 @@ body.playing .eqs i{animation-play-state:running}
 .set-txt small{display:block;color:var(--mut);font-size:13px;margin-top:3px;line-height:1.45}
 .set-row .pill{height:36px;padding:0 16px;font-size:13px}
 .soon{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ac2);background:rgba(139,92,246,.15);padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:2px}
+.sel{height:36px;max-width:260px;min-width:0;border-radius:8px;border:1px solid #6b6b75;background:var(--panel);color:#fff;padding:0 10px;font:inherit;font-size:13px;font-weight:600;flex:none}
+.sel:focus-visible{outline:2px solid var(--ac2);outline-offset:1px}
+.status.lost{color:#ffb4b4}.status.lost i{background:#ff6b6b}
 .sw{width:46px;height:26px;border-radius:13px;background:#3a3a44;position:relative;flex:none;transition:background .2s}
 .sw::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s cubic-bezier(.3,.7,0,1)}
 .sw[aria-checked="true"]{background:var(--ac)}
@@ -653,6 +656,9 @@ const fmt=s=>{if(!isFinite(s))return'0:00';s=Math.floor(s);return Math.floor(s/6
 /* Deux lecteurs audio : pendant qu'un morceau joue, le suivant est déjà chargé dans l'autre,
    pour enchaîner sans blanc. A = lecteur actif, B = lecteur de réserve. */
 let A=$('#audio'),B=$('#audio2');
+/* Sortie son choisie (voir « Sortie son » plus bas) */
+let SINK=store.get('sink',null);if(!SINK||typeof SINK!=='object'||typeof SINK.id!=='string'||!SINK.id)SINK=null;
+let OUTS=[],sinkLost=false;
 const P={queue:[],i:-1,plId:null,shuffle:false,repeat:1,nx:null,seen:[],after:[],retId:null,done:[]}; // seen : morceaux déjà passés dans le tour aléatoire en cours
 let want=false; // vrai tant que la musique doit jouer (faux après une pause voulue)
 let vol=store.get('vol',.8);if(!(vol>=0&&vol<=1))vol=.8;
@@ -708,7 +714,7 @@ function playQueue(list,start,plId,at){
 }
 function load(i,at){
  const t=P.queue[i];if(!t)return;
- stopRamp();
+ stopRamp();sinkLost=false;
  const xf=xfMode&&!A.paused;
  if(!xf)cancelFade();
  P.i=i;want=true;loadN++;
@@ -789,6 +795,7 @@ function ramp(to,ms,done){
  },20)};
 }
 function toggle(){
+ if(sinkLost){sinkLost=false;logErr('Lecture demandée alors que la sortie choisie est débranchée : sortie par défaut')}
  if(P.i<0){playQueue(tracksOf('arena'),0,'arena');return}
  if(!isOn()){
   want=true;
@@ -830,7 +837,7 @@ function toggleFav(id){
 }
 function saveState(){
  const t=P.queue[P.i];
- store.set('resume',{pl:P.plId,id:t?t.id:null,t:t?Math.floor(A.currentTime||0):0,playing:!!t&&want,shuffle:P.shuffle,repeat:P.repeat,seen:P.seen.slice(-500)});
+ store.set('resume',{pl:P.plId,id:t?t.id:null,t:t?Math.floor(A.currentTime||0):0,playing:!!t&&(want||sinkLost),shuffle:P.shuffle,repeat:P.repeat,seen:P.seen.slice(-500)});
 }
 function logErr(m){try{if(LB)LB.log(m)}catch(e){}}
 window.addEventListener('error',e=>logErr('Erreur interface : '+(e.message||e)+' ('+(e.filename||'').split('/').pop()+':'+(e.lineno||0)+')'));
@@ -886,10 +893,60 @@ setInterval(()=>{
    on relance le morceau au même endroit pour qu'il sorte bien sur la sortie active. */
 let outSig=null,devT=null;
 async function outputs(){try{return (await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput').map(d=>d.deviceId+'|'+d.groupId+'|'+d.label).sort().join(';')}catch(e){return null}}
+/* Sortie son choisie (Paramètres > Lecture > Sortie son). Aucune = sortie par défaut de Windows.
+   Si elle est débranchée, la musique se met en pause (elle ne part pas sur d'autres enceintes)
+   et reprend toute seule quand elle est rebranchée. */
+async function listOuts(){
+ try{OUTS=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput'&&d.deviceId&&d.deviceId!=='default'&&d.deviceId!=='communications').map(d=>({id:d.deviceId,label:d.label||'Sortie son'}))}catch(e){OUTS=[]}
+ return OUTS;
+}
+function sinkNow(){ // '' = sortie par défaut ; null = sortie choisie absente
+ if(!SINK)return '';
+ const d=OUTS.find(o=>o.id===SINK.id)||OUTS.find(o=>o.label&&o.label===SINK.label);
+ return d?d.id:null;
+}
+async function applySink(){
+ const id=sinkNow();if(id===null)return false;
+ for(const el of [A,B]){
+  if(!el.setSinkId||el.sinkId===id)continue;
+  try{await el.setSinkId(id)}catch(e){logErr('Sortie son impossible ('+(SINK?SINK.label:'par défaut')+') : '+e);return false}
+ }
+ return true;
+}
+function sinkSel(){
+ const cur=sinkNow();
+ return `<select class="sel" data-k="sink" aria-label="Sortie son"><option value="">Sortie par défaut de Windows</option>${OUTS.map(o=>`<option value="${esc(o.id)}"${cur===o.id?' selected':''}>${esc(o.label)}</option>`).join('')}${SINK&&cur===null?`<option value="${esc(SINK.id)}" selected>${esc(SINK.label)} (débranchée)</option>`:''}</select>`;
+}
+function sinkTxt(){
+ return sinkLost?'La sortie choisie est débranchée : la musique est en pause et reprendra toute seule dès qu\'elle sera rebranchée.'
+  :'Où sort la musique : prise casque, HDMI, enceintes USB… Si la sortie choisie est débranchée, la musique se met en pause.';
+}
+async function setSink(id){
+ const o=OUTS.find(x=>x.id===id);
+ SINK=o?{id:o.id,label:o.label}:null;store.set('sink',SINK);
+ const ok=await applySink();
+ logErr('Sortie son : '+(SINK?SINK.label:'par défaut de Windows')+(ok?'':' (impossible)'));
+ if(sinkLost&&ok){sinkLost=false;if(P.i>=0){want=true;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}else resume()}
+ ui();if(V.name==='settings')render();
+}
+document.addEventListener('change',e=>{const s=e.target.closest&&e.target.closest('select[data-k="sink"]');if(s)setSink(s.value)});
+const sinkReady=listOuts().then(()=>{if(SINK&&sinkNow()===null)sinkLost=true;else return applySink()});
 async function onDevices(){
  const sig=await outputs();
  if(sig!==null&&sig===outSig)return;  // rien n'a changé côté sorties audio
  outSig=sig;
+ await listOuts();
+ if(SINK&&sinkNow()===null){ // sortie choisie débranchée : pause, sans basculer sur d'autres enceintes
+  if(!sinkLost&&want&&P.i>=0){sinkLost=true;want=false;cancelFade();stopRamp();A.pause();saveState();logErr('Sortie son « '+SINK.label+' » débranchée : musique en pause')}
+  ui();if(V.name==='settings')render();return;
+ }
+ await applySink();
+ if(sinkLost){ // rebranchée : la musique reprend
+  sinkLost=false;logErr('Sortie son « '+SINK.label+' » rebranchée : la musique reprend');
+  if(P.i>=0){want=true;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}else resume();
+  ui();if(V.name==='settings')render();return;
+ }
+ if(V.name==='settings')render();
  if(!want||P.i<0)return;
  cancelFade();
  const t=A.currentTime;logErr('Sortie audio modifiée : relance du morceau à '+Math.floor(t)+' s');
@@ -906,6 +963,7 @@ function resume(){
  P.shuffle=!!R.shuffle;P.repeat=[0,1,2].includes(R.repeat)?R.repeat:1;
  P.plId=R.pl||null;P.seen=Array.isArray(R.seen)?R.seen.filter(x=>typeof x==='string').slice(-500):[]; // le tour aléatoire continue après un redémarrage
  if(!R.playing||!R.id){ui();return}
+ if(sinkLost){logErr('Sortie son « '+SINK.label+' » absente au lancement : la musique attend qu\'elle soit branchée');ui();return}
  const t=trackById(R.id);
  if(!t){ // morceau retiré depuis : on repart sur sa playlist (ou Laser Arena) plutôt que de rester muet
   const own=tracksOf(R.pl),l=own.length?own:tracksOf('arena');
@@ -973,7 +1031,8 @@ let lastPlaying=null;
 function topStatus(){
  const on=isOn()&&P.i>=0;
  $('#stat').classList.toggle('live',on);
- $('#statT').textContent=on?'En lecture · '+getPl(P.plId).name:'En pause';
+ $('#stat').classList.toggle('lost',sinkLost);
+ $('#statT').textContent=sinkLost?'Sortie son débranchée':on?'En lecture · '+getPl(P.plId).name:'En pause';
 }
 setInterval(topStatus,10000);
 const pyramid='<svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 3v16M7.5 11h9"/></svg>';
@@ -1060,6 +1119,7 @@ function vSettings(el){
  <section class="set-sec"><h3>Lecture</h3><div class="set-card">
   ${setRow('shuf','Fondu enchaîné','Les morceaux s\'enchaînent en se mélangeant pendant 3 secondes, sans blanc.',sw('xfade',xfadeOn,'Fondu enchaîné'))}
   ${setRow('vol','Volume égal','Tous les morceaux au même niveau sonore : plus de morceau plus fort que les autres.',sw('norm',normOn,'Volume égal'))}
+  ${setRow('vol','Sortie son',sinkTxt(),sinkSel())}
  </div></section>
  <section class="set-sec"><h3>Affichage</h3><div class="set-card">
   ${setRow('panel','Panneau « En cours de lecture »','Affiche à droite la pochette, la suite de la file et les infos du morceau.',sw('rp',app.classList.contains('rp'),'Panneau En cours de lecture'))}
@@ -1574,6 +1634,7 @@ function launchTryOk(v){
  let v=null;
  if(LB&&LB.launchUpdateCheck){try{v=await LB.launchUpdateCheck()}catch(e){v=null}}
  if(v&&v!==(LB&&LB.version)&&launchTryOk(v)){updV=v;installUpd('lancement');return}
+ try{await sinkReady}catch(e){}
  resume();
  if(migrateV2){P.repeat=1;ui();saveState()}
 })();
