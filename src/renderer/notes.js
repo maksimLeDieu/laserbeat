@@ -8,6 +8,15 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.19.1', date: '20 novembre 2026',
+      items: [
+        "Version stable : relecture complète et tests de plusieurs heures. Une trentaine de cas rares sont corrigés.",
+        "Réglages, favoris et comptes des salles sont protégés contre une coupure de courant ou un fichier abîmé.",
+        "Une mise à jour qui ne s'installe pas ne bloque plus l'écran : la musique continue avec la version actuelle.",
+        "Accueil : la musique repart bien après une sortie son débranchée, et les morceaux ajoutés ou supprimés sont pris en compte tout de suite."
+      ]
+    },
+    {
       v: '2.19.0', date: '20 novembre 2026',
       items: [
         "Mac : les mises à jour s'installent maintenant toutes seules, comme sur Windows. Plus besoin de repasser par le site ni par le Terminal.",
