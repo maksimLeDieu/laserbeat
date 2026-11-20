@@ -1118,6 +1118,8 @@ if (ENDURANCE) {
   tests.length = 0;
   require('./endurance.js')({ test, launch, close, newDataDir, assert, waitFor, playing, title, sleep, logOf, fs, path, tmpRoot, SAMPLE_MP3 });
 }
+// LASERBEAT_ONLY=texte : ne lance que les tests dont le nom contient ce texte
+if (process.env.LASERBEAT_ONLY) { const keep = tests.filter(t => t.name.includes(process.env.LASERBEAT_ONLY)); tests.length = 0; tests.push(...keep); }
 (async () => {
   console.log(`LaserBeat - tests (${EXE ? 'logiciel compilé : ' + EXE : 'version de développement'})`);
   let failed = 0;

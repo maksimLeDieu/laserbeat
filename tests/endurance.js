@@ -30,6 +30,8 @@ module.exports = function ({ test, launch, close, newDataDir, assert, waitFor, p
     const h0 = await heap(w);
     let last = await title(w), changes = 0, silent = 0;
     for (let k = 0; k < 300; k++) {
+      // attendre la fin du fondu précédent : un seul lecteur actif, celui du morceau en cours
+      await waitFor(async () => (await arena(w)).on === 1, 8000, 100);
       await w.evaluate(() => {
         const a = [...document.querySelectorAll('audio:not(.zone2)')].find(x => !x.paused);
         if (!a) return;
