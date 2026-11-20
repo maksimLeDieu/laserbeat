@@ -626,6 +626,41 @@ test('Mise à jour à la demande : Paramètres > Mise à jour, recherche puis «
   await close(app);
 });
 
+test('Mac : mise à jour automatique, l\'ancienne appli remplacée et rien ne traîne', async () => {
+  if (process.platform !== 'darwin' || !EXE) { console.log('        (vérifié seulement sur Mac, avec le logiciel compilé)'); return; }
+  const dmg = path.join(ROOT, 'dist', 'Musique-ML-Mac.dmg');
+  assert(fs.existsSync(dmg), '.dmg absent : ' + dmg);
+  // copie de l'appli dans un dossier « Applications » de test
+  const apps = fs.mkdtempSync(path.join(os.tmpdir(), 'ml-applications-'));
+  const src = path.resolve(EXE, '..', '..', '..'), target = path.join(apps, path.basename(src));
+  cp.execFileSync('/usr/bin/ditto', [src, target]);
+  const exe = path.join(target, 'Contents', 'MacOS', path.basename(EXE));
+  const ino0 = fs.statSync(target).ino;
+  const leftovers = () => fs.readdirSync(os.tmpdir()).filter(n => n.startsWith('musique-ml-maj-'));
+  const dir = newDataDir('maj-mac-auto');
+  const app = await _electron.launch({ executablePath: exe, args: BASE_ARGS, env: env(dir, { LASERBEAT_TEST_MAC_DMG: dmg }), timeout: 60000 });
+  current = app;
+  const w = await app.firstWindow();
+  await w.waitForLoadState('domcontentloaded');
+  // téléchargement (ici : copie du .dmg), sortie de l'appli, puis le bouton apparaît
+  assert(await waitFor(() => w.isVisible('#updBtn'), 180000, 1000), 'version jamais prête : ' + logOf(dir).split('\n').filter(l => l.includes('[maj]')).slice(-3).join(' | '));
+  const dmgs = leftovers().flatMap(n => { try { return fs.readdirSync(path.join(os.tmpdir(), n)); } catch (e) { return []; } }).filter(n => n.endsWith('.dmg'));
+  assert(!dmgs.length, 'le .dmg téléchargé n\'a pas été supprimé');
+  const pid = app.process().pid;
+  await w.click('#updBtn');
+  // Musique ML se ferme, l'appli est remplacée, le dossier temporaire est effacé
+  const gone = () => { try { process.kill(pid, 0); return false; } catch (e) { return true; } };
+  assert(await waitFor(async () => gone(), 20000, 250), 'Musique ML ne se ferme pas pour s\'installer');
+  current = null;
+  assert(await waitFor(async () => { try { return fs.statSync(target).ino !== ino0; } catch (e) { return false; } }, 30000, 250), 'ancienne appli non remplacée');
+  assert(await waitFor(async () => !leftovers().length, 15000, 250), 'dossier temporaire non effacé : ' + leftovers().join(', '));
+  assert(!fs.existsSync(target + '.ancienne-version'), 'l\'ancienne version est restée à côté');
+  assert(fs.readdirSync(apps).length === 1, 'fichiers en trop dans Applications : ' + fs.readdirSync(apps).join(', '));
+  assert(fs.existsSync(exe), 'nouvelle appli incomplète');
+  assert(logOf(dir).includes('[maj] remplacement de'), 'remplacement non noté dans le journal');
+  fs.rmSync(apps, { recursive: true, force: true });
+});
+
 test('Mac : nouvelle version annoncée, à télécharger sur le site, sans couper la musique', async () => {
   const dir = newDataDir('maj-mac');
   const { app, w, errors } = await launch(dir, { LASERBEAT_TEST_SITE_UPDATE: '9.9.9' });

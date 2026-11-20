@@ -11,12 +11,9 @@
  *   si une version existe, elle se télécharge puis le bouton « Installer maintenant » apparaît.
  * - Jamais pendant un arrêt de Windows. Sans Internet, rien ne se passe et la musique démarre normalement.
  */
-const { app, ipcMain, net, shell } = require('electron');
+const { app, ipcMain } = require('electron');
 
-// Site de téléchargement : sur Mac, les nouvelles versions se récupèrent là (voir setupMacNotice).
-const SITE = 'https://maksimledieu.github.io/laserbeat/';
-const LATEST_API = 'https://api.github.com/repos/maksimLeDieu/laserbeat/releases/latest';
-const MAC_ASSET = 'Musique-ML-Mac.dmg';
+const { setupMacUpdater } = require('./maj-mac');
 
 const LAUNCH_WAIT_MS = 6000;               // attente maximale au lancement avant de démarrer la musique
 const CHECK_EVERY_MS = 4 * 60 * 60 * 1000; // téléchargement des nouvelles versions toutes les 4 h
@@ -27,44 +24,11 @@ const newer = (a, b) => {
   return false;
 };
 
-/*
- * Mac : sans certificat Apple payant, macOS refuse qu'une appli se remplace toute seule.
- * Musique ML vérifie donc seulement s'il existe une nouvelle version (au lancement, toutes les 4 h,
- * et à la demande) et propose de l'ouvrir sur le site de téléchargement. La musique n'est jamais coupée.
- */
-function setupMacNotice({ log, getWindow }) {
-  let available = null;
-  ipcMain.on('update:avail-get', e => { e.returnValue = available; });
-  ipcMain.handle('update:launch-check', async () => null);
-  ipcMain.on('update:install', () => {});
-  ipcMain.on('update:site', () => { log('[maj] ouverture du site de téléchargement'); shell.openExternal(SITE).catch(() => {}); });
-  const look = () => net.fetch(LATEST_API, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Musique-ML' } })
-    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(d => {
-      const v = String(d.tag_name || '').replace(/^v/, '');
-      // la version Mac n'est annoncée que si son installateur est bien publié
-      const mac = (d.assets || []).some(a => a.name === MAC_ASSET);
-      if (v && mac && newer(v, app.getVersion())) {
-        if (available !== v) {
-          available = v; log('[maj] nouvelle version disponible sur le site', v);
-          const w = getWindow(); if (w && !w.isDestroyed()) w.webContents.send('update:available', v);
-        }
-        return { status: 'available', version: v };
-      }
-      return { status: 'none' };
-    })
-    .catch(err => { log('[maj] vérification impossible', err && err.message ? err.message : String(err)); return { status: 'error' }; });
-  look();
-  setInterval(look, CHECK_EVERY_MS);
-  ipcMain.handle('update:check', () => look());
-  return { onSessionEnd() {} };
-}
-
 function setupUpdater({ log, getWindow }) {
+  // Mac : mise à jour faite par Musique ML lui-même (voir maj-mac.js). Tests : LASERBEAT_TEST_MAC_DMG.
+  if (app.isPackaged && process.platform === 'darwin' && (!process.env.LASERBEAT_TEST || process.env.LASERBEAT_TEST_MAC_DMG)) return setupMacUpdater({ log, getWindow });
   let ready = null;
   ipcMain.on('update:get', e => { e.returnValue = ready; });
-
-  if (app.isPackaged && process.platform === 'darwin' && !process.env.LASERBEAT_TEST) return setupMacNotice({ log, getWindow });
   ipcMain.on('update:avail-get', e => { e.returnValue = null; });
 
   // Pas de mise à jour en développement, hors Windows, ni pendant les tests automatiques.
