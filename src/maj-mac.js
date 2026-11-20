@@ -53,7 +53,8 @@ if [ "$RELAUNCH" = "1" ]; then open "$OLD"; fi
 `;
 
 function setupMacUpdater({ log, getWindow }) {
-  const test = process.env.LASERBEAT_TEST && process.env.LASERBEAT_TEST_MAC_DMG; // tests : .dmg local au lieu de GitHub
+  // tests : LASERBEAT_TEST_MAC_DMG = un .dmg local, ou « github » pour le vrai téléchargement de la dernière version
+  const test = process.env.LASERBEAT_TEST && process.env.LASERBEAT_TEST_MAC_DMG;
   const tmp = app.getPath('temp');
   // restes d'une mise à jour précédente (interrompue) : on les efface
   try { for (const n of fs.readdirSync(tmp)) if (n.startsWith(PREFIX)) rm(path.join(tmp, n)); } catch (e) { /* rien */ }
@@ -76,7 +77,7 @@ function setupMacUpdater({ log, getWindow }) {
   };
 
   async function fetchLatest() {
-    if (test) return { v: process.env.LASERBEAT_TEST_MAC_VERSION || '9.9.9', asset: { local: test } };
+    if (test && test !== 'github') return { v: process.env.LASERBEAT_TEST_MAC_VERSION || '9.9.9', asset: { local: test } };
     const r = await net.fetch(LATEST_API, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Musique-ML' } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();

@@ -630,6 +630,8 @@ test('Mac : mise à jour automatique, l\'ancienne appli remplacée et rien ne tr
   if (process.platform !== 'darwin' || !EXE) { console.log('        (vérifié seulement sur Mac, avec le logiciel compilé)'); return; }
   const dmg = path.join(ROOT, 'dist', 'Musique-ML-Mac.dmg');
   assert(fs.existsSync(dmg), '.dmg absent : ' + dmg);
+  // 1er essai : le .dmg qui vient d'être compilé ; 2e essai : le vrai téléchargement depuis GitHub
+  for (const source of [dmg, 'github']) {
   // copie de l'appli dans un dossier « Applications » de test
   const apps = fs.mkdtempSync(path.join(os.tmpdir(), 'ml-applications-'));
   const src = path.resolve(EXE, '..', '..', '..'), target = path.join(apps, path.basename(src));
@@ -637,8 +639,8 @@ test('Mac : mise à jour automatique, l\'ancienne appli remplacée et rien ne tr
   const exe = path.join(target, 'Contents', 'MacOS', path.basename(EXE));
   const ino0 = fs.statSync(target).ino;
   const leftovers = () => fs.readdirSync(os.tmpdir()).filter(n => n.startsWith('musique-ml-maj-'));
-  const dir = newDataDir('maj-mac-auto');
-  const app = await _electron.launch({ executablePath: exe, args: BASE_ARGS, env: env(dir, { LASERBEAT_TEST_MAC_DMG: dmg }), timeout: 60000 });
+  const dir = newDataDir('maj-mac-auto-' + (source === 'github' ? 'github' : 'local'));
+  const app = await _electron.launch({ executablePath: exe, args: BASE_ARGS, env: env(dir, { LASERBEAT_TEST_MAC_DMG: source }), timeout: 60000 });
   current = app;
   const w = await app.firstWindow();
   await w.waitForLoadState('domcontentloaded');
@@ -659,6 +661,7 @@ test('Mac : mise à jour automatique, l\'ancienne appli remplacée et rien ne tr
   assert(fs.existsSync(exe), 'nouvelle appli incomplète');
   assert(logOf(dir).includes('[maj] remplacement de'), 'remplacement non noté dans le journal');
   fs.rmSync(apps, { recursive: true, force: true });
+  }
 });
 
 test('Mac : nouvelle version annoncée, à télécharger sur le site, sans couper la musique', async () => {
