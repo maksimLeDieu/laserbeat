@@ -8,6 +8,13 @@
   'use strict';
   g.NOTES = [
     {
+      v: '2.19.0', date: '20 novembre 2026',
+      items: [
+        "Mac : les mises à jour s'installent maintenant toutes seules, comme sur Windows. Plus besoin de repasser par le site ni par le Terminal.",
+        "L'ancienne version est remplacée et le fichier téléchargé est effacé : rien ne s'accumule sur le Mac."
+      ]
+    },
+    {
       v: '2.18.1', date: '19 novembre 2026',
       items: [
         "Multi-écoute : la barre de progression de l'Accueil se clique, comme celle de l'Arène, pour avancer ou reculer dans le morceau.",
