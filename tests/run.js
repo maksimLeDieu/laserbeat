@@ -1112,13 +1112,19 @@ test('Sortie audio modifiée : le morceau repart au même endroit', async () => 
 });
 
 /* ------------------------------------------------------------------ */
+// Tests de durée (longs) : LASERBEAT_ENDURANCE=1 npm test — remplacent les tests habituels.
+const ENDURANCE = !!process.env.LASERBEAT_ENDURANCE;
+if (ENDURANCE) {
+  tests.length = 0;
+  require('./endurance.js')({ test, launch, close, newDataDir, assert, waitFor, playing, title, sleep, logOf, fs, path, tmpRoot, SAMPLE_MP3 });
+}
 (async () => {
   console.log(`LaserBeat - tests (${EXE ? 'logiciel compilé : ' + EXE : 'version de développement'})`);
   let failed = 0;
   for (const t of tests) {
     const t0 = Date.now();
     try {
-      await Promise.race([t.fn(), sleep(180000).then(() => { throw new Error('test trop long (> 3 min)'); })]);
+      await Promise.race([t.fn(), sleep(ENDURANCE ? 2400000 : 180000).then(() => { throw new Error('test trop long'); })]);
       console.log(`  OK    ${t.name} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
     } catch (e) {
       failed++;
