@@ -78,9 +78,13 @@ function setupMacUpdater({ log, getWindow }) {
 
   async function fetchLatest() {
     if (test && test !== 'github') return { v: process.env.LASERBEAT_TEST_MAC_VERSION || '9.9.9', asset: { local: test } };
-    const r = await net.fetch(LATEST_API, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Musique-ML' } });
+    // tests (« github ») : pendant une publication, la toute dernière version n'a pas encore son .dmg :
+    // on prend la plus récente qui en a un.
+    const url = test === 'github' ? LATEST_API.replace('/latest', '?per_page=5') : LATEST_API;
+    const r = await net.fetch(url, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Musique-ML' } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
+    let d = await r.json();
+    if (Array.isArray(d)) d = d.find(x => !x.prerelease && !x.draft && (x.assets || []).some(a => a.name === MAC_ASSET)) || {};
     return { v: String(d.tag_name || '').replace(/^v/, ''), asset: (d.assets || []).find(a => a.name === MAC_ASSET) || null };
   }
 
