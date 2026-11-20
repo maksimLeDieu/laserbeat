@@ -638,15 +638,16 @@ test('Mac : mise à jour automatique, l\'ancienne appli remplacée et rien ne tr
   cp.execFileSync('/usr/bin/ditto', [src, target]);
   const exe = path.join(target, 'Contents', 'MacOS', path.basename(EXE));
   const ino0 = fs.statSync(target).ino;
-  const leftovers = () => fs.readdirSync(os.tmpdir()).filter(n => n.startsWith('musique-ml-maj-'));
   const dir = newDataDir('maj-mac-auto-' + (source === 'github' ? 'github' : 'local'));
+  const work = path.join(dir, 'mise-a-jour');
+  const leftovers = () => { try { return fs.readdirSync(work).filter(n => n.startsWith('musique-ml-maj-')); } catch (e) { return []; } };
   const app = await _electron.launch({ executablePath: exe, args: BASE_ARGS, env: env(dir, { LASERBEAT_TEST_MAC_DMG: source }), timeout: 60000 });
   current = app;
   const w = await app.firstWindow();
   await w.waitForLoadState('domcontentloaded');
   // téléchargement (ici : copie du .dmg), sortie de l'appli, puis le bouton apparaît
   assert(await waitFor(() => w.isVisible('#updBtn'), 180000, 1000), 'version jamais prête : ' + logOf(dir).split('\n').filter(l => l.includes('[maj]')).slice(-3).join(' | '));
-  const dmgs = leftovers().flatMap(n => { try { return fs.readdirSync(path.join(os.tmpdir(), n)); } catch (e) { return []; } }).filter(n => n.endsWith('.dmg'));
+  const dmgs = leftovers().flatMap(n => { try { return fs.readdirSync(path.join(work, n)); } catch (e) { return []; } }).filter(n => n.endsWith('.dmg'));
   assert(!dmgs.length, 'le .dmg téléchargé n\'a pas été supprimé');
   const pid = app.process().pid;
   await w.click('#updBtn');
@@ -656,7 +657,7 @@ test('Mac : mise à jour automatique, l\'ancienne appli remplacée et rien ne tr
   current = null;
   assert(await waitFor(async () => { try { return fs.statSync(target).ino !== ino0; } catch (e) { return false; } }, 30000, 250), 'ancienne appli non remplacée');
   assert(await waitFor(async () => !leftovers().length, 15000, 250), 'dossier temporaire non effacé : ' + leftovers().join(', '));
-  assert(!fs.existsSync(target + '.ancienne-version'), 'l\'ancienne version est restée à côté');
+  assert(await waitFor(async () => /remplacement réussi/.test(fs.existsSync(path.join(dir, 'mise-a-jour.log')) ? fs.readFileSync(path.join(dir, 'mise-a-jour.log'), 'utf8') : ''), 10000, 250), 'remplacement non confirmé par le script');
   assert(fs.readdirSync(apps).length === 1, 'fichiers en trop dans Applications : ' + fs.readdirSync(apps).join(', '));
   assert(fs.existsSync(exe), 'nouvelle appli incomplète');
   assert(logOf(dir).includes('[maj] remplacement de'), 'remplacement non noté dans le journal');

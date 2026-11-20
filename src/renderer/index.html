@@ -667,7 +667,8 @@ const ACC=LB&&LB.accounts&&LB.accounts.state&&LB.accounts.state.enabled?LB.accou
 let ACCOUNT=ACC&&ACC.state?ACC.state.account:null,PROF=ACC&&ACC.state&&ACC.state.profile?ACC.state.profile:null;
 const pget=(k,d)=>{if(ACCOUNT){const v=PROF&&PROF[k];return v===undefined||v===null?d:v}return store.get(k,d)};
 const pset=(k,v)=>{if(ACCOUNT){PROF=PROF||{};PROF[k]=v;try{ACC.setProfile(k,v)}catch(e){}}else store.set(k,v)};
-let favs=new Set((pget('favs',[])||[]).filter(id=>known.has(id)));
+const arr=v=>Array.isArray(v)?v:[];
+let favs=new Set(arr(pget('favs',[])).filter(id=>known.has(id)));
 /* Ordre des morceaux choisi par glisser-déposer (par playlist) ; les morceaux non classés gardent l'ordre d'origine, à la fin. */
 let ORDER=pget('order',{});if(!ORDER||typeof ORDER!=='object')ORDER={};
 function ordered(id,l){const o=ORDER[id];if(!Array.isArray(o)||!o.length)return l;const pos=new Map(o.map((x,i)=>[x,i]));const r=(t,i)=>pos.has(t.id)?pos.get(t.id):1e6+i;return l.map((t,i)=>[t,r(t,i)]).sort((a,b)=>a[1]-b[1]).map(x=>x[0])}
@@ -719,6 +720,7 @@ function cancelFade(){
  clearInterval(fade.timer);const o=fade.out;fade=null;
  o.pause();o.removeAttribute('src');o.dataset.tid='';o.load();
  A.volume=vg(A);B.volume=vg(B);
+ clearTimeout(preT);preT=setTimeout(preloadNext,1500); // le suivant est de nouveau préparé
 }
 function startFade(o){
  cancelFade();
@@ -739,7 +741,7 @@ function maybeCrossfade(){
  xfMode=true;try{next(true)}finally{xfMode=false}
 }
 A.volume=vol;B.volume=vol;
-let recent=(pget('recent',[])||[]).filter(id=>known.has(id));
+let recent=arr(pget('recent',[])).filter(id=>known.has(id));
 let preT=null,errs=0;
 function playQueue(list,start,plId,at){
  if(!list.length)return;
@@ -773,13 +775,17 @@ function load(i,at){
 }
 /* Aléatoire sans répétition : on tire parmi les morceaux pas encore passés dans ce tour.
    Quand toute la playlist est passée, un nouveau tour commence (sans rejouer tout de suite le morceau en cours). */
+let lastOfRound=null; // dernier morceau du tour précédent : pas tout de suite au début du tour suivant
 function pickShuffle(){
- const rest=[];
+ let rest=[];
  P.queue.forEach((t,k)=>{if(k!==P.i&&!P.seen.includes(t.id))rest.push(k)});
- if(rest.length)return rest[Math.floor(Math.random()*rest.length)];
- P.seen=[];
- const all=[];P.queue.forEach((t,k)=>{if(k!==P.i)all.push(k)});
- return all[Math.floor(Math.random()*all.length)];
+ if(!rest.length){
+  lastOfRound=P.queue[P.i]?P.queue[P.i].id:null;P.seen=[];
+  P.queue.forEach((t,k)=>{if(k!==P.i)rest.push(k)});
+ }
+ // en première moitié de tour, on évite de rejouer le morceau qui vient de finir le tour précédent
+ if(lastOfRound&&P.seen.length<P.queue.length/2){const r2=rest.filter(k=>P.queue[k].id!==lastOfRound);if(r2.length)rest=r2}
+ return rest[Math.floor(Math.random()*rest.length)];
 }
 /* « Lire ensuite » : les morceaux demandés passent juste après celui en cours, dans l'ordre des demandes.
    Ensuite la lecture reprend où elle en était (ordre de la playlist) ou continue le tour aléatoire. */
@@ -831,7 +837,12 @@ function ramp(to,ms,done){
 }
 function toggle(){
  if(sinkLost){sinkLost=false;logErr('Lecture demandée alors que la sortie choisie est débranchée : sortie par défaut')}
- if(P.i<0){playQueue(tracksOf('arena'),0,'arena');return}
+ if(P.i<0){
+  // rien encore chargé (sortie absente au lancement…) : on reprend la musique enregistrée plutôt que de repartir de zéro
+  const R=store.get('resume',null);
+  if(R&&typeof R==='object'&&R.id&&trackById(R.id)){store.set('resume',Object.assign({},R,{playing:true}));resume();if(P.i>=0)return}
+  playQueue(tracksOf('arena'),0,'arena');return
+ }
  if(!isOn()){
   want=true;
   if(A.paused){A.volume=0;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}
@@ -872,20 +883,23 @@ function toggleFav(id){
 }
 function saveState(){
  const t=P.queue[P.i];
+ // rien chargé pendant ce lancement : on garde la reprise enregistrée (au lieu de l'effacer)
+ if(!t){const R=store.get('resume',null);if(R&&typeof R==='object'&&R.id)return}
  store.set('resume',{pl:P.plId,id:t?t.id:null,t:t?Math.floor(A.currentTime||0):0,playing:!!t&&(want||sinkLost),shuffle:P.shuffle,repeat:P.repeat,seen:P.seen.slice(-500)});
 }
 function logErr(m){try{if(LB)LB.log(m)}catch(e){}}
 window.addEventListener('error',e=>logErr('Erreur interface : '+(e.message||e)+' ('+(e.filename||'').split('/').pop()+':'+(e.lineno||0)+')'));
 window.addEventListener('unhandledrejection',e=>logErr('Promesse rejetée : '+(e.reason&&e.reason.message||e.reason)));
 [A,B].forEach(el=>{
- el.addEventListener('ended',e=>{if(e.target===A)next(true)});
+ el.addEventListener('ended',e=>{if(e.target===A&&want)next(true)}); // pas pendant une pause demandée
  el.addEventListener('play',e=>{if(e.target===A)ui()});
  el.addEventListener('pause',e=>{if(e.target===A){ui();saveState()}});
  el.addEventListener('playing',e=>{if(e.target===A)errs=0});
  el.addEventListener('error',e=>{
   if(e.target!==A||!A.getAttribute('src'))return;
   const t=P.queue[P.i];logErr('Lecture impossible : '+(t?t.title:'?')+' (code '+(A.error&&A.error.code)+')');
-  if(P.queue.length>1&&errs<P.queue.length){errs++;setTimeout(()=>next(true),400)}
+  const id=A.dataset.tid;
+  if(P.queue.length>1&&errs<P.queue.length){errs++;setTimeout(()=>{if(want&&A.dataset.tid===id)next(true)},400)}
  });
  el.addEventListener('loadedmetadata',e=>{
   const t=P.queue[P.i];
@@ -917,7 +931,7 @@ setInterval(()=>{
   if(A.paused){const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}
   if(stuck>=3){
    stuck=0;fails++;logErr('Lecture bloquée, relance ('+fails+')');
-   if(fails>=2&&P.queue.length>1){fails=0;next(true)}
+   if(fails>=2){fails=0;next(true)} // (un seul morceau : il repart du début)
    else{A.load();if(c>0)A.currentTime=c;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}
   }
  }
@@ -926,7 +940,7 @@ setInterval(()=>{
 
 /* Sortie audio : si une carte son, un ampli ou des enceintes sont branchés ou débranchés,
    on relance le morceau au même endroit pour qu'il sorte bien sur la sortie active. */
-let outSig=null,devT=null;
+let outSig=null,devT=null,lastSid=null;
 async function outputs(){try{return (await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput').map(d=>d.deviceId+'|'+d.groupId+'|'+d.label).sort().join(';')}catch(e){return null}}
 /* Sortie son choisie (Paramètres > Lecture > Sortie son). Aucune = sortie par défaut de Windows.
    Si elle est débranchée, la musique se met en pause (elle ne part pas sur d'autres enceintes)
@@ -965,7 +979,7 @@ async function setSink(id){
  ui();if(V.name==='settings')render();
 }
 document.addEventListener('change',e=>{const s=e.target.closest&&e.target.closest('select[data-k="sink"],select[data-k="zsink"]');if(!s)return;if(s.dataset.k==='zsink')Z.setSink(s.value);else setSink(s.value)});
-const sinkReady=listOuts().then(()=>{if(SINK&&sinkNow()===null)sinkLost=true;else return applySink()});
+const sinkReady=listOuts().then(()=>{lastSid=sinkNow();if(SINK&&sinkNow()===null)sinkLost=true;else return applySink()});
 async function onDevices(){
  const sig=await outputs();
  if(sig!==null&&sig===outSig)return;  // rien n'a changé côté sorties audio
@@ -978,11 +992,14 @@ async function onDevices(){
  await applySink();
  if(sinkLost){ // rebranchée : la musique reprend
   sinkLost=false;logErr('Sortie son « '+SINK.label+' » rebranchée : la musique reprend');
-  if(P.i>=0){want=true;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}else resume();
+  // on recharge le lecteur au même endroit, pour que le son reparte bien sur la sortie retrouvée
+  if(P.i>=0){want=true;const t=A.currentTime;A.load();if(t>0)A.currentTime=t;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{})}else resume();
   ui();if(V.name==='settings')render();return;
  }
  if(V.name==='settings')render();
- if(!want||P.i<0)return;
+ // sortie choisie toujours là et inchangée (c'est une autre sortie qui a bougé) : rien à relancer
+ const sid=sinkNow(),same=SINK&&sid&&sid===lastSid;lastSid=sid;
+ if(same||!want||P.i<0)return;
  cancelFade();
  const t=A.currentTime;logErr('Sortie audio modifiée : relance du morceau à '+Math.floor(t)+' s');
  A.load();if(t>0)A.currentTime=t;const pr=A.play();if(pr&&pr.catch)pr.catch(()=>{});
@@ -1005,7 +1022,8 @@ function resume(){
   if(l.length)playQueue(l,0,own.length?R.pl:'arena');else ui();
   return;
  }
- let l=tracksOf(R.pl),k=l.findIndex(x=>x.id===R.id);if(k<0){l=[t];k=0}
+ // morceau qui n'est plus dans sa playlist (« Lire ensuite », favori retiré…) : il passe d'abord, puis la playlist
+ let l=tracksOf(R.pl),k=l.findIndex(x=>x.id===R.id);if(k<0){l=[t].concat(l);k=0}
  playQueue(l,k,R.pl,R.t>0&&(!t.dur||R.t<t.dur-3)?R.t:0);
 }
 /* Durée des morceaux ajoutés : lue une fois dans le fichier puis mémorisée. */
@@ -1034,13 +1052,14 @@ async function delTrack(id){
   else{want=false;stopRamp();A.pause();A.removeAttribute('src');A.dataset.tid='';A.load();P.queue=rest;P.i=-1}
  }
  if(B.dataset.tid===id){B.removeAttribute('src');B.dataset.tid='';B.load()}
+ if(Z)Z.release(id); // l'accueil aussi libère le fichier
  let done=false;try{done=await LB.deleteTrack(id)}catch(e){logErr('Suppression : '+e)}
- if(!done)return;
+ if(!done){if(Z)Z.refresh();return}
  const k=TRACKS.findIndex(x=>x.id===id);if(k>=0)TRACKS.splice(k,1);
  if(favs.delete(id))pset('favs',[...favs]);
  recent=recent.filter(x=>x!==id);pset('recent',recent);
  const now=P.queue[P.i];P.queue=P.queue.filter(x=>x.id!==id);P.i=now?P.queue.indexOf(now):-1;P.nx=null;
- refreshPl();
+ refreshPl();if(Z)Z.refresh();
  render();saveState();clearTimeout(preT);preT=setTimeout(preloadNext,500);
 }
 async function importTracks(playlist){
@@ -1049,7 +1068,7 @@ async function importTracks(playlist){
  if(!list||!list.length)return;
  const added=[];
  list.forEach(x=>{if(!trackById(x.id)){const t=mkTrack(x);TRACKS.push(t);added.push(t)}});
- refreshPl();
+ refreshPl();if(Z)Z.refresh();
  const t0=trackById(list[0].id);
  go('pl',t0?t0.pl:'imp');
  probe(added);setTimeout(measureAll,1500);
@@ -1288,7 +1307,7 @@ function act(n,d){
   }
   case 'about':about(true);break;
   case 'play-next':ctxClose();playNext(d.id);break;
-  case 'play-zone':ctxClose();if(MULTI)Z.start(d.pl,d.id);break;
+  case 'play-zone':ctxClose();if(MULTI&&!(P.i>=0&&d.pl===P.plId&&d.pl!==Z.pl))Z.start(d.pl,d.id);else if(MULTI)logErr('Accueil : cette playlist joue déjà dans l\'Arène');break;
   case 'upd-check':updCheck();break;
   case 'upd-install':installUpd('paramètres');break;
   case 'upd-site':if(LB&&LB.openSite)LB.openSite();break;
@@ -1380,9 +1399,9 @@ function showNotes(since){
 }
 /* ---------- comptes des salles ---------- */
 function applyProfile(){
- favs=new Set((pget('favs',[])||[]).filter(id=>known.has(id)));
+ favs=new Set(arr(pget('favs',[])).filter(id=>known.has(id)));
  ORDER=pget('order',{});if(!ORDER||typeof ORDER!=='object')ORDER={};
- recent=(pget('recent',[])||[]).filter(id=>known.has(id));
+ recent=arr(pget('recent',[])).filter(id=>known.has(id));
  acctChip();render();
 }
 function setAccount(r){ACCOUNT=r&&r.account||null;PROF=r&&r.profile||null;applyProfile()}
@@ -1549,9 +1568,13 @@ function lufsOf(buf){
  const g=abs.filter(v=>L(v)>rel);
  return Math.round(L(g.reduce((a,b)=>a+b,0)/g.length)*10)/10;
 }
+let NOLUFS=store.get('nolufs',[]);if(!Array.isArray(NOLUFS))NOLUFS=[];
 async function measure(t){
  if(!LB||!LB.readAudio)return;
+ // morceau très long (mix d'une heure…) : on ne le mesure pas, cela prendrait trop de mémoire
+ if(t.dur>900){logErr('Volume non mesuré (morceau de plus de 15 min) : '+t.title);NOLUFS.push(t.id);store.set('nolufs',NOLUFS);return}
  const bytes=await LB.readAudio(t.id);if(!bytes)return;
+ if(bytes.byteLength>60*1048576){logErr('Volume non mesuré (fichier de plus de 60 Mo) : '+t.title);NOLUFS.push(t.id);store.set('nolufs',NOLUFS);return}
  const ab=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
  const ctx=new OfflineAudioContext(2,1,48000);
  const buf=await ctx.decodeAudioData(ab);
@@ -1573,8 +1596,9 @@ async function measure(t){
 let measuring=false;
 async function measureAll(){
  if(measuring)return;measuring=true;
- try{for(const t of TRACKS.filter(x=>typeof x.lufs!=='number'||(x.user&&typeof x.end!=='number'))){
-  try{await measure(t)}catch(e){logErr('Mesure du volume impossible : '+t.title+' ('+e+')');t.lufs=undefined}
+ try{for(const t of TRACKS.filter(x=>!NOLUFS.includes(x.id)&&(typeof x.lufs!=='number'||(x.user&&typeof x.end!=='number')))){
+  // échec : noté, pour ne pas recommencer à chaque lancement
+  try{await measure(t)}catch(e){logErr('Mesure du volume impossible : '+t.title+' ('+e+')');t.lufs=undefined;NOLUFS.push(t.id);store.set('nolufs',NOLUFS)}
   await new Promise(r=>setTimeout(r,800));
  }}finally{measuring=false}
 }
@@ -1590,11 +1614,23 @@ Z=(function(){
  const S=Object.assign({pl:'accueil',id:null,t:0,playing:false,shuffle:true,seen:[],vol:.6,sink:null},store.get('zone2',{})||{});
  if(!(S.vol>=0&&S.vol<=1))S.vol=.6;
  if(!Array.isArray(S.seen))S.seen=[];
+ S.shuffle=S.shuffle!==false;
+ // playlist inconnue (supprimée, réglage abîmé) : jamais la musique du laser game par erreur, on revient à l'accueil
+ const plOk=id=>typeof id==='string'&&PL.some(p=>p.id===id);
+ if(!plOk(S.pl))S.pl='accueil';
  if(S.sink&&(typeof S.sink!=='object'||typeof S.sink.id!=='string'||!S.sink.id))S.sink=null;
  let q=[],i=-1,want=false,fade=null,ramp=null,lost=false,tried=-1,n=0,lastT=-1,stuck=0,optSig='';
  const g=el=>S.vol*(+el.dataset.g||1);
  const on=()=>!a.paused&&!(ramp&&ramp.out);
- function save(){const t=q[i];S.id=t?t.id:null;S.t=t?Math.floor(a.currentTime||0):0;S.playing=!!t&&(want||lost);S.seen=S.seen.slice(-500);store.set('zone2',S)}
+ // le lecteur contient-il bien le morceau en cours ? (pas le cas si la sortie était débranchée au moment du choix)
+ const loaded=()=>!!(q[i]&&a.dataset.tid===q[i].id&&a.getAttribute('src'));
+ // (re)lancer le morceau en cours : rechargé au même endroit s'il est déjà là, sinon chargé
+ function playHere(){
+  if(!q[i])return resume();
+  if(loaded()){want=true;const t=a.currentTime;a.load();if(t>0)a.currentTime=t;a.volume=g(a);const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{});paint()}
+  else load(i,0,false);
+ }
+ function save(){const t=q[i];S.id=t?t.id:null;S.t=loaded()?Math.floor(a.currentTime||0):0;S.playing=!!t&&(want||lost);S.seen=S.seen.slice(-500);store.set('zone2',S)}
  /* ----- sortie son ----- */
  function sinkId(){if(!S.sink)return '';const d=OUTS.find(o=>o.id===S.sink.id)||OUTS.find(o=>o.label&&o.label===S.sink.label);return d?d.id:null}
  async function applySink(){
@@ -1632,22 +1668,26 @@ Z=(function(){
   const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{});
   save();paint();
  }
+ let errRun=0,zSig=null; // morceaux illisibles d'affilée ; sorties connues
  function next(fromEnd){if(!q.length)return;const k=pick();if(k>=0)load(k,0,!!fromEnd&&xfadeOn)}
  function start(plId,startId){
+  if(!plOk(plId))return false;
   const l=tracksOf(plId);if(!l.length)return false;
   if(plId!==S.pl)S.seen=[];
   S.pl=plId;q=l.slice();i=-1;
   let k=startId?q.findIndex(t=>t.id===startId):-1;
   if(k<0)k=S.shuffle?pick():0;
-  if(sinkId()===null){lost=true;want=false;save();paint();logErr('Accueil : sortie son débranchée, la musique attend');return true}
+  // sortie débranchée : le morceau choisi est retenu, il partira dès qu'elle sera rebranchée
+  if(sinkId()===null){stopFade();a.pause();i=k;lost=true;want=false;save();paint();logErr('Accueil : sortie son débranchée, la musique attend');return true}
   load(k,0,false);return true;
  }
  function toggle(){
   if(!MULTI)return;
-  if(i<0||!q[i]){start(S.pl);return}
+  if(i<0||!q[i]){if(!start(S.pl)&&!start($('#zPl').value))logErr('Accueil : aucune playlist avec des morceaux');return}
   if(on()){want=false;stopFade();const el=a;rampTo(0,PAUSE_MS,()=>{el.pause();el.volume=g(el);paint()})}
   else{
    if(lost){lost=false;logErr('Accueil : lecture demandée alors que sa sortie est débranchée : sortie par défaut')}
+   if(!loaded()){load(i,0,false);save();setTimeout(paint,0);return}
    want=true;if(a.paused){a.volume=0;const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{})}rampTo(1,RESUME_MS);
   }
   save();setTimeout(paint,0);
@@ -1663,7 +1703,13 @@ Z=(function(){
    if(!fade&&d<a.duration-.2&&a.currentTime>=d)next(false);
   });
   el.addEventListener('ended',e=>{if(e.target===a&&want)next(false)});
-  el.addEventListener('error',e=>{if(e.target===a&&want&&a.getAttribute('src')){logErr('Accueil : lecture impossible, morceau suivant');setTimeout(()=>{if(want)next(false)},800)}});
+  el.addEventListener('error',e=>{
+   if(e.target!==a||!want||!a.getAttribute('src'))return;
+   // tous les morceaux illisibles : on arrête d'essayer en boucle, nouvel essai dans une minute
+   if(++errRun>=Math.max(1,q.length)){errRun=0;want=false;save();paint();logErr('Accueil : aucun morceau lisible, nouvel essai dans 1 min');setTimeout(()=>{if(MULTI&&!want&&S.playing!==false&&q.length){want=true;next(false)}},60000);return}
+   logErr('Accueil : lecture impossible, morceau suivant');const m=n;setTimeout(()=>{if(want&&n===m)next(false)},800);
+  });
+  el.addEventListener('playing',e=>{if(e.target===a)errRun=0});
   el.addEventListener('play',e=>{if(e.target===a)paint()});
   el.addEventListener('pause',e=>{if(e.target===a){paint();save()}});
  }
@@ -1682,12 +1728,17 @@ Z=(function(){
  async function devices(){
   if(!MULTI)return;
   await listOuts();
+  if(!MULTI)return; // désactivée entre-temps
+  const sig=OUTS.map(o=>o.id+'|'+o.label).join(';'),changed=zSig!==null&&sig!==zSig;zSig=sig;
   if(S.sink&&sinkId()===null){
    if(!lost&&want&&i>=0){lost=true;want=false;stopFade();stopRamp();a.pause();save();logErr('Accueil : sortie son « '+S.sink.label+' » débranchée : musique en pause')}
    paint();if(V.name==='settings')render();return;
   }
   await applySink();
-  if(lost){lost=false;logErr('Accueil : sortie son « '+(S.sink?S.sink.label:'par défaut')+' » rebranchée : la musique reprend');if(i>=0&&q[i]){want=true;const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{})}else resume()}
+  if(!MULTI)return;
+  if(lost){lost=false;logErr('Accueil : sortie son « '+(S.sink?S.sink.label:'par défaut')+' » rebranchée : la musique reprend');playHere()}
+  // sortie par défaut de Windows qui a pu changer : on relance au même endroit, comme l'Arène
+  else if(changed&&!S.sink&&want&&loaded()){logErr('Accueil : sortie audio modifiée, relance au même endroit');stopFade();playHere()}
   paint();if(V.name==='settings')render();
  }
  async function setSink(id){
@@ -1695,7 +1746,7 @@ Z=(function(){
   S.sink=o?{id:o.id,label:o.label}:null;save();
   const ok=await applySink();
   logErr('Accueil : sortie son '+(S.sink?S.sink.label:'par défaut de Windows')+(ok?'':' (impossible)'));
-  if(lost&&ok){lost=false;if(i>=0&&q[i]){want=true;const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{})}else resume()}
+  if(lost&&ok){lost=false;playHere()}
   paint();if(V.name==='settings')render();
  }
  /* ----- marche / arrêt de la multi-écoute ----- */
@@ -1708,16 +1759,17 @@ Z=(function(){
  }
  function resume(){ // au lancement (ou quand la sortie revient) : l'accueil repart où il en était
   if(!MULTI||!S.playing||!S.id)return;
+  if(!plOk(S.pl))S.pl='accueil';
   const l=tracksOf(S.pl);if(!l.length)return;
   q=l.slice();let k=q.findIndex(t=>t.id===S.id);
-  if(sinkId()===null){lost=true;i=k;paint();logErr('Accueil : sortie son « '+S.sink.label+' » absente au lancement : la musique attend');return}
+  if(sinkId()===null){if(k<0)k=S.shuffle?pick():0;lost=true;i=k;paint();logErr('Accueil : sortie son « '+S.sink.label+' » absente au lancement : la musique attend');return}
   if(k<0){i=-1;k=S.shuffle?pick():0;load(k,0,false)}
   else{const t=q[k];load(k,S.t>0&&(!t.dur||S.t<t.dur-3)?S.t:0,false)}
  }
  /* ----- affichage ----- */
  function plOpts(){
   const arenaPl=P.i>=0?P.plId:null;
-  return PL.filter(p=>tracksOf(p.id).length).map(p=>{const busy=p.id===arenaPl&&p.id!==S.pl;return `<option value="${esc(p.id)}"${p.id===S.pl?' selected':''}${busy?' disabled':''}>${esc(p.name)}${busy?' (Arène)':''}</option>`}).join('');
+  return PL.filter(p=>p.id===S.pl||tracksOf(p.id).length).map(p=>{const busy=p.id===arenaPl&&p.id!==S.pl;return `<option value="${esc(p.id)}"${p.id===S.pl?' selected':''}${busy?' disabled':''}>${esc(p.name)}${busy?' (Arène)':''}</option>`}).join('');
  }
  function paintProg(){const d=q[i]?endOf(a):0,c=Math.min(a.currentTime||0,d||0);$('#zBarF').style.width=(d?c/d*100:0)+'%';$('#zTmC').textContent=fmt(d?c:0);$('#zTm').textContent=fmt(d||0)}
  // clic sur la barre : avance ou recule dans le morceau de l'accueil (comme pour l'arène)
@@ -1744,6 +1796,18 @@ Z=(function(){
   const cur=sinkId();
   return `<select class="sel" data-k="zsink" aria-label="Sortie son de l'accueil"><option value="">Sortie par défaut de Windows</option>${OUTS.map(o=>`<option value="${esc(o.id)}"${cur===o.id?' selected':''}>${esc(o.label)}</option>`).join('')}${S.sink&&cur===null?`<option value="${esc(S.sink.id)}" selected>${esc(S.sink.label)} (débranchée)</option>`:''}</select>`;
  }
+ /* morceaux ajoutés ou supprimés : la liste de l'accueil est mise à jour ; un morceau supprimé est d'abord libéré */
+ let wasOn=false;
+ function release(id){
+  if(b.dataset.tid===id)stopFade();
+  if(a.dataset.tid===id){wasOn=want;want=false;stopFade();stopRamp();a.pause();a.removeAttribute('src');a.dataset.tid='';a.load()}
+ }
+ function refresh(){
+  const cur=q[i],l=tracksOf(S.pl);
+  q=l.slice();i=cur?q.findIndex(t=>t.id===cur.id):-1;
+  if(i<0&&wasOn&&MULTI&&q.length){wasOn=false;const k=S.shuffle?pick():0;load(k,0,false)}
+  wasOn=false;optSig='';save();paint();
+ }
  $('#zPlay').onclick=toggle;
  $('#zNext').onclick=()=>{if(i<0)start(S.pl);else next(false)};
  $('#zBar').addEventListener('click',seek);
@@ -1754,11 +1818,12 @@ Z=(function(){
  $('#zOut').onclick=()=>go('settings');
  $('#zNext').innerHTML=ic('next');$('#zShuf').innerHTML=ic('shuf');
  $('#app').classList.toggle('multi',MULTI);
- return {enable,start,toggle,resume,devices,setSink,sel,paint,on,
+ return {enable,start,toggle,resume,devices,setSink,sel,paint,on,release,refresh,
   ready:()=>listOuts().then(()=>{if(MULTI){if(S.sink&&sinkId()===null)lost=true;else return applySink()}}),
   get lost(){return lost},get pl(){return S.pl},state:()=>({pl:S.pl,id:q[i]?q[i].id:null,playing:on()&&!!q[i],vol:S.vol,sink:S.sink,lost})};
 })();
-if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>setTimeout(()=>Z.devices(),1600));
+let zDevT=null;
+if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>{clearTimeout(zDevT);zDevT=setTimeout(()=>Z.devices(),1600)});
 
 /* ---------- touches multimédia du clavier (zone Arène) ---------- */
 if(LB&&LB.onMediaKey)LB.onMediaKey(a=>{
@@ -1858,15 +1923,28 @@ function launchTryOk(v){
  if(t.v===v&&t.n>=2){logErr('Mise à jour '+v+' : 2 tentatives sans succès, installation au lancement suspendue');return false}
  store.set('updTry',{v,n:(t.v===v?t.n:0)+1});return true;
 }
-(async function startup(){
- let v=null;
- if(LB&&LB.launchUpdateCheck){try{v=await LB.launchUpdateCheck()}catch(e){v=null}}
- if(v&&v!==(LB&&LB.version)&&launchTryOk(v)){updV=v;installUpd('lancement');return}
+let started=false;
+async function startPlayback(){
+ if(started)return;started=true;
  try{await sinkReady}catch(e){}
  resume();
  try{await Z.ready()}catch(e){}
  Z.resume();Z.paint();
  if(migrateV2){P.repeat=1;ui();saveState()}
+}
+/* L'installation n'a pas pu démarrer (installateur introuvable, disque plein…) : on retire l'écran
+   « Mise à jour » et la musique continue (ou démarre) avec la version actuelle. */
+if(LB&&LB.onUpdateFailed)LB.onUpdateFailed(()=>{
+ logErr('Mise à jour '+updV+' non installée : on continue avec la version actuelle');
+ updDone=false;hideUpdateScreen();
+ const b=$('#updBtn');if(b){b.disabled=false;b.textContent='Réessayer la mise à jour '+(updV||'')}
+ startPlayback();
+});
+(async function startup(){
+ let v=null;
+ if(LB&&LB.launchUpdateCheck){try{v=await LB.launchUpdateCheck()}catch(e){v=null}}
+ if(v&&v!==(LB&&LB.version)&&launchTryOk(v)){updV=v;installUpd('lancement');return}
+ startPlayback();
 })();
 probe(TRACKS);
 setTimeout(measureAll,5000);

@@ -41,13 +41,14 @@ if (process.env.LASERBEAT_USER_DATA) app.setPath('userData', process.env.LASERBE
 /* ---------- journal (pour comprendre un éventuel problème) ---------- */
 let logFile = null;
 function log(...args) {
-  const line = new Date().toISOString() + ' ' + args.map(a => (a instanceof Error ? a.stack : typeof a === 'string' ? a : JSON.stringify(a))).join(' ') + '\n';
+  let line = '';
   try {
+    line = new Date().toISOString() + ' ' + args.map(a => { try { return a instanceof Error ? a.stack : typeof a === 'string' ? a : JSON.stringify(a); } catch (e) { return String(a); } }).join(' ') + '\n';
     if (!logFile) logFile = path.join(app.getPath('userData'), 'laserbeat.log');
     try { if (fs.statSync(logFile).size > 1024 * 1024) fs.renameSync(logFile, logFile + '.old'); } catch (e) { /* pas encore de journal */ }
     fs.appendFileSync(logFile, line);
   } catch (e) { /* le journal ne doit jamais faire planter l'application */ }
-  if (!app.isPackaged) process.stdout.write(line);
+  if (!app.isPackaged && line) { try { process.stdout.write(line); } catch (e) { /* rien */ } }
 }
 process.on('uncaughtException', err => log('uncaughtException', err));
 process.on('unhandledRejection', err => log('unhandledRejection', err));
@@ -61,8 +62,10 @@ if (!app.requestSingleInstanceLock()) {
   start();
 }
 
+var recreateWindow = null; // (var : utilisé par start(), appelé plus haut)
 function showWindow() {
-  if (!win || win.isDestroyed()) return;
+  // fenêtre disparue (erreur au démarrage…) : on la recrée au lieu de laisser un processus invisible
+  if (!win || win.isDestroyed()) { if (recreateWindow && app.isReady()) { try { recreateWindow(); } catch (e) { log('recréation fenêtre', e); } } return; }
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
@@ -70,6 +73,7 @@ function showWindow() {
 
 function start() {
   let config = null;
+  recreateWindow = () => createWindow();
   let musicDirs = null;
   let blockerId = null;
   let updater = null;
@@ -141,7 +145,8 @@ function start() {
   const OFF = { ok: false, error: 'Les comptes ne sont pas encore disponibles.' };
   on('acct:state', e => { e.returnValue = accounts ? { enabled: true, account: accounts.current(), profile: accounts.profile(), count: accounts.list().length, salles: SALLES } : { enabled: false }; });
   handle('acct:list', () => (accounts ? accounts.list() : []));
-  handle('acct:create', (e, name, login, pw, initial) => !accounts ? OFF : accounts.create(str(name, 80), str(login, 64), str(pw, 300), initial && typeof initial === 'object' ? initial : null));
+  const sizeOk = v => { try { return JSON.stringify(v).length < 1024 * 1024; } catch (e) { return false; } };
+  handle('acct:create', (e, name, login, pw, initial) => !accounts ? OFF : accounts.create(str(name, 80), str(login, 64), str(pw, 300), initial && typeof initial === 'object' && sizeOk(initial) ? initial : null));
   handle('acct:login', (e, login, pw) => !accounts ? OFF : accounts.login(str(login, 64), str(pw, 300)));
   handle('acct:logout', () => (!accounts ? OFF : accounts.logout()));
   handle('acct:password', (e, oldPw, newPw) => !accounts ? OFF : accounts.changePassword(str(oldPw, 300), str(newPw, 300)));
@@ -303,8 +308,13 @@ function start() {
     wc.on('console-message', (e) => { if (e.level === 'error') log('[console]', e.message); });
 
     // Arrêt de Windows : pas d'installation de mise à jour à ce moment-là.
-    win.on('query-session-end', () => { quitting = true; });
-    win.on('session-end', () => { quitting = true; if (updater) updater.onSessionEnd(); });
+    // (si l'arrêt est annulé par un autre logiciel, la question « Réduire / Quitter » revient au bout de 30 s)
+    win.on('query-session-end', () => { quitting = true; setTimeout(() => { if (win && !win.isDestroyed()) quitting = false; }, 30000); });
+    win.on('session-end', () => {
+      quitting = true; if (updater) updater.onSessionEnd();
+      // Windows s'arrête : Electron ne prévient pas « avant de quitter », on enregistre tout de suite
+      try { if (config) config.flush(); if (accounts) accounts.flush(); } catch (e) { log('enregistrement à l\'arrêt', e); }
+    });
 
     // Croix de la fenêtre (ou Alt+F4) : on propose de réduire, pour ne pas couper la musique par erreur.
     let asking = false;

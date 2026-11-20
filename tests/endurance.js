@@ -79,7 +79,7 @@ module.exports = function ({ test, launch, close, newDataDir, assert, waitFor, p
       assert(s.z, 'l\'Accueil s\'est arrêté après ' + Math.round((Date.now() - t0) / 60000 * 8) + ' min de musique');
       stillA = s.a === lastA ? stillA + 1 : 0; stillZ = s.z === lastZ ? stillZ + 1 : 0;
       assert(stillA < 3 && stillZ < 3, 'lecture figée (' + (stillA >= 3 ? 'Arène' : 'Accueil') + ')');
-      lastA = s.a; lastZ = s.z; seenA.add(s.at); seenZ.add(s.zt);
+      lastA = s.a; lastZ = s.z; if (s.at) seenA.add(s.at); if (s.zt) seenZ.add(s.zt); // (pendant un fondu, le lecteur sortant n'a plus de morceau)
       if (k % 36 === 0) console.log('        ' + Math.round((Date.now() - t0) / 60000 * 8) + ' min de musique, mémoire ' + Math.round((await heap(w)) / 1048576) + ' Mo');
     }
     assert(seenA.size >= 10, 'peu de morceaux différents dans l\'Arène : ' + seenA.size);
@@ -165,7 +165,7 @@ module.exports = function ({ test, launch, close, newDataDir, assert, waitFor, p
     for (const [what, write] of [
       ['config.json illisible', d => fs.writeFileSync(path.join(d, 'config.json'), '{"lb_v2": tr')],
       ['config.json vide', d => fs.writeFileSync(path.join(d, 'config.json'), '')],
-      ['config.json avec de mauvaises valeurs', d => fs.writeFileSync(path.join(d, 'config.json'), JSON.stringify({ lb_v2: true, lb_vol: 'fort', lb_resume: { pl: 42, id: null, t: -5, playing: 'oui' }, lb_favs: 'aucun', lb_zone2: { pl: null, vol: 9, seen: 'x', sink: 3 }, lb_multi: true, lb_sink: 'casque' }))],
+      ['config.json avec de mauvaises valeurs', d => fs.writeFileSync(path.join(d, 'config.json'), JSON.stringify({ lb_v2: true, lb_vol: 'fort', lb_resume: { pl: 42, id: null, t: -5, playing: 'oui' }, lb_favs: 'aucun', lb_zone2: { pl: null, vol: 9, seen: 'x', sink: 3 }, lb_multi: true, lb_sink: 'casque', lb_lastVersion: require('../package.json').version }))],
       ['morceaux.json illisible', d => { fs.mkdirSync(path.join(d, 'musiques'), { recursive: true }); fs.writeFileSync(path.join(d, 'musiques', 'morceaux.json'), '[{"fichier": '); }]
     ]) {
       const dir = newDataDir('end-corrompu-' + what.replace(/\W+/g, '-'));

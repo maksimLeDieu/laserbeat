@@ -30,6 +30,12 @@ function scrypt(password, salt) {
   return new Promise((res, rej) => crypto.scrypt(password, salt, KEYLEN, SCRYPT, (err, key) => (err ? rej(err) : res(key))));
 }
 
+// Écrit le fichier (lisible par l'utilisateur seulement) et attend qu'il soit vraiment sur le disque.
+function writeSync(file, data) {
+  const fd = fs.openSync(file, 'w', 0o600);
+  try { fs.writeSync(fd, data); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+}
+
 class Accounts {
   constructor(dir, { safeStorage, log } = {}) {
     this.file = path.join(dir, 'comptes.dat');
@@ -42,13 +48,27 @@ class Accounts {
   /* ----- fichier ----- */
   load() {
     const empty = { v: 1, accounts: [], profiles: {}, session: null };
+    let unreadable = false;
     for (const f of [this.file, this.file + '.bak']) {
       try {
         const raw = fs.readFileSync(f);
         const text = raw.subarray(0, 4).toString() === 'MLC1' ? this.decrypt(raw.subarray(4)) : raw.toString('utf8');
         const d = JSON.parse(text);
-        if (d && Array.isArray(d.accounts)) { const r = Object.assign(empty, d); delete r.fails; return r; }
-      } catch (e) { if (e.code !== 'ENOENT') this.log('comptes illisibles', f, e.message); }
+        if (d && Array.isArray(d.accounts)) {
+          if (unreadable) { this.mainBad = true; this.log('comptes : fichier principal illisible, copie de secours utilisée'); }
+          const r = Object.assign(empty, d); delete r.fails; return r;
+        }
+        unreadable = true;
+      } catch (e) { if (e.code !== 'ENOENT') { unreadable = true; this.log('comptes illisibles', f, e.message); } }
+    }
+    // Fichiers présents mais illisibles (mot de passe Windows réinitialisé, profil copié…) : on les met
+    // de côté au lieu de les écraser, pour ne jamais perdre les comptes définitivement.
+    if (unreadable) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      for (const f of [this.file, this.file + '.bak']) {
+        try { if (fs.existsSync(f)) fs.renameSync(f, f + '.illisible-' + stamp); } catch (e) { this.log('comptes : mise de côté impossible', f, e.message); }
+      }
+      this.log('comptes : fichiers illisibles mis de côté (' + stamp + ')');
     }
     return empty;
   }
@@ -61,11 +81,13 @@ class Accounts {
     const out = this.safe ? Buffer.concat([Buffer.from('MLC1'), this.safe.encryptString(json)]) : Buffer.from(json, 'utf8');
     const tmp = this.file + '.tmp';
     try {
-      fs.writeFileSync(tmp, out, { mode: 0o600 });
-      try { fs.copyFileSync(this.file, this.file + '.bak'); } catch (e) { /* premier enregistrement */ }
+      writeSync(tmp, out);
+      // la copie de secours n'est refaite qu'à partir d'un fichier principal lisible
+      if (!this.mainBad) { try { if (fs.existsSync(this.file)) writeSync(this.file + '.bak', fs.readFileSync(this.file)); } catch (e) { /* premier enregistrement */ } }
       fs.renameSync(tmp, this.file);
+      this.mainBad = false;
     } catch (e) {
-      try { fs.writeFileSync(this.file, out, { mode: 0o600 }); } catch (e2) { this.log('comptes non enregistrés', e2.message); }
+      try { writeSync(this.file, out); } catch (e2) { this.log('comptes non enregistrés', e2.message); }
     }
   }
 

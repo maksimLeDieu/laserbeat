@@ -35,24 +35,42 @@ function photoUrl(dir, name) {
 const num = v => { const n = Number(v); return isFinite(n) && n > 0 ? n : 0; };
 const keyOf = f => String(f).replace(/\\/g, '/').toLowerCase();
 
-function readList(dir) {
-  const file = path.join(dir, LIST);
+// ok : lu correctement (ou absent) ; corrupt : contenu abîmé (JSON invalide) ; sinon fichier momentanément
+// illisible (antivirus…) : on ne touche à rien.
+function parseList(file) {
   let raw;
-  try { raw = fs.readFileSync(file, 'utf8'); } catch (e) { return { list: [], ok: e.code === 'ENOENT' }; }
+  try { raw = fs.readFileSync(file, 'utf8'); } catch (e) { return { list: [], ok: e.code === 'ENOENT', missing: e.code === 'ENOENT' }; }
   try {
-    const v = JSON.parse(raw.replace(/^﻿/, ''));
+    const v = JSON.parse(raw.replace(/^\uFEFF/, ''));
     const list = Array.isArray(v) ? v : (v && Array.isArray(v.morceaux) ? v.morceaux : []);
     return { list: list.filter(e => e && typeof e === 'object'), ok: true };
   } catch (e) {
-    return { list: [], ok: false, error: e.message };
+    return { list: [], ok: false, corrupt: true, error: e.message };
   }
 }
+function readList(dir) {
+  const file = path.join(dir, LIST);
+  const r = parseList(file);
+  if (r.corrupt) { // fichier abîmé (coupure de courant…) : la copie de secours prend le relais
+    const b = parseList(file + '.bak');
+    if (b.ok && !b.missing) return { list: b.list, ok: true, fromBak: true, corrupt: true };
+  }
+  return r;
+}
 
+// Écrit le fichier et attend qu'il soit vraiment sur le disque.
+function writeSync(file, data) {
+  const fd = fs.openSync(file, 'w');
+  try { fs.writeSync(fd, data); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+}
 function writeList(dir, list) {
   const file = path.join(dir, LIST);
   const tmp = file + '.tmp';
   const json = JSON.stringify(list, null, 2) + '\n';
-  try { fs.writeFileSync(tmp, json); fs.renameSync(tmp, file); } catch (e) { fs.writeFileSync(file, json); }
+  // copie de secours du fichier actuel, seulement s'il est valide
+  const cur = parseList(file);
+  if (cur.ok && !cur.missing) { try { writeSync(file + '.bak', fs.readFileSync(file)); } catch (e) { /* ignore */ } }
+  try { writeSync(tmp, json); fs.renameSync(tmp, file); } catch (e) { writeSync(file, json); }
 }
 
 function makeTrack(origin, dir, file, e) {
@@ -151,10 +169,13 @@ function loadAll(dirs) {
 // Liste utilisateur modifiable ; si le JSON est abîmé, on le met de côté plutôt que de l'écraser.
 function editableList(dir) {
   const r = readList(dir);
-  if (!r.ok) {
+  // fichier abîmé : on le met de côté (la copie de secours, si elle existe, reprend sa place)
+  if (r.corrupt) {
     try { fs.renameSync(path.join(dir, LIST), path.join(dir, LIST + '.erreur-' + Date.now())); } catch (e) { /* ignore */ }
   }
-  return r.ok ? r.list : [];
+  // fichier momentanément illisible : on refuse de le remplacer par une liste vide
+  if (!r.ok) throw new Error('liste des morceaux momentanément illisible');
+  return r.list;
 }
 
 function uniqueName(dir, base) {
@@ -190,6 +211,8 @@ function importFiles(dir, paths, playlist) {
       listed.add(keyOf(name));
     }
     added.push('u:' + keyOf(name));
+    // ré-importé alors qu'il attendait d'être effacé : il ne doit plus l'être
+    try { const p = readPending(dir), k = p.findIndex(n => keyOf(n) === keyOf(name)); if (k >= 0) { p.splice(k, 1); writePending(dir, p); } } catch (e) { /* ignore */ }
   }
   writeList(dir, list);
   const all = loadDir(dir, 'u');

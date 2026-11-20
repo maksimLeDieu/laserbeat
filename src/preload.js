@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('laserbeat', {
   updateReady,
   onUpdate: cb => ipcRenderer.on('update:ready', (e, v) => cb(String(v))),
   installUpdate: () => ipcRenderer.send('update:install'),
+  onUpdateFailed: cb => ipcRenderer.on('update:failed', () => cb()),
   launchUpdateCheck: () => ipcRenderer.invoke('update:launch-check'),
   checkUpdate: () => ipcRenderer.invoke('update:check'),
   // Mac : la nouvelle version se télécharge sur le site

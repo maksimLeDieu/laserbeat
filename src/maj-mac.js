@@ -40,13 +40,22 @@ const rm = p => { try { fs.rmSync(p, { recursive: true, force: true }); } catch 
 const writable = p => { try { fs.accessSync(p, fs.constants.W_OK); return true; } catch (e) { return false; } };
 
 // Script lancé à part : attend la fermeture de Musique ML, remplace l'appli, nettoie, relance.
+// Prudence : la nouvelle appli est d'abord vérifiée puis copiée À CÔTÉ de l'ancienne (même dossier), pour
+// que l'échange final soit deux renommages instantanés. En cas d'échec, l'ancienne appli est remise.
+// Le résultat est noté dans un journal que Musique ML recopie dans le sien au lancement suivant.
 const SWAP = `#!/bin/sh
-PID="$1"; OLD="$2"; NEW="$3"; DIR="$4"; RELAUNCH="$5"; BAK="$OLD.ancienne-version"
+PID="$1"; OLD="$2"; NEW="$3"; DIR="$4"; RELAUNCH="$5"; LOG="$6"
+NEXT="\${OLD%.app} (nouvelle version).app"; BAK="\${OLD%.app} (ancienne version).app"
+note() { echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG"; }
 i=0; while kill -0 "$PID" 2>/dev/null && [ $i -lt 240 ]; do sleep 0.25; i=$((i+1)); done
-rm -rf "$BAK"
+if kill -0 "$PID" 2>/dev/null; then note "Musique ML ne s'est pas fermé : remplacement reporté"; exit 0; fi
+if ! /usr/bin/codesign --verify --deep "$NEW" 2>/dev/null; then note "nouvelle version incomplète : remplacement annulé"; rm -rf "$DIR"; [ "$RELAUNCH" = "1" ] && open "$OLD"; exit 0; fi
+rm -rf "$NEXT" "$BAK"
+if ! /usr/bin/ditto "$NEW" "$NEXT"; then note "copie impossible (disque plein ?) : remplacement annulé"; rm -rf "$NEXT" "$DIR"; [ "$RELAUNCH" = "1" ] && open "$OLD"; exit 0; fi
 if mv "$OLD" "$BAK"; then
-  if mv "$NEW" "$OLD"; then rm -rf "$BAK"; else rm -rf "$OLD"; mv "$BAK" "$OLD"; fi
-fi
+  if mv "$NEXT" "$OLD"; then rm -rf "$BAK"; note "remplacement réussi"; else mv "$BAK" "$OLD"; note "renommage impossible : ancienne version remise"; fi
+else note "ancienne appli non déplaçable (autorisation macOS ?) : remplacement annulé"; fi
+rm -rf "$NEXT"
 xattr -dr com.apple.quarantine "$OLD" 2>/dev/null
 rm -rf "$DIR"
 if [ "$RELAUNCH" = "1" ]; then open "$OLD"; fi
@@ -55,9 +64,17 @@ if [ "$RELAUNCH" = "1" ]; then open "$OLD"; fi
 function setupMacUpdater({ log, getWindow }) {
   // tests : LASERBEAT_TEST_MAC_DMG = un .dmg local, ou « github » pour le vrai téléchargement de la dernière version
   const test = process.env.LASERBEAT_TEST && process.env.LASERBEAT_TEST_MAC_DMG;
-  const tmp = app.getPath('temp');
+  // Dossier de travail dans les données de l'appli (pas le dossier temporaire du système, que macOS vide
+  // au bout de quelques jours : une version préparée pourrait y être abîmée avant d'être installée).
+  const tmp = path.join(app.getPath('userData'), 'mise-a-jour');
+  const swapLog = path.join(app.getPath('userData'), 'mise-a-jour.log');
+  try { fs.mkdirSync(tmp, { recursive: true }); } catch (e) { /* rien */ }
   // restes d'une mise à jour précédente (interrompue) : on les efface
   try { for (const n of fs.readdirSync(tmp)) if (n.startsWith(PREFIX)) rm(path.join(tmp, n)); } catch (e) { /* rien */ }
+  // résultat du dernier remplacement (écrit par le script) : recopié dans le journal
+  try { const t = fs.readFileSync(swapLog, 'utf8').trim(); if (t) log('[maj] remplacement précédent :', t.split('\n').slice(-3).join(' | ')); fs.rmSync(swapLog, { force: true }); } catch (e) { /* aucun */ }
+  // arrêt du Mac : pas de remplacement à ce moment-là
+  try { require('electron').powerMonitor.on('shutdown', () => { sessionEnd = true; }); } catch (e) { /* rien */ }
 
   const bundle = path.resolve(process.execPath, '..', '..', '..'); // …/Musique ML.app
   const selfOk = () => bundle.endsWith('.app') && !bundle.startsWith('/Volumes/') && writable(path.dirname(bundle)) && writable(bundle);
@@ -81,7 +98,7 @@ function setupMacUpdater({ log, getWindow }) {
     // tests (« github ») : pendant une publication, la toute dernière version n'a pas encore son .dmg :
     // on prend la plus récente qui en a un.
     const url = test === 'github' ? LATEST_API.replace('/latest', '?per_page=5') : LATEST_API;
-    const r = await net.fetch(url, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Musique-ML' } });
+    const r = await net.fetch(url, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Musique-ML' }, signal: AbortSignal.timeout(30000) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     let d = await r.json();
     if (Array.isArray(d)) d = d.find(x => !x.prerelease && !x.draft && (x.assets || []).some(a => a.name === MAC_ASSET)) || {};
@@ -94,7 +111,8 @@ function setupMacUpdater({ log, getWindow }) {
     log('[maj] téléchargement de la version', v);
     if (asset.local) fs.copyFileSync(asset.local, dmg);
     else {
-      const r = await net.fetch(asset.browser_download_url, { headers: { 'User-Agent': 'Musique-ML' } });
+      // 20 min au plus pour le téléchargement : une connexion figée ne bloque pas les vérifications suivantes
+      const r = await net.fetch(asset.browser_download_url, { headers: { 'User-Agent': 'Musique-ML' }, signal: AbortSignal.timeout(20 * 60 * 1000) });
       if (!r.ok || !r.body) throw new Error('téléchargement HTTP ' + r.status);
       const h = crypto.createHash('sha256');
       const src = Readable.fromWeb(r.body);
@@ -158,14 +176,23 @@ function setupMacUpdater({ log, getWindow }) {
   const swap = relaunch => {
     if (!ready || !staged || !dir || installing) return false;
     installing = true;
-    const script = path.join(dir, 'remplacer.sh');
-    fs.writeFileSync(script, SWAP, { mode: 0o755 });
-    const again = relaunch && !process.env.LASERBEAT_TEST ? '1' : '0';
-    log('[maj] remplacement de', bundle, 'par la version', ready, again === '1' ? '(puis relance)' : '');
-    spawn('/bin/sh', [script, String(process.pid), bundle, staged, dir, again], { detached: true, stdio: 'ignore' }).unref();
-    return true;
+    try {
+      const script = path.join(dir, 'remplacer.sh');
+      fs.writeFileSync(script, SWAP, { mode: 0o755 });
+      const again = relaunch && !process.env.LASERBEAT_TEST ? '1' : '0';
+      log('[maj] remplacement de', bundle, 'par la version', ready, again === '1' ? '(puis relance)' : '');
+      spawn('/bin/sh', [script, String(process.pid), bundle, staged, dir, again, swapLog], { detached: true, stdio: 'ignore' }).unref();
+      return true;
+    } catch (err) {
+      installing = false;
+      log('[maj] remplacement impossible', err && err.message);
+      return false;
+    }
   };
-  ipcMain.on('update:install', () => { if (swap(true)) setTimeout(() => app.quit(), 300); });
+  ipcMain.on('update:install', () => {
+    if (swap(true)) setTimeout(() => app.quit(), 300);
+    else { log('[maj] installation non démarrée : on continue avec la version actuelle'); send('update:failed'); }
+  });
   // Fermeture de Musique ML avec une version prête : elle est mise en place, sans relancer.
   app.on('will-quit', () => { if (!sessionEnd) swap(false); });
 

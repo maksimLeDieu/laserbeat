@@ -138,7 +138,14 @@ function setupUpdater({ log, getWindow }) {
     installing = true;
     log('[maj] installation demandée', ready);
     // Installation silencieuse puis relance de LaserBeat ; la musique reprend toute seule.
-    setTimeout(() => autoUpdater.quitAndInstall(true, true), 300);
+    setTimeout(() => { try { autoUpdater.quitAndInstall(true, true); } catch (err) { log('[maj] installation impossible', err && err.message); } }, 300);
+    // Toujours là 30 s plus tard (installateur supprimé par un antivirus…) : on le dit à la page,
+    // qui retire l'écran « Installation » et remet la musique au lieu de rester bloquée.
+    setTimeout(() => {
+      installing = false;
+      log('[maj] l\'installation n\'a pas démarré : on continue avec la version actuelle');
+      const w = getWindow(); if (w && !w.isDestroyed()) w.webContents.send('update:failed');
+    }, 30000);
   });
 
   return {
